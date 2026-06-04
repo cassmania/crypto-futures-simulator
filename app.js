@@ -5484,6 +5484,30 @@ window.카카오로그인실행 = function() {
     });
 };
 
+window.카카오알림테스트발송 = function() {
+    if (typeof Kakao === 'undefined' || !Kakao.isInitialized()) {
+        alert("먼저 JavaScript 키를 입력하고 [설정 저장]을 눌러주세요.");
+        return;
+    }
+    Kakao.API.request({
+        url: '/v2/api/talk/memo/default/send',
+        data: {
+            template_object: {
+                object_type: 'text',
+                text: '[Antigravity 테스트]\n\n카카오톡 연동 테스트 메시지입니다.\n알림이 성공적으로 작동하고 있습니다!',
+                link: { web_url: 'https://cassmania.github.io/crypto-futures-simulator/', mobile_web_url: 'https://cassmania.github.io/crypto-futures-simulator/' },
+                button_title: '시뮬레이터 확인'
+            }
+        },
+        success: function(res) {
+            alert("카카오톡 발송 테스트 성공! 내 카카오톡을 확인해보세요.");
+        },
+        fail: function(error) {
+            alert('카카오톡 발송 테스트 실패: ' + JSON.stringify(error));
+        }
+    });
+};
+
 window.카카오알림발송 = function(data, isSummary = false) {
     if (typeof Kakao === 'undefined' || !Kakao.isInitialized()) return;
     
@@ -5508,6 +5532,7 @@ window.카카오알림발송 = function(data, isSummary = false) {
             새신호알림(data.코인명, `[카카오톡 발송] ${data.코인명} 카톡 브리핑 전송 완료`, 'neutral');
         },
         fail: function(error) {
+            alert('카카오톡 발송 실패: ' + JSON.stringify(error));
             console.error('카카오톡 발송 실패:', error);
         }
     });
