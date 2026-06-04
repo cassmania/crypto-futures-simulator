@@ -3299,3 +3299,21 @@ body {
 .tiktok-banner:hover .fa-arrow-right {
     color: #ff0050;
 }
+
+/* Coupang Partners 배너 */
+.coupang-banner {
+    background: linear-gradient(90deg, #1f1f1f 0%, #2a2a2a 100%);
+}
+.coupang-banner:hover {
+    border-color: #cb1400;
+    box-shadow: 0 0 12px rgba(203, 20, 0, 0.2);
+}
+.coupang-banner i.fa-bag-shopping {
+    color: #cb1400;
+}
+.coupang-banner strong {
+    color: #cb1400;
+}
+.coupang-banner:hover .fa-arrow-right {
+    color: #cb1400;
+}
