@@ -1,0 +1,42 @@
+Created At: 2026-05-29T04:46:19Z
+Completed At: 2026-05-29T04:46:19Z
+File Path: `file:///C:/Users/Administrator/source/repos/crypto-futures-simulator/app.js`
+Total Lines: 2772
+Total Bytes: 123310
+Showing lines 215 to 248
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+215:                 secondsVisible: false
+216:             }
+217:         };
+218: 
+219:         // A. 각 분할 차트 생성
+220:         chartData.메인차트 = LightweightCharts.createChart(container, chartOptions);
+221:         
+222:         // 캔들 시리즈 주입
+223:         chartData.캔들시리즈 = chartData.메인차트.addCandlestickSeries({
+224:             upColor: '#f6465d', // 상승(수익) = 빨간색 (한국 기준)
+225:             downColor: '#0066ff', // 하락(손실) = 파란색 (한국 기준)
+226:             borderUpColor: '#f6465d',
+227:             borderDownColor: '#0066ff',
+228:             wickUpColor: '#f6465d',
+229:             wickDownColor: '#0066ff'
+230:         });
+231: 
+232:         // 이동평균선(MA) 추가
+233:         chartData.MA7시리즈 = chartData.메인차트.addLineSeries({ color: '#F0B90B', lineWidth: 1, title: 'MA(7)' });
+234:         chartData.MA25시리즈 = chartData.메인차트.addLineSeries({ color: '#03A9F4', lineWidth: 1, title: 'MA(25)' });
+235:         chartData.MA99시리즈 = chartData.메인차트.addLineSeries({ color: '#E040FB', lineWidth: 1, title: 'MA(99)' });
+236: 
+237:         // 화면 크기 반응형 리스너 개별 부착
+238:         window.addEventListener("resize", () => {
+239:             if (chartData.메인차트 && container) {
+240:                 chartData.메인차트.resize(container.clientWidth, container.clientHeight);
+241:             }
+242:         });
+243:     });
+244: 
+245:     // 시간 단위 선택 UI 버튼 및 타이틀 동기화
+246:     시간단위UI동기화();
+247: }
+248: 
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

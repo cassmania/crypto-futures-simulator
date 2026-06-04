@@ -1,0 +1,78 @@
+Created At: 2026-05-29T16:26:44Z
+Completed At: 2026-05-29T16:26:44Z
+File Path: `file:///C:/Users/Administrator/source/repos/crypto-futures-simulator/app.js`
+Total Lines: 4570
+Total Bytes: 220901
+Showing lines 401 to 480
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+401: async function 분할차트캔들데이터로드(chartIdx) {
+402:     const chartData = 상태.차트객체.분할차트들[chartIdx];
+403:     if (!chartData) return;
+404: 
+405:     const symbol = chartData.코인심볼;
+406:     const interval = chartData.시간단위;
+407:     const coin = 상태.코인목록[symbol];
+408:     if (!coin) return;
+409: 
+410:     try {
+411:         const response = await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=${interval}&limit=150`);
+412:         if (!response.ok) throw new Error(`${interval} API 호출 실패`);
+413: 
+414:         const rawData = await response.json();
+415:         const formattedCandles = rawData.map(c => ({
+416:             time: Math.floor(c[0] / 1000),
+417:             open: parseFloat(c[1]),
+418:             high: parseFloat(c[2]),
+419:             low: parseFloat(c[3]),
+420:             close: parseFloat(c[4]),
+421:             volume: parseFloat(c[5])
+422:         }));
+423: 
+424:         chartData.캔들데이터 = formattedCandles;
+425:         
+426:         // 각 코인의 실시간 시뮬레이션용 데이터 버퍼도 항상 함께 완벽히 초기화하여 퀀트 분석 즉각 구동 보장
+427:         if (formattedCandles.length > 0) {
+428:             coin.현재가 = formattedCandles[formattedCandles.length - 1].close;
+429:             coin.어제종가 = formattedCandles[0].close;
+430:             coin.최고24h = Math.max(...formattedCandles.map(c => c.high));
+431:             coin.최저24h = Math.min(...formattedCandles.map(c => c.low));
+432:       
+<truncated 607 bytes>
+     const coin = 상태.코인목록[symbol];
+445:     const chartData = 상태.차트객체.분할차트들[chartIdx];
+446:     if (!coin || !chartData) return;
+447: 
+448:     const interval = chartData.시간단위;
+449:     let 가격 = 100.00;
+450:     if (symbol.startsWith("BTC")) 가격 = 73000.00;
+451:     else if (symbol.startsWith("ETH")) 가격 = 2000.00;
+452:     else if (symbol.startsWith("SOL")) 가격 = 150.00;
+453:     else if (symbol.startsWith("HYPE")) 가격 = 61.50;
+454: 
+455:     let 봉단위초 = 60; // 기본 1분
+456:     if (interval === "1h") 봉단위초 = 3600;
+457:     else if (interval === "4h") 봉단위초 = 14400;
+458:     else if (interval === "8h") 봉단위초 = 28800;
+459:     else if (interval === "12h") 봉단위초 = 43200;
+460:     else if (interval === "1d") 봉단위초 = 86400;
+461:     else if (interval === "1w") 봉단위초 = 604800;
+462: 
+463:     let 시간 = Math.floor(Date.now() / 1000) - 150 * 봉단위초;
+464:     const 캔들들 = [];
+465:     const 변동성 = symbol.startsWith("BTC") ? 0.001 : 0.003;
+466: 
+467:     for (let i = 0; i < 150; i++) {
+468:         let open = 가격;
+469:         let change = 가격 * 변동성 * (Math.random() - 0.485) * 2;
+470:         let close = open + change;
+471:         let high = Math.max(open, close) + (가격 * 변동성 * Math.random() * 0.4);
+472:         let low = Math.min(open, close) - (가격 * 변동성 * Math.random() * 0.4);
+473:         
+474:         캔들들.push({
+475:             time: 시간,
+476:             open: parseFloat(open.toFixed(coin.소수점)),
+477:             high: parseFloat(high.toFixed(coin.소수점)),
+478:             low: parseFloat(low.toFixed(coin.소수점)),
+479:             close: parseFloat(close.toFixed(coin.소수점)),
+480:             volume: parseFloat((Math.random() * 200 + 20).toFixed(2))
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

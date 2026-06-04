@@ -1,0 +1,74 @@
+Created At: 2026-05-29T04:45:46Z
+Completed At: 2026-05-29T04:45:46Z
+File Path: `file:///C:/Users/Administrator/source/repos/crypto-futures-simulator/app.js`
+Total Lines: 2742
+Total Bytes: 120836
+Showing lines 240 to 305
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+240:                 "1d": "일봉 (1d)",
+241:                 "1w": "주봉 (1w)"
+242:             }[chartData.시간단위];
+243:             titleEl.innerHTML = `<i class="fa-solid fa-chart-line text-yellow" style="margin-right:6px;"></i>차트 ${idx+1}: ${tfName}`;
+244:         }
+245:     });
+246: }
+247: 
+248: // 4. 바이낸스 REST API 연동 및 데이터 파싱 (Historical Data Loader for 4-Split Charts)
+249: async function 최초과거데이터로드() {
+250:     await 탭전환시분할차트데이터로드(상태.기본코인);
+251: }
+252: 
+253: // 탭 전환 시 4분할 차트 데이터를 비동기 병렬 로드
+254: async function 탭전환시분할차트데이터로드(symbol) {
+255:     const coin = 상태.코인목록[symbol];
+256:     if (!coin) return;
+257: 
+258:     // 4개 분할 차트별로 비동기 로드 프로미스들 동시 가동
+259:     const 로드프로미스들 = 상태.차트객체.분할차트들.map((_, idx) => {
+260:         return 분할차트캔들데이터로드(symbol, idx);
+261:     });
+262:     
+263:     await Promise.all(로드프로미스들);
+264:     
+265:     // 로드 완료 후 렌더링
+266:     분할차트들렌더링();
+267: }
+268: 
+269: async function 분할차트캔들데이터로드(symbol, chartIdx) {
+270:     const coin = 상태.코인목록[symbol];
+271:     const chartData = 상태.차트객체.분할차트들[chartIdx];
+272:     if (!coin || !chartData) return;
+273: 
+274:     const interval = chartData.시간단위; // "1h", "4h" 등
+275: 
+276:     try {
+277:         const response = await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=${interval}&limit=150`);
+278:         if (!response.ok) throw new Error(`${interval} API 호출 실패`);
+279: 
+280:         const rawData = await response.json();
+281:         const formattedCandles = rawData.map(c => ({
+282:             time: Math.floor(c[0] / 1000),
+283:             open: parseFloat(c[1]),
+284:             high: parseFloat(c[2]),
+285:             low: parseFloat(c[3]),
+286:             close: parseFloat(c[4]),
+287:             volume: parseFloat(c[5])
+288:         }));
+289: 
+290:         chartData.캔들데이터 = formattedCandles;
+291:         
+292:         // 대표 틱 실시간 기준선 동기화 (최초 1개 차트 데이터 기준)
+293:         if (chartIdx === 0 && formattedCandles.length > 0) {
+294:             coin.현재가 = formattedCandles[formattedCandles.length - 1].close;
+295:             coin.어제종가 = formattedCandles[0].close;
+296:             coin.최고24h = Math.max(...formattedCandles.map(c => c.high));
+297:             coin.최저24h = Math.min(...formattedCandles.map(c => c.low));
+298:             coin.캔들데이터 = [...formattedCandles]; // 퀀트 모듈 분석 활성화를 위한 버퍼 동기화
+299:         }
+300: 
+301:         console.log(`[Binance Futures] ${symbol} ${interval} 과거 캔들 ${formattedCandles.length}개 적재 완료.`);
+302:     } catch (err) {
+303:         console.warn(`[CORS/Network Alert] ${symbol} ${interval} 로드 실패. 가상 캔들 구성:`, err.message);
+304:         CORS분할폴백데이터빌드(symbol, chartIdx);
+305:     }
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

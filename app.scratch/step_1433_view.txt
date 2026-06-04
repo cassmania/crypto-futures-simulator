@@ -1,0 +1,69 @@
+Created At: 2026-05-29T05:53:11Z
+Completed At: 2026-05-29T05:53:11Z
+File Path: `file:///C:/Users/Administrator/source/repos/crypto-futures-simulator/app.js`
+Total Lines: 3402
+Total Bytes: 153573
+Showing lines 300 to 360
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+300: async function 전체분할차트데이터로드() {
+301:     const 로드프로미스들 = 상태.차트객체.분할차트들.map((_, idx) => {
+302:         return 분할차트캔들데이터로드(idx);
+303:     });
+304:     
+305:     await Promise.all(로드프로미스들);
+306:     
+307:     // 로드 완료 후 렌더링
+308:     분할차트들렌더링();
+309: }
+310: 
+311: // 특정 단일 코인 탭 전환 시 8개 차트 전체를 해당 코인으로 맞춰주는 하이브리드 로드 지원
+312: async function 탭전환시분할차트데이터로드(symbol) {
+313:     상태.차트객체.분할차트들.forEach(c => {
+314:         c.코인심볼 = symbol;
+315:     });
+316:     차트설정저장();
+317:     시간단위UI동기화();
+318:     await 전체분할차트데이터로드();
+319: }
+320: 
+321: async function 분할차트캔들데이터로드(chartIdx) {
+322:     const chartData = 상태.차트객체.분할차트들[chartIdx];
+323:     if (!chartData) return;
+324: 
+325:     const symbol = chartData.코인심볼;
+326:     const interval = chartData.시간단위;
+327:     const coin = 상태.코인목록[symbol];
+328:     if (!coin) return;
+329: 
+330:     try {
+331:         const response = await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=${interval}&limit=150`);
+332:         if (!response.ok) throw new Error(`${interval} API 호출 실패`);
+333: 
+334:         const rawData = await response.json();
+335:         const formattedCandles = rawData.map(c => ({
+336:             time: Math.floor(c[0] / 1000),
+337:             open: parseFloat(c[1]),
+338:             high: parseFloat(c[2]),
+339:             low: parseFloat(c[3]),
+340:             close: parseFloat(c[4]),
+341:             volume: parseFloat(c[5])
+342:         }));
+343: 
+344:         chartData.캔들데이터 = formattedCandles;
+345:         
+346:         // 각 코인의 실시간 시뮬레이션용 데이터 버퍼도 항상 함께 완벽히 초기화하여 퀀트 분석 즉각 구동 보장
+347:         if (formattedCandles.length > 0) {
+348:             coin.현재가 = formattedCandles[formattedCandles.length - 1].close;
+349:             coin.어제종가 = formattedCandles[0].close;
+350:             coin.최고24h = Math.max(...formattedCandles.map(c => c.high));
+351:             coin.최저24h = Math.min(...formattedCandles.map(c => c.low));
+352:             coin.캔들데이터 = [...formattedCandles];
+353:         }
+354: 
+355:         console.log(`[Binance Futures] Chart ${chartIdx+1} (${symbol} ${interval}) 과거 캔들 ${formattedCandles.length}개 적재 완료.`);
+356:     } catch (err) {
+357:         console.warn(`[CORS/Network Alert] ${symbol} ${interval} 로드 실패. 가상 캔들 구성:`, err.message);
+358:         CORS분할폴백데이터빌드(symbol, chartIdx);
+359:     }
+360: }
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

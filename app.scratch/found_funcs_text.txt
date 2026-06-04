@@ -1,0 +1,47 @@
+Created At: 2026-05-29T05:16:00Z
+Completed At: 2026-05-29T05:16:01Z
+
+				The command completed successfully.
+				Output:
+				
+LineNumber Line                                                                              
+---------- ----                                                                              
+       106 function 초기코인데이터정의() {                                                            
+       190 function 차트시스템초기화() {                                                             
+       253 function 시간단위UI동기화() {                                                            
+       283 function 차트설정저장() {                                                               
+       291 async function 최초과거데이터로드() {                                                      
+       296 async function 전체분할차트데이터로드() {                                                    
+       308 async function 탭전환시분할차트데이터로드(symbol) {                                            
+       317 async function 분할차트캔들데이터로드(chartIdx) {                                            
+       359 function CORS분할폴백데이터빌드(symbol, chartIdx) {                                        
+       413 function 분할차트들렌더링() {                                                             
+       439 function 매핑지표데이터(times, values) {                                                 
+       447 function 바이낸스웹소켓연결() {                                                            
+       522 function 웹소켓스트림갱신() {                                                             
+       531 function 실시간캔들메시지파싱(data) {                                                       
+       671 function 실시간호가메시지파싱(data, symbol) {                                               
+       685 function 호가창렌더
+<truncated 3400 bytes>
+시각텍스트() {                                                            
+      2031 function 재생효과음(audioId) {                                                         
+      2050 function AI추천분석및업데이트(symbol) {                                                    
+      2383 function AI추천타점적용() {                                                             
+      2435 window.시간단위변경액션 = async function(chartIdx, tf) {                                  
+      2478 window.차트코인변경액션 = async function(chartIdx, symbol) {                              
+      2526 window.차트클릭포커스액션 = function(chartIdx, event) {                                    
+      2565 window.활성차트강조테두리 = function(activeIdx) {                                          
+      2579 window.차트최대화토글 = function(chartIdx) {                                             
+      2641 function 실시간시세REST폴러() {                                                          
+      2711 function REST폴링데이터수입(symbol, 현재가, asks, bids) {                                   
+      2842 function 모의매매상태저장() {                                                             
+      2860 function 모의매매상태복원() {                                                             
+      2895 function 계산CCI(highs, lows, closes, period = 20) {                                
+      2924 function 계산스토캐스틱(highs, lows, closes, periodK = 14, periodD = 3, smoothingK = 3) {
+      2948 function 계산VWAP(candles) {                                                        
+      2964 function 계산볼린저밴드(closes, period = 20, stdDevMultiplier = 2) {                     
+      2982 function 계산피보나치되돌림(high, low) {                                                   
+      2996 function 계산VPVR매물대(candles, priceDecimal = 2) {                                   
+
+
+

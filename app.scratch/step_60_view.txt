@@ -1,0 +1,45 @@
+Created At: 2026-05-28T23:21:08Z
+Completed At: 2026-05-28T23:21:08Z
+File Path: `file:///C:/Users/Administrator/source/repos/crypto-futures-simulator/app.js`
+Total Lines: 1750
+Total Bytes: 73051
+Showing lines 320 to 356
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+320:         let color = '#26a69a';
+321:         if (val < 0) color = '#ef5350';
+322:         return { time: t, value: val, color: color };
+323:     }).filter(d => d.value !== undefined);
+324:     상태.차트객체.MACD히스토그램시리즈.setData(histData);
+325: 
+326:     상태.차트객체.메인차트.timeScale().fitContent();
+327: }
+328: 
+329: function 매핑지표데이터(times, values) {
+330:     return times.map((t, idx) => ({
+331:         time: t,
+332:         value: values[idx]
+333:     })).filter(d => d.value !== undefined && !isNaN(d.value));
+334: }
+335: 
+336: // 6. MEXC WebSocket 실시간 스트리밍 시스템 (WebSocket Engine)
+337: function MEXC웹소켓연결() {
+338:     if (상태.웹소켓인스턴스) {
+339:         상태.웹소켓인스턴스.close();
+340:     }
+341: 
+342:     const statusDot = document.getElementById("mexc-status-dot");
+343:     const statusText = document.getElementById("mexc-status-text");
+344: 
+345:     // MEXC Spot 공식 퍼블릭 웹소켓 주소
+346:     const wsUrl = "wss://wbs.mexc.com/ws";
+347:     
+348:     console.log("[MEXC WS] 웹소켓 연결 시도 중...");
+349:     상태.웹소켓인스턴스 = new WebSocket(wsUrl);
+350: 
+351:     상태.웹소켓인스턴.onopen = () => {
+352:         상태.웹소켓연결상태 = true;
+353:         console.log("[MEXC WS] 웹소켓 서버와 정상 연결되었습니다.");
+354:         
+355:         if (statusDot && statusText) {
+356:             statusDot.className = "status-dot green";
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

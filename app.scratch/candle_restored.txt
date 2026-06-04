@@ -1,0 +1,51 @@
+"// Kline 실시간 수신 핸들러 (4분할 실시간 틱 갱신 및 1m 신호 감지 병합)
+function 실시간캔들메시지파싱(data) {
+    const symbol = data.s; // 심볼 (예: BTCUSDT)
+    const coin = 상태.코인목록[symbol];
+    if (!coin) return;
+
+    // 바이낸스 K라인 페이로드 규격: t: 시작시각(ms), o: 시가, h: 고가, l: 저가, c: 종가, v: 거래량
+    const k = data.k;
+    const candleTime = Math.floor(k.t / 1000);
+    const 현재가 = parseFloat(k.c);
+
+    const 실시간캔들 = {
+        time: candleTime,
+        open: parseFloat(k.o),
+        high: parseFloat(k.h),
+        low: parseFloat(k.l),
+        close: 현재가,
+        volume: parseFloat(k.v)
+    };
+
+    coin.현재가 = 현재가;
+
+    // 1. 실시간 1분봉 버퍼 누적 및 신호 가동 (분할 시간대와 별개로 1분봉으로 타점 분석 유지)
+    const candles = coin.캔들데이터;
+    if (candles.length === 0) {
+        candles.push(실시간캔들);
+    } else {
+        const lastCandle = candles[candles.length - 1];
+        
+        // 동일 시간대 분봉 캔들 실시간 데이터 갱신
+        if (candleTime === lastCandle.time) {
+            candles[candles.length - 1] = 실시간캔들;
+        } else if (candleTime > lastCandle.time) {
+            // 1분 지나서 새로운 캔들 영역 진입 시 추가 삽입
+            candles.push(실시간캔들);
+            if (candles.length > 500) candles.shift();
+
+            // 신규 1분봉 확정 시 기술 지표 신호 분석 가동
+            분석및신호생성(symbol);
+        }
+    }
+
+    // 24시간 최고/최저가 실시간 갱신
+    if (현재가 > coin.최고24h) coin.최고24h = 현재가;
+    if (현재가 < coin.최저24h) coin.최저24h = 현재가;
+
+    // 현재 보고 있는 코인 화면 실시간 연동
+    if (symbol === 상태.기본코인) {
+        const priceEl = document.getElementById("current-price");
+        const midPriceEl = document.getElemen
+<truncated 3227 bytes>

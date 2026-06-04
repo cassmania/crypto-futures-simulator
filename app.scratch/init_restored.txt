@@ -1,0 +1,53 @@
+"// 3. 차트 시스템 구현 (TradingView Charts 8-Split Grid System Core)
+function 차트시스템초기화() {
+    const chartOptions = {
+        layout: {
+            background: { type: 'solid', color: '#0B0E11' },
+            textColor: '#848E9C',
+            fontSize: 9,
+            fontFamily: 'Inter'
+        },
+        grid: {
+            vertLines: { color: '#1F2226' },
+            horzLines: { color: '#1F2226' }
+        },
+        crosshair: {
+            mode: LightweightCharts.CrosshairMode.Normal,
+            vertLine: { color: '#848E9C', labelBackgroundColor: '#1E2329' },
+            horzLine: { color: '#848E9C', labelBackgroundColor: '#1E2329' }
+        },
+        rightPriceScale: {
+            borderColor: '#2B3139',
+            visible: true
+        },
+        timeScale: {
+            borderColor: '#2B3139',
+            timeVisible: true,
+            secondsVisible: false
+        }
+    };
+
+    상태.차트객체.분할차트들.forEach((chartData, idx) => {
+        const container = document.getElementById(`chart-container-${idx}`);
+        if (!container) return;
+
+        container.innerHTML = "";
+
+        chartData.메인차트 = LightweightCharts.createChart(container, chartOptions);
+        
+        chartData.캔들시리즈 = chartData.메인차트.addCandlestickSeries({
+            upColor: '#f6465d',
+            downColor: '#0066ff',
+            borderUpColor: '#f6465d',
+            borderDownColor: '#0066ff',
+            wickUpColor: '#f6465d',
+            wickDownColor: '#0066ff'
+        });
+
+        chartData.MA7시리즈 = chartData.메인차트.addLineSeries({ color: '#F0B90B', lineWidth: 1, title: 'MA(7)' });
+        chartData.MA25시리즈 = chartData.메인차트.addLineSeries({ color: '#03A9F4', lineWidth: 1, title: 'MA(25)' });
+        chartData.MA99시리즈 = chartData.메인차트.addLineSeries({ color: '#E040FB', lineWidth: 1, title: 'MA(99)' });
+
+        const resizeObserver = new ResizeObserver(entries => {
+           
+<truncated 5262 bytes>

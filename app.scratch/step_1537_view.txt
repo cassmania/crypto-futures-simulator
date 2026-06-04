@@ -1,0 +1,77 @@
+Created At: 2026-05-29T06:06:40Z
+Completed At: 2026-05-29T06:06:40Z
+File Path: `file:///C:/Users/Administrator/source/repos/crypto-futures-simulator/app.js`
+Total Lines: 3462
+Total Bytes: 157126
+Showing lines 313 to 380
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+313: async function 탭전환시분할차트데이터로드(symbol) {
+314:     // 1. 이미 8개 차트 중 해당 코인을 띄우고 있는 차트가 있는지 지능적으로 선색인
+315:     let targetChartIdx = 상태.차트객체.분할차트들.findIndex(c => c.코인심볼 === symbol);
+316:     
+317:     if (targetChartIdx !== -1) {
+318:         // 이미 해당 코인을 띄우고 있는 차트가 있다면, 그 차트로 포커스(활성차트) 인덱스 변경
+319:         상태.차트객체.활성인덱스 = targetChartIdx;
+320:         window.활성차트강조테두리(targetChartIdx);
+321:         window.차트지지저항선드로잉(targetChartIdx);
+322:     } else {
+323:         // 어디에도 해당 코인이 없다면, 현재 포커스된 차트(활성인덱스)의 코인을 해당 코인으로 교체
+324:         const activeIdx = 상태.차트객체.활성인덱스 || 0;
+325:         const chartData = 상태.차트객체.분할차트들[activeIdx];
+326:         if (chartData) {
+327:             chartData.코인심볼 = symbol;
+328:             
+329:             // 상단 select 드롭다운 선택값도 연동 변경
+330:             const selectEl = document.getElementById(`chart-symbol-select-${activeIdx}`);
+331:             if (selectEl) {
+332:                 selectEl.value = symbol;
+333:             }
+334:             
+335:             // 해당 차트의 데이터를 새로 가져옴
+336:             await 분할차트캔들데이터로드(activeIdx);
+337:             
+338:             // 해당 차트 개별 렌더링
+339:     
+<truncated 181 bytes>
+이터);
+341:                 
+342:                 const closes = chartData.캔들데이터.map(c => c.close);
+343:                 const times = chartData.캔들데이터.map(c => c.time);
+344:                 
+345:                 const ma7 = 계산SMA(closes, 7);
+346:                 const ma25 = 계산SMA(closes, 25);
+347:                 const ma99 = 계산SMA(closes, 99);
+348:                 
+349:                 chartData.MA7시리즈.setData(매핑지표데이터(times, ma7));
+350:                 chartData.MA25시리즈.setData(매핑지표데이터(times, ma25));
+351:                 chartData.MA99시리즈.setData(매핑지표데이터(times, ma99));
+352:                 
+353:                 chartData.메인차트.timeScale().fitContent();
+354:             }
+355:             
+356:             window.활성차트강조테두리(activeIdx);
+357:             window.차트지지저항선드로잉(activeIdx);
+358:         }
+359:     }
+360:     
+361:     // 차트 개별 코인 설정 로컬 스토리지에 영구 저장 및 시간단위 동기화
+362:     차트설정저장();
+363:     시간단위UI동기화();
+364: }
+365: 
+366: async function 분할차트캔들데이터로드(chartIdx) {
+367:     const chartData = 상태.차트객체.분할차트들[chartIdx];
+368:     if (!chartData) return;
+369: 
+370:     const symbol = chartData.코인심볼;
+371:     const interval = chartData.시간단위;
+372:     const coin = 상태.코인목록[symbol];
+373:     if (!coin) return;
+374: 
+375:     try {
+376:         const response = await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=${interval}&limit=150`);
+377:         if (!response.ok) throw new Error(`${interval} API 호출 실패`);
+378: 
+379:         const rawData = await response.json();
+380:         const formattedCandles = rawData.map(c => ({
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

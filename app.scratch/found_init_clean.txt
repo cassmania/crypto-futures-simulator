@@ -1,0 +1,44 @@
+"// 코인 데이터 기본 정적 정의 및 localStorage 알트코인 목록 복원
+function 초기코인데이터정의() {
+    // A. 기본 정의 코인 이식
+    Object.keys(코인정의).forEach(symbol => {
+        상태.코인목록[symbol] = {
+            심볼: symbol,
+            이름: 코인정의[symbol].이름,
+            현재가: 코인정의[symbol].시작가,
+            어제종가: 코인정의[symbol].시작가 * 0.98,
+            최고24h: 코인정의[symbol].시작가 * 1.02,
+            최저24h: 코인정의[symbol].시작가 * 0.97,
+            캔들데이터: [],
+            호가매도: [], 
+            호가매수: [], 
+            소수점: 코인정의[symbol].소수점,
+            수량소수점: 코인정의[symbol].수량소수점
+        };
+    });
+
+    // B. localStorage 저장된 코인 목록 복원
+    try {
+        const 저장된목록 = localStorage.getItem("선물시뮬레이터_추가코인");
+        if (저장된목록) {
+            const 코인들 = JSON.parse(저장된목록);
+            코인들.forEach(symbol => {
+                if (!상태.코인목록[symbol]) {
+                    상태.코인목록[symbol] = {
+                        심볼: symbol,
+                        이름: `${symbol.replace("USDT", "")}/USDT Perpetual`,
+                        현재가: 10.00,
+                        어제종가: 9.80,
+                        최고24h: 10.20,
+                        최저24h: 9.70,
+                        캔들데이터: [],
+                        호가매도: [],
+                        호가매수: [],
+                        소수점: symbol.startsWith("BTC") ? 2 : 3,
+                        수량소수점: symbol.startsWith("BTC") ? 3 : 2
+                    };
+                    
+                    if (symbol.startsWith("DOGE") || symbol.startsWith("SHIB")) {
+                        상태.코인목록[symbol].소수점 = 5;
+                        상태.코
+<truncated 4075 bytes>

@@ -1,0 +1,39 @@
+Created At: 2026-05-29T04:46:22Z
+Completed At: 2026-05-29T04:46:22Z
+File Path: `file:///C:/Users/Administrator/source/repos/crypto-futures-simulator/app.js`
+Total Lines: 2772
+Total Bytes: 123310
+Showing lines 240 to 270
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+240:                 chartData.메인차트.resize(container.clientWidth, container.clientHeight);
+241:             }
+242:         });
+243:     });
+244: 
+245:     // 시간 단위 선택 UI 버튼 및 타이틀 동기화
+246:     시간단위UI동기화();
+247: }
+248: 
+249: function 시간단위UI동기화() {
+250:     상태.차트객체.분할차트들.forEach((chartData, idx) => {
+251:         // 기존 active 클래스 전부 제거
+252:         const buttons = document.querySelectorAll(`.timeframe-selector[data-chart-idx="${idx}"] .btn-tf`);
+253:         buttons.forEach(btn => btn.classList.remove("active"));
+254:         
+255:         // 현재 상태에 부합하는 시간 단위 버튼 활성화
+256:         const targetBtn = document.getElementById(`btn-tf-${idx}-${chartData.시간단위}`);
+257:         if (targetBtn) {
+258:             targetBtn.classList.add("active");
+259:         }
+260:         
+261:         // 헤더 타이틀 갱신
+262:         const titleEl = document.getElementById(`chart-title-${idx}`);
+263:         if (titleEl) {
+264:             const tfName = {
+265:                 "1m": "1분봉 (1m)",
+266:                 "1h": "1시간봉 (1h)",
+267:                 "4h": "4시간봉 (4h)",
+268:                 "8h": "8시간봉 (8h)",
+269:                 "12h": "12시간봉 (12h)",
+270:                 "1d": "일봉 (1d)",
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

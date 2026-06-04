@@ -1,0 +1,44 @@
+Created At: 2026-05-28T23:27:05Z
+Completed At: 2026-05-28T23:27:05Z
+File Path: `file:///C:/Users/Administrator/source/repos/crypto-futures-simulator/app.js`
+Total Lines: 1539
+Total Bytes: 63282
+Showing lines 300 to 335
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+300: }
+301: 
+302: // 6. 바이낸스 WebSocket 실시간 스트리밍 시스템 (WebSocket Combined streams Engine)
+303: function 바이낸스웹소켓연결() {
+304:     if (상태.웹소켓인스턴스) {
+305:         상태.웹소켓인스턴스.close();
+306:     }
+307: 
+308:     const statusDot = document.getElementById("binance-status-dot");
+309:     const statusText = document.getElementById("binance-status-text");
+310: 
+311:     // 바이낸스는 여러 스트림을 결합(Combined Streams)하여 하나의 소켓 포트로 편리하게 제공합니다.
+312:     // 연결 시점 등록된 모든 코인을 주소 스트림으로 취합
+313:     const streamsList = [];
+314:     Object.keys(상태.코인목록).forEach(symbol => {
+315:         const sym = symbol.toLowerCase();
+316:         streamsList.push(`${sym}@kline_1m`);
+317:         streamsList.push(`${sym}@depth5`); // 5단계 호가 깊이
+318:     });
+319: 
+320:     const wsUrl = `wss://stream.binance.com:9443/stream?streams=${streamsList.join("/")}`;
+321:     
+322:     console.log("[Binance WS] 웹소켓 다중 스트림 연결 시도...");
+323:     상태.웹소켓인스턴스 = new WebSocket(wsUrl);
+324: 
+325:     상태.웹소켓인스턴스.onopen = () => {
+326:         상태.웹소켓연결상태 = true;
+327:         console.log("[Binance WS] 바이낸스 라이브 웹소켓 연결 성공.");
+328:         
+329:         if (statusDot && statusText) {
+330:             statusDot.className = "status-dot green";
+331:             statusText.innerText = "Binance 라이브 시세 연동 중";
+332:             statusText.className = "status-text text-green";
+333:         }
+334:     };
+335: 
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

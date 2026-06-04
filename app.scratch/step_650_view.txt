@@ -1,0 +1,81 @@
+Created At: 2026-05-29T01:08:17Z
+Completed At: 2026-05-29T01:08:18Z
+File Path: `file:///C:/Users/Administrator/source/repos/crypto-futures-simulator/app.js`
+Total Lines: 2732
+Total Bytes: 120151
+Showing lines 280 to 360
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+280:         const rawData = await response.json();
+281:         const formattedCandles = rawData.map(c => ({
+282:             time: Math.floor(c[0] / 1000),
+283:             open: parseFloat(c[1]),
+284:             high: parseFloat(c[2]),
+285:             low: parseFloat(c[3]),
+286:             close: parseFloat(c[4]),
+287:             volume: parseFloat(c[5])
+288:         }));
+289: 
+290:         chartData.캔들데이터 = formattedCandles;
+291:         
+292:         // 대표 틱 실시간 기준선 동기화 (최초 1개 차트 데이터 기준)
+293:         if (chartIdx === 0 && formattedCandles.length > 0) {
+294:             coin.현재가 = formattedCandles[formattedCandles.length - 1].close;
+295:             coin.어제종가 = formattedCandles[0].close;
+296:             coin.최고24h = Math.max(...formattedCandles.map(c => c.high));
+297:             coin.최저24h = Math.min(...formattedCandles.map(c => c.low));
+298:         }
+299: 
+300:         console.log(`[Binance Futures] ${symbol} ${interval} 과거 캔들 ${formattedCandles.length}개 적재 완료.`);
+301:     } catch (err) {
+302:         console.warn(`[CORS/Network Alert] ${symbol} ${interval} 로드 실패. 가상 캔들 구성:`, err.message);
+303:         CORS분할폴백데이터빌드(symbol, chartIdx);
+304:     }
+305: }
+306: 
+307: // 브라우저 CORS 차단 대비용 가상 분할 차트 캔들 빌더
+308: function CORS분할폴백데이터빌드(symbol, chartIdx) {
+309:     const coin = 상태.코인목록[symbol];
+310:     const chartData = 상태.차트객체.분할차트들[chartId
+<truncated 399 bytes>
+위초 = 60; // 기본 1분
+321:     if (interval === "1h") 봉단위초 = 3600;
+322:     else if (interval === "4h") 봉단위초 = 14400;
+323:     else if (interval === "8h") 봉단위초 = 28800;
+324:     else if (interval === "12h") 봉단위초 = 43200;
+325:     else if (interval === "1d") 봉단위초 = 86400;
+326:     else if (interval === "1w") 봉단위초 = 604800;
+327: 
+328:     let 시간 = Math.floor(Date.now() / 1000) - 150 * 봉단위초;
+329:     const 캔들들 = [];
+330:     const 변동성 = symbol.startsWith("BTC") ? 0.001 : 0.003;
+331: 
+332:     for (let i = 0; i < 150; i++) {
+333:         let open = 가격;
+334:         let change = 가격 * 변동성 * (Math.random() - 0.485) * 2;
+335:         let close = open + change;
+336:         let high = Math.max(open, close) + (가격 * 변동성 * Math.random() * 0.4);
+337:         let low = Math.min(open, close) - (가격 * 변동성 * Math.random() * 0.4);
+338:         
+339:         캔들들.push({
+340:             time: 시간,
+341:             open: parseFloat(open.toFixed(coin.소수점)),
+342:             high: parseFloat(high.toFixed(coin.소수점)),
+343:             low: parseFloat(low.toFixed(coin.소수점)),
+344:             close: parseFloat(close.toFixed(coin.소수점)),
+345:             volume: parseFloat((Math.random() * 200 + 20).toFixed(2))
+346:         });
+347:         가격 = close;
+348:         시간 += 봉단위초;
+349:     }
+350:     
+351:     chartData.캔들데이터 = 캔들들;
+352:     if (chartIdx === 0) {
+353:         coin.현재가 = 가격;
+354:         coin.어제종가 = 캔들들[0].close;
+355:         coin.최고24h = Math.max(...캔들들.map(c => c.high));
+356:         coin.최저24h = Math.min(...캔들들.map(c => c.low));
+357:     }
+358: }
+359: 
+360: // 5. 4분할 TradingView 차트에 지표 및 시세 일괄 렌더링
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

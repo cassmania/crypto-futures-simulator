@@ -1,0 +1,2 @@
+"// 3. 차트 시스템 구현 (Lightweight Charts)
+function 차트시스템초기화() {"

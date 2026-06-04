@@ -1,0 +1,59 @@
+Created At: 2026-05-29T05:24:27Z
+Completed At: 2026-05-29T05:24:28Z
+File Path: `file:///C:/Users/Administrator/source/repos/crypto-futures-simulator/app.js`
+Total Lines: 3212
+Total Bytes: 142844
+Showing lines 310 to 360
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+310:         c.코인심볼 = symbol;
+311:     });
+312:     차트설정저장();
+313:     시간단위UI동기화();
+314:     await 전체분할차트데이터로드();
+315: }
+316: 
+317: async function 분할차트캔들데이터로드(chartIdx) {
+318:     const chartData = 상태.차트객체.분할차트들[chartIdx];
+319:     if (!chartData) return;
+320: 
+321:     const symbol = chartData.코인심볼;
+322:     const interval = chartData.시간단위;
+323:     const coin = 상태.코인목록[symbol];
+324:     if (!coin) return;
+325: 
+326:     try {
+327:         const response = await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=${interval}&limit=150`);
+328:         if (!response.ok) throw new Error(`${interval} API 호출 실패`);
+329: 
+330:         const rawData = await response.json();
+331:         const formattedCandles = rawData.map(c => ({
+332:             time: Math.floor(c[0] / 1000),
+333:             open: parseFloat(c[1]),
+334:             high: parseFloat(c[2]),
+335:             low: parseFloat(c[3]),
+336:             close: parseFloat(c[4]),
+337:             volume: parseFloat(c[5])
+338:         }));
+339: 
+340:         chartData.캔들데이터 = formattedCandles;
+341:         
+342:         // 메인 퀀트 분석 활성화를 위한 대표 코인(기본코인) 버퍼 동기화
+343:         if (symbol === 상태.기본코인 && formattedCandles.length > 0) {
+344:             coin.현재가 = formattedCandles[formattedCandles.length - 1].close;
+345:             coin.어제종가 = formattedCandles[0].close;
+346:             coin.최고24h = Math.max(...formattedCandles.map(c => c.high));
+347:             coin.최저24h = Math.min(...formattedCandles.map(c => c.low));
+348:             coin.캔들데이터 = [...formattedCandles];
+349:         }
+350: 
+351:         console.log(`[Binance Futures] Chart ${chartIdx+1} (${symbol} ${interval}) 과거 캔들 ${formattedCandles.length}개 적재 완료.`);
+352:     } catch (err) {
+353:         console.warn(`[CORS/Network Alert] ${symbol} ${interval} 로드 실패. 가상 캔들 구성:`, err.message);
+354:         CORS분할폴백데이터빌드(symbol, chartIdx);
+355:     }
+356: }
+357: 
+358: // 브라우저 CORS 차단 대비용 가상 분할 차트 캔들 빌더
+359: function CORS분할폴백데이터빌드(symbol, chartIdx) {
+360:     const coin = 상태.코인목록[symbol];
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

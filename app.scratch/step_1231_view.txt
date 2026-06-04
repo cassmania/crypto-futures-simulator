@@ -1,0 +1,49 @@
+Created At: 2026-05-29T05:36:46Z
+Completed At: 2026-05-29T05:36:46Z
+File Path: `file:///C:/Users/Administrator/source/repos/crypto-futures-simulator/app.js`
+Total Lines: 3212
+Total Bytes: 143277
+Showing lines 280 to 320
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+280: }
+281: 
+282: // 8개 차트 개별 코인 및 시간 설정 로컬스토리지 저장
+283: function 차트설정저장() {
+284:     const 코인설정 = 상태.차트객체.분할차트들.map(c => c.코인심볼);
+285:     const 시간설정 = 상태.차트객체.분할차트들.map(c => c.시간단위);
+286:     localStorage.setItem("선물시뮬레이터_차트코인설정", JSON.stringify(코인설정));
+287:     localStorage.setItem("선물시뮬레이터_차트시간설정", JSON.stringify(시간설정));
+288: }
+289: 
+290: // 4. 바이낸스 REST API 연동 및 데이터 파싱 (Historical Data Loader for 8-Split Charts)
+291: async function 최초과거데이터로드() {
+292:     await 전체분할차트데이터로드();
+293: }
+294: 
+295: // 전체 8개 차트 데이터를 독립적으로 로드
+296: async function 전체분할차트데이터로드() {
+297:     const 로드프로미스들 = 상태.차트객체.분할차트들.map((_, idx) => {
+298:         return 분할차트캔들데이터로드(idx);
+299:     });
+300:     
+301:     await Promise.all(로드프로미스들);
+302:     
+303:     // 로드 완료 후 렌더링
+304:     분할차트들렌더링();
+305: }
+306: 
+307: // 특정 단일 코인 탭 전환 시 8개 차트 전체를 해당 코인으로 맞춰주는 하이브리드 로드 지원
+308: async function 탭전환시분할차트데이터로드(symbol) {
+309:     상태.차트객체.분할차트들.forEach(c => {
+310:         c.코인심볼 = symbol;
+311:     });
+312:     차트설정저장();
+313:     시간단위UI동기화();
+314:     await 전체분할차트데이터로드();
+315: }
+316: 
+317: async function 분할차트캔들데이터로드(chartIdx) {
+318:     const chartData = 상태.차트객체.분할차트들[chartIdx];
+319:     if (!chartData) return;
+320: 
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

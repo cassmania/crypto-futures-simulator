@@ -1,0 +1,81 @@
+Created At: 2026-05-29T00:07:40Z
+Completed At: 2026-05-29T00:07:40Z
+File Path: `file:///C:/Users/Administrator/source/repos/crypto-futures-simulator/app.js`
+Total Lines: 1814
+Total Bytes: 74324
+Showing lines 210 to 355
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+210:         const titleEl = document.getElementById(`chart-title-${idx}`);
+211:         if (titleEl) {
+212:             const tfName = {
+213:                 "1h": "1시간봉 (1h)",
+214:                 "4h": "4시간봉 (4h)",
+215:                 "8h": "8시간봉 (8h)",
+216:                 "12h": "12시간봉 (12h)",
+217:                 "1d": "일봉 (1d)",
+218:                 "1w": "주봉 (1w)"
+219:             }[chartData.시간단위];
+220:             titleEl.innerHTML = `<i class="fa-solid fa-chart-line text-yellow" style="margin-right:6px;"></i>차트 ${idx+1}: ${tfName}`;
+221:         }
+222:     });
+223: }
+224: 
+225: // 4. 바이낸스 REST API 연동 및 데이터 파싱 (Historical Data Loader)
+226: async function 최초과거데이터로드() {
+227:     for (const symbol of Object.keys(상태.코인목록)) {
+228:         await 바이낸스과거캔들데이터로드(symbol);
+229:     }
+230:     차트데이터렌더링();
+231: }
+232: 
+233: async function 바이낸스과거캔들데이터로드(symbol) {
+234:     const coin = 상태.코인목록[symbol];
+235:     if (!coin) return;
+236: 
+237:     try {
+238:         // 바이낸스 USD-M 선물(Perpetual Futures) K-Line API 호출 (1분봉 150개 요청)
+239:         // 선물 거래 시뮬레이터이므로 선물 전용 알트코인(HYPE 등)을 완벽히 수신하기 위해 fapi를 연동합니다.
+240:         const response = await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=1m&limit=150`);
+241:         
+242:         if (!response.ok) throw new Error("바이
+<truncated 3743 bytes>
+즈 || activeCoin.캔들데이터.length === 0) return;
+318: 
+319:     // 1. 캔들스틱 렌더링
+320:     상태.차트객체.캔들시리즈.setData(activeCoin.캔들데이터);
+321: 
+322:     // 2. 기술적 지표 연산
+323:     const closes = activeCoin.캔들데이터.map(c => c.close);
+324:     const times = activeCoin.캔들데이터.map(c => c.time);
+325: 
+326:     // SMA(이동평균) 라인 렌더링
+327:     const ma7 = 계산SMA(closes, 7);
+328:     const ma25 = 계산SMA(closes, 25);
+329:     const ma99 = 계산SMA(closes, 99);
+330:     상태.차트객체.MA7시리즈.setData(매핑지표데이터(times, ma7));
+331:     상태.차트객체.MA25시리즈.setData(매핑지표데이터(times, ma25));
+332:     상태.차트객체.MA99시리즈.setData(매핑지표데이터(times, ma99));
+333: 
+334:     // RSI 렌더링
+335:     const rsi = 계산RSI(closes, 14);
+336:     상태.차트객체.RSI시리즈.setData(매핑지표데이터(times, rsi));
+337: 
+338:     // MACD 렌더링
+339:     const macdData = 계산MACD(closes, 12, 26, 9);
+340:     상태.차트객체.MACD시리즈.setData(매핑지표데이터(times, macdData.macd));
+341:     상태.차트객체.MACD시그널시리즈.setData(매핑지표데이터(times, macdData.signal));
+342:     
+343:     const histData = times.map((t, idx) => {
+344:         const val = macdData.histogram[idx];
+345:         let color = '#26a69a';
+346:         if (val < 0) color = '#ef5350';
+347:         return { time: t, value: val, color: color };
+348:     }).filter(d => d.value !== undefined);
+349:     상태.차트객체.MACD히스토그램시리즈.setData(histData);
+350: 
+351:     상태.차트객체.메인차트.timeScale().fitContent();
+352:     
+353:     // 차트 로드 즉시 AI 추천 타점 초기 연산
+354:     AI추천분석및업데이트(상태.기본코인);
+355: }
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

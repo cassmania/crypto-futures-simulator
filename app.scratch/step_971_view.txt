@@ -1,0 +1,54 @@
+Created At: 2026-05-29T05:01:29Z
+Completed At: 2026-05-29T05:01:29Z
+File Path: `file:///C:/Users/Administrator/source/repos/crypto-futures-simulator/app.js`
+Total Lines: 2934
+Total Bytes: 131614
+Showing lines 295 to 340
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+295:     });
+296:     
+297:     await Promise.all(로드프로미스들);
+298:     
+299:     // 로드 완료 후 렌더링
+300:     분할차트들렌더링();
+301: }
+302: 
+303: // 특정 단일 코인 탭 전환 시 8개 차트 전체를 해당 코인으로 맞춰주는 하이브리드 로드 지원
+304: async function 탭전환시분할차트데이터로드(symbol) {
+305:     상태.차트객체.분할차트들.forEach(c => {
+306:         c.코인심볼 = symbol;
+307:     });
+308:     차트설정저장();
+309:     시간단위UI동기화();
+310:     await 전체분할차트데이터로드();
+311: }
+312: 
+313: async function 분할차트캔들데이터로드(chartIdx) {
+314:     const chartData = 상태.차트객체.분할차트들[chartIdx];
+315:     if (!chartData) return;
+316: 
+317:     const symbol = chartData.코인심볼;
+318:     const interval = chartData.시간단위;
+319:     const coin = 상태.코인목록[symbol];
+320:     if (!coin) return;
+321: 
+322:     try {
+323:         const response = await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=${interval}&limit=150`);
+324:         if (!response.ok) throw new Error(`${interval} API 호출 실패`);
+325: 
+326:         const rawData = await response.json();
+327:         const formattedCandles = rawData.map(c => ({
+328:             time: Math.floor(c[0] / 1000),
+329:             open: parseFloat(c[1]),
+330:             high: parseFloat(c[2]),
+331:             low: parseFloat(c[3]),
+332:             close: parseFloat(c[4]),
+333:             volume: parseFloat(c[5])
+334:         }));
+335: 
+336:         chartData.캔들데이터 = formattedCandles;
+337:         
+338:         // 메인 퀀트 분석 활성화를 위한 대표 코인(기본코인) 버퍼 동기화
+339:         if (symbol === 상태.기본코인 && formattedCandles.length > 0) {
+340:             coin.현재가 = formattedCandles[formattedCandles.length - 1].close;
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

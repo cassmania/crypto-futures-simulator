@@ -1,0 +1,69 @@
+Created At: 2026-05-29T05:36:49Z
+Completed At: 2026-05-29T05:36:49Z
+File Path: `file:///C:/Users/Administrator/source/repos/crypto-futures-simulator/app.js`
+Total Lines: 3212
+Total Bytes: 143277
+Showing lines 180 to 240
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+180:                     상태.차트객체.분할차트들[idx].시간단위 = tf;
+181:                 }
+182:             });
+183:         }
+184:     } catch (err) {
+185:         console.error("[Storage Restore Error] 코인 목록 및 즐겨찾기 복원 중 에러:", err);
+186:     }
+187: }
+188: 
+189: // 3. 차트 시스템 구현 (TradingView Charts 4-Split Grid)
+190: function 차트시스템초기화() {
+191:     상태.차트객체.분할차트들.forEach((chartData, idx) => {
+192:         const container = document.getElementById(`split-chart-canvas-${idx}`);
+193:         if (!container) return;
+194: 
+195:         // 공통 차트 테마 옵션 정의
+196:         const chartOptions = {
+197:             layout: {
+198:                 background: { type: 'solid', color: '#0B0E11' },
+199:                 textColor: '#848E9C',
+200:                 fontSize: 9,
+201:                 fontFamily: 'Inter'
+202:             },
+203:             grid: {
+204:                 vertLines: { color: '#1F2226' },
+205:                 horzLines: { color: '#1F2226' }
+206:             },
+207:             crosshair: {
+208:                 mode: LightweightCharts.CrosshairMode.Normal,
+209:                 vertLine: { color: '#848E9C', labelBackgroundColor: '#1E2329' },
+210:                 horzLine: { color: '#848E9C', labelBackgroundColor: '#1E2329' }
+211:             },
+212:             rightPriceScale: {
+213:                 borderColor: '#2B3139',
+214:                 visible: true
+215:             },
+216:             timeScale: {
+217:                 borderColor: '#2B3139',
+218:                 timeVisible: true,
+219:                 secondsVisible: false
+220:             }
+221:         };
+222: 
+223:         // A. 각 분할 차트 생성
+224:         chartData.메인차트 = LightweightCharts.createChart(container, chartOptions);
+225:         
+226:         // 캔들 시리즈 주입
+227:         chartData.캔들시리즈 = chartData.메인차트.addCandlestickSeries({
+228:             upColor: '#f6465d', // 상승(수익) = 빨간색 (한국 기준)
+229:             downColor: '#0066ff', // 하락(손실) = 파란색 (한국 기준)
+230:             borderUpColor: '#f6465d',
+231:             borderDownColor: '#0066ff',
+232:             wickUpColor: '#f6465d',
+233:             wickDownColor: '#0066ff'
+234:         });
+235: 
+236:         // 이동평균선(MA) 추가
+237:         chartData.MA7시리즈 = chartData.메인차트.addLineSeries({ color: '#F0B90B', lineWidth: 1, title: 'MA(7)' });
+238:         chartData.MA25시리즈 = chartData.메인차트.addLineSeries({ color: '#03A9F4', lineWidth: 1, title: 'MA(25)' });
+239:         chartData.MA99시리즈 = chartData.메인차트.addLineSeries({ color: '#E040FB', lineWidth: 1, title: 'MA(99)' });
+240: 
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

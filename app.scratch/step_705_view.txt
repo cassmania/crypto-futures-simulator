@@ -1,0 +1,69 @@
+Created At: 2026-05-29T04:39:39Z
+Completed At: 2026-05-29T04:39:39Z
+File Path: `file:///C:/Users/Administrator/source/repos/crypto-futures-simulator/app.js`
+Total Lines: 2742
+Total Bytes: 120836
+Showing lines 300 to 360
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+300: 
+301:         console.log(`[Binance Futures] ${symbol} ${interval} 과거 캔들 ${formattedCandles.length}개 적재 완료.`);
+302:     } catch (err) {
+303:         console.warn(`[CORS/Network Alert] ${symbol} ${interval} 로드 실패. 가상 캔들 구성:`, err.message);
+304:         CORS분할폴백데이터빌드(symbol, chartIdx);
+305:     }
+306: }
+307: 
+308: // 브라우저 CORS 차단 대비용 가상 분할 차트 캔들 빌더
+309: function CORS분할폴백데이터빌드(symbol, chartIdx) {
+310:     const coin = 상태.코인목록[symbol];
+311:     const chartData = 상태.차트객체.분할차트들[chartIdx];
+312:     if (!coin || !chartData) return;
+313: 
+314:     const interval = chartData.시간단위;
+315:     let 가격 = 100.00;
+316:     if (symbol.startsWith("BTC")) 가격 = 73000.00;
+317:     else if (symbol.startsWith("ETH")) 가격 = 2000.00;
+318:     else if (symbol.startsWith("SOL")) 가격 = 150.00;
+319:     else if (symbol.startsWith("HYPE")) 가격 = 61.50;
+320: 
+321:     let 봉단위초 = 60; // 기본 1분
+322:     if (interval === "1h") 봉단위초 = 3600;
+323:     else if (interval === "4h") 봉단위초 = 14400;
+324:     else if (interval === "8h") 봉단위초 = 28800;
+325:     else if (interval === "12h") 봉단위초 = 43200;
+326:     else if (interval === "1d") 봉단위초 = 86400;
+327:     else if (interval === "1w") 봉단위초 = 604800;
+328: 
+329:     let 시간 = Math.floor(Date.now() / 1000) - 150 * 봉단위초;
+330:     const 캔들들 = [];
+331:     const 변동성 = symbol.startsWith("BTC") ? 0.001 : 0.003;
+332: 
+333:     for (let i = 0; i < 150; i++) {
+334:         let open = 가격;
+335:         let change = 가격 * 변동성 * (Math.random() - 0.485) * 2;
+336:         let close = open + change;
+337:         let high = Math.max(open, close) + (가격 * 변동성 * Math.random() * 0.4);
+338:         let low = Math.min(open, close) - (가격 * 변동성 * Math.random() * 0.4);
+339:         
+340:         캔들들.push({
+341:             time: 시간,
+342:             open: parseFloat(open.toFixed(coin.소수점)),
+343:             high: parseFloat(high.toFixed(coin.소수점)),
+344:             low: parseFloat(low.toFixed(coin.소수점)),
+345:             close: parseFloat(close.toFixed(coin.소수점)),
+346:             volume: parseFloat((Math.random() * 200 + 20).toFixed(2))
+347:         });
+348:         가격 = close;
+349:         시간 += 봉단위초;
+350:     }
+351:     
+352:     chartData.캔들데이터 = 캔들들;
+353:     if (chartIdx === 0) {
+354:         coin.현재가 = 가격;
+355:         coin.어제종가 = 캔들들[0].close;
+356:         coin.최고24h = Math.max(...캔들들.map(c => c.high));
+357:         coin.최저24h = Math.min(...캔들들.map(c => c.low));
+358:         coin.캔들데이터 = [...캔들들]; // 퀀트 모듈 분석 활성화를 위한 폴백 버퍼 동기화
+359:     }
+360: }
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

@@ -1,0 +1,57 @@
+"// 3. 차트 시스템 구현 (TradingView Charts 4-Split Grid)
+function 차트시스템초기화() {
+    상태.차트객체.분할차트들.forEach((chartData, idx) => {
+        const container = document.getElementById(`split-chart-canvas-${idx}`);
+        if (!container) return;
+
+        // 공통 차트 테마 옵션 정의
+        const chartOptions = {
+            layout: {
+                background: { type: 'solid', color: '#0B0E11' },
+                textColor: '#848E9C',
+                fontSize: 9,
+                fontFamily: 'Inter'
+            },
+            grid: {
+                vertLines: { color: '#1F2226' },
+                horzLines: { color: '#1F2226' }
+            },
+            crosshair: {
+                mode: LightweightCharts.CrosshairMode.Normal,
+            },
+            timeScale: {
+                borderColor: '#1F2226',
+                timeVisible: true,
+                secondsVisible: false
+            },
+            rightPriceScale: {
+                borderColor: '#1F2226'
+            }
+        };
+
+        // 기존 차트 인스턴스 파괴 및 재구성 방지 (있을 경우 정리)
+        if (chartData.메인차트) {
+            try {
+                chartData.메인차트.remove();
+            } catch (e) {
+                console.error("이전 차트 제거 에러:", e);
+            }
+        }
+
+        // 차트 생성
+        chartData.메인차트 = LightweightCharts.createChart(container, chartOptions);
+
+        // 캔들 시리즈 추가
+        chartData.캔들시리즈 = chartData.메인차트.addCandlestickSeries({
+            upColor: '#00b060',
+            downColor: '#ff3e41',
+            borderUpColor: '#00b060',
+            borderDownColor: '#ff3e41',
+            wickUpColor: '#00b060',
+            wickDownColor: '#ff3e41'
+        });
+
+        // 이동평균선(MA) 시리즈 추가
+        chartData.MA7시리즈 = chartData.메인차트.addLineSeries({ color: '#f0b90b', lineWidth: 1 });
+        char
+<truncated 1390 bytes>

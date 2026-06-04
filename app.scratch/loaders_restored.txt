@@ -1,0 +1,50 @@
+"// 4. 바이낸스 REST API 연동 및 데이터 파싱 (Historical Data Loader for 4-Split Charts)
+async function 최초과거데이터로드() {
+    await 탭전환시분할차트데이터로드(상태.기본코인);
+}
+
+// 탭 전환 시 4분할 차트 데이터를 비동기 병렬 로드
+async function 탭전환시분할차트데이터로드(symbol) {
+    const coin = 상태.코인목록[symbol];
+    if (!coin) return;
+
+    // 4개 분할 차트별로 비동기 로드 프로미스들 동시 가동
+    const 로드프로미스들 = 상태.차트객체.분할차트들.map((_, idx) => {
+        return 분할차트캔들데이터로드(symbol, idx);
+    });
+    
+    await Promise.all(로드프로미스들);
+    
+    // 로드 완료 후 렌더링
+    분할차트들렌더링();
+}
+
+async function 분할차트캔들데이터로드(symbol, chartIdx) {
+    const coin = 상태.코인목록[symbol];
+    const chartData = 상태.차트객체.분할차트들[chartIdx];
+    if (!coin || !chartData) return;
+
+    const interval = chartData.시간단위; // "1h", "4h" 등
+
+    try {
+        const response = await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=${interval}&limit=150`);
+        if (!response.ok) throw new Error(`${interval} API 호출 실패`);
+
+        const rawData = await response.json();
+        const formattedCandles = rawData.map(c => ({
+            time: Math.floor(c[0] / 1000),
+            open: parseFloat(c[1]),
+            high: parseFloat(c[2]),
+            low: parseFloat(c[3]),
+            close: parseFloat(c[4]),
+            volume: parseFloat(c[5])
+        }));
+
+        chartData.캔들데이터 = formattedCandles;
+        
+        // 대표 틱 실시간 기준선 동기화 (최초 1개 차트 데이터 기준)
+        if (chartIdx === 0 && formattedCandles.length > 0) {
+            coin.현재가 = formattedCandles[formattedCandles.length - 1].close;
+            coin.어제종가 = formattedCandles[0].close;
+         
+<truncated 3939 bytes>

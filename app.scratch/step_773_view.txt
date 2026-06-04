@@ -1,0 +1,82 @@
+Created At: 2026-05-29T04:46:24Z
+Completed At: 2026-05-29T04:46:24Z
+File Path: `file:///C:/Users/Administrator/source/repos/crypto-futures-simulator/app.js`
+Total Lines: 2772
+Total Bytes: 123310
+Showing lines 249 to 330
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+249: function 시간단위UI동기화() {
+250:     상태.차트객체.분할차트들.forEach((chartData, idx) => {
+251:         // 기존 active 클래스 전부 제거
+252:         const buttons = document.querySelectorAll(`.timeframe-selector[data-chart-idx="${idx}"] .btn-tf`);
+253:         buttons.forEach(btn => btn.classList.remove("active"));
+254:         
+255:         // 현재 상태에 부합하는 시간 단위 버튼 활성화
+256:         const targetBtn = document.getElementById(`btn-tf-${idx}-${chartData.시간단위}`);
+257:         if (targetBtn) {
+258:             targetBtn.classList.add("active");
+259:         }
+260:         
+261:         // 헤더 타이틀 갱신
+262:         const titleEl = document.getElementById(`chart-title-${idx}`);
+263:         if (titleEl) {
+264:             const tfName = {
+265:                 "1m": "1분봉 (1m)",
+266:                 "1h": "1시간봉 (1h)",
+267:                 "4h": "4시간봉 (4h)",
+268:                 "8h": "8시간봉 (8h)",
+269:                 "12h": "12시간봉 (12h)",
+270:                 "1d": "일봉 (1d)",
+271:                 "1w": "주봉 (1w)"
+272:             }[chartData.시간단위];
+273:             titleEl.innerHTML = `<i class="fa-solid fa-chart-line text-yellow" style="margin-right:6px;"></i>차트 ${idx+1}: ${tfName}`;
+274:         }
+275:     });
+276: }
+277: 
+278: // 4. 바이낸스 REST API 연동 및 데이터 파싱 (Historical Data Loader for 4-Split Charts)
+279: async function 최초과거데이터로드() {
+280:     await 탭전환시분할차트데이터로드(
+<truncated 460 bytes>
+n 분할차트캔들데이터로드(symbol, idx);
+291:     });
+292:     
+293:     await Promise.all(로드프로미스들);
+294:     
+295:     // 로드 완료 후 렌더링
+296:     분할차트들렌더링();
+297: }
+298: 
+299: async function 분할차트캔들데이터로드(symbol, chartIdx) {
+300:     const coin = 상태.코인목록[symbol];
+301:     const chartData = 상태.차트객체.분할차트들[chartIdx];
+302:     if (!coin || !chartData) return;
+303: 
+304:     const interval = chartData.시간단위; // "1h", "4h" 등
+305: 
+306:     try {
+307:         const response = await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=${interval}&limit=150`);
+308:         if (!response.ok) throw new Error(`${interval} API 호출 실패`);
+309: 
+310:         const rawData = await response.json();
+311:         const formattedCandles = rawData.map(c => ({
+312:             time: Math.floor(c[0] / 1000),
+313:             open: parseFloat(c[1]),
+314:             high: parseFloat(c[2]),
+315:             low: parseFloat(c[3]),
+316:             close: parseFloat(c[4]),
+317:             volume: parseFloat(c[5])
+318:         }));
+319: 
+320:         chartData.캔들데이터 = formattedCandles;
+321:         
+322:         // 대표 틱 실시간 기준선 동기화 (최초 1개 차트 데이터 기준)
+323:         if (chartIdx === 0 && formattedCandles.length > 0) {
+324:             coin.현재가 = formattedCandles[formattedCandles.length - 1].close;
+325:             coin.어제종가 = formattedCandles[0].close;
+326:             coin.최고24h = Math.max(...formattedCandles.map(c => c.high));
+327:             coin.최저24h = Math.min(...formattedCandles.map(c => c.low));
+328:             coin.캔들데이터 = [...formattedCandles]; // 퀀트 모듈 분석 활성화를 위한 버퍼 동기화
+329:         }
+330: 
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

@@ -1,0 +1,33 @@
+"const fs = require('fs');
+const path = require('path');
+
+const logPath = 'C:\\Users\\Administrator\\.gemini\\antigravity\\brain\\f747d36c-726a-4e79-ab58-4ed242124998\\.system_generated\\logs\\transcript.jsonl';
+
+if (!fs.existsSync(logPath)) {
+    console.log("로그 파일이 없습니다!");
+    process.exit(1);
+}
+
+const content = fs.readFileSync(logPath, 'utf8');
+const lines = content.split('\
+');
+
+lines.forEach((line, index) => {
+    if (!line.trim()) return;
+    try {
+        const obj = JSON.parse(line);
+        if (obj.type === "VIEW_FILE" && obj.content) {
+            const text = obj.content;
+            if (text.includes("function 차트시스템초기화") && text.includes("app.js")) {
+                console.log(`[라인 ${index}] step_index: ${obj.step_index}`);
+                // text에서 function 차트시스템초기화 부분을 찾아서 약 80줄만 출력해본다.
+                const startIdx = text.indexOf("function 차트시스템초기화");
+                if (startIdx !== -1) {
+                    console.log(text.substring(startIdx, startIdx + 1500));
+                    console.log("-----------------------------------------");
+                }
+            }
+        }
+    } catch (e) {}
+});
+"

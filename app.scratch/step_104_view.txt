@@ -1,0 +1,75 @@
+Created At: 2026-05-28T23:27:23Z
+Completed At: 2026-05-28T23:27:23Z
+File Path: `file:///C:/Users/Administrator/source/repos/crypto-futures-simulator/app.js`
+Total Lines: 1539
+Total Bytes: 63282
+Showing lines 200 to 270
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+200:     // 화면 크기 반응형 조절
+201:     window.addEventListener("resize", () => {
+202:         상태.차트객체.메인차트.resize(mainContainer.clientWidth, mainContainer.clientHeight);
+203:         상태.차트객체.RSI차트.resize(rsiContainer.clientWidth, rsiContainer.clientHeight);
+204:         상태.차트객체.MACD차트.resize(macdContainer.clientWidth, macdContainer.clientHeight);
+205:     });
+206: }
+207: 
+208: // 4. 바이낸스 REST API 연동 및 데이터 파싱 (Historical Data Loader)
+209: async function 최초과거데이터로드() {
+210:     for (const symbol of Object.keys(상태.코인목록)) {
+211:         await 바이낸스과거캔들데이터로드(symbol);
+212:     }
+213:     차트데이터렌더링();
+214: }
+215: 
+216: async function 바이낸스과거캔들데이터로드(symbol) {
+217:     const coin = 상태.코인목록[symbol];
+218:     if (!coin) return;
+219: 
+220:     try {
+221:         // 바이낸스 SPOT K-Line API 호출 (1분봉 150개 요청)
+222:         // 바이낸스는 퍼블릭 API에 대하여 완전한 CORS 오픈 정책을 가지므로 브라우저 직접 로딩이 100% 보장됩니다.
+223:         const response = await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=1m&limit=150`);
+224:         
+225:         if (!response.ok) throw new Error("바이낸스 API 응답 실패");
+226: 
+227:         const rawData = await response.json();
+228:         
+229:         // 바이낸스 응답 규격: [ [시작시간(ms), 시가, 고가, 저가, 종가, 거래량, ...], ... ]
+2
+<truncated 329 bytes>
+: parseFloat(c[5])
+237:         }));
+238: 
+239:         coin.캔들데이터 = formattedCandles;
+240:         coin.현재가 = formattedCandles[formattedCandles.length - 1].close;
+241:         coin.어제종가 = formattedCandles[0].close; // 기초 기준선
+242:         coin.최고24h = Math.max(...formattedCandles.map(c => c.high));
+243:         coin.최저24h = Math.min(...formattedCandles.map(c => c.low));
+244: 
+245:         console.log(`[Binance REST] ${symbol} 과거 캔들 ${formattedCandles.length}개 로딩 완수. 현재가: ${coin.현재가} USDT`);
+246:     } catch (err) {
+247:         console.error(`[Binance REST Error] ${symbol} 데이터 로드 실패:`, err.message);
+248:         alert(`코인 심볼(${symbol})을 바이낸스에서 조회할 수 없거나 네트워크 에러가 발생했습니다. 대문자로 정확히 입력했는지 확인해주세요. (예: SOLUSDT)`);
+249:         // 에러 시 메모리 목록에서 강제 배제
+250:         delete 상태.코인목록[symbol];
+251:         코인탭렌더링();
+252:     }
+253: }
+254: 
+255: // 5. TradingView 차트에 지표 및 시세 렌더링
+256: function 차트데이터렌더링() {
+257:     const activeCoin = 상태.코인목록[상태.기본코인];
+258:     if (!activeCoin || !상태.차트객체.캔들시리즈 || activeCoin.캔들데이터.length === 0) return;
+259: 
+260:     // 1. 캔들스틱 렌더링
+261:     상태.차트객체.캔들시리즈.setData(activeCoin.캔들데이터);
+262: 
+263:     // 2. 기술적 지표 연산
+264:     const closes = activeCoin.캔들데이터.map(c => c.close);
+265:     const times = activeCoin.캔들데이터.map(c => c.time);
+266: 
+267:     // SMA(이동평균) 라인 렌더링
+268:     const ma7 = 계산SMA(closes, 7);
+269:     const ma25 = 계산SMA(closes, 25);
+270:     const ma99 = 계산SMA(closes, 99);
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

@@ -1,0 +1,80 @@
+Created At: 2026-05-28T23:30:06Z
+Completed At: 2026-05-28T23:30:06Z
+File Path: `file:///C:/Users/Administrator/source/repos/crypto-futures-simulator/app.js`
+Total Lines: 1581
+Total Bytes: 64954
+Showing lines 230 to 320
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+230:         const formattedCandles = rawData.map(c => ({
+231:             time: Math.floor(c[0] / 1000), // ms 단위를 초 단위로 변환
+232:             open: parseFloat(c[1]),
+233:             high: parseFloat(c[2]),
+234:             low: parseFloat(c[3]),
+235:             close: parseFloat(c[4]),
+236:             volume: parseFloat(c[5])
+237:         }));
+238: 
+239:         coin.캔들데이터 = formattedCandles;
+240:         coin.현재가 = formattedCandles[formattedCandles.length - 1].close;
+241:         coin.어제종가 = formattedCandles[0].close; // 기초 기준선
+242:         coin.최고24h = Math.max(...formattedCandles.map(c => c.high));
+243:         coin.최저24h = Math.min(...formattedCandles.map(c => c.low));
+244: 
+245:         console.log(`[Binance REST] ${symbol} 과거 캔들 ${formattedCandles.length}개 로딩 완수. 현재가: ${coin.현재가} USDT`);
+246:     } catch (err) {
+247:         console.warn(`[Binance CORS/Local Security Alert] ${symbol} 데이터 로드 실패 (로컬 파일 정책 또는 CORS 제한 감시). 폴백 엔진을 활성화합니다:`, err.message);
+248:         // 지우지 않고 가상 폴백 빌드 적용
+249:         CORS폴백데이터빌드(symbol);
+250:     }
+251: }
+252: 
+253: // 브라우저의 로컬 보안(Same-Origin Policy) 및 CORS 제약 발생 시 폴백용 고화질 가상 데이터 생성기
+254: function CORS폴백데이터빌드(symbol) {
+255:     const coin = 상태.코인목록[symbol];
+256:     if (!coin) return;
+257: 
+258:     let 가격 = 100.00;
+259:     if (symbol.startsWith("BT
+<truncated 1055 bytes>
+점)),
+281:             close: parseFloat(close.toFixed(coin.소수점)),
+282:             volume: parseFloat((Math.random() * 200 + 20).toFixed(2))
+283:         });
+284:         가격 = close;
+285:         시간 += 60;
+286:     }
+287:     
+288:     coin.캔들데이터 = 캔들들;
+289:     coin.현재가 = 가격;
+290:     coin.어제종가 = 캔들들[0].close;
+291:     coin.최고24h = Math.max(...캔들들.map(c => c.high));
+292:     coin.최저24h = Math.min(...캔들들.map(c => c.low));
+293:     
+294:     console.log(`[CORS Fallback Activated] ${symbol} 로컬 보안 예외 대응 모의 데이터 구성 성공.`);
+295: }
+296: 
+297: // 5. TradingView 차트에 지표 및 시세 렌더링
+298: function 차트데이터렌더링() {
+299:     const activeCoin = 상태.코인목록[상태.기본코인];
+300:     if (!activeCoin || !상태.차트객체.캔들시리즈 || activeCoin.캔들데이터.length === 0) return;
+301: 
+302:     // 1. 캔들스틱 렌더링
+303:     상태.차트객체.캔들시리즈.setData(activeCoin.캔들데이터);
+304: 
+305:     // 2. 기술적 지표 연산
+306:     const closes = activeCoin.캔들데이터.map(c => c.close);
+307:     const times = activeCoin.캔들데이터.map(c => c.time);
+308: 
+309:     // SMA(이동평균) 라인 렌더링
+310:     const ma7 = 계산SMA(closes, 7);
+311:     const ma25 = 계산SMA(closes, 25);
+312:     const ma99 = 계산SMA(closes, 99);
+313:     상태.차트객체.MA7시리즈.setData(매핑지표데이터(times, ma7));
+314:     상태.차트객체.MA25시리즈.setData(매핑지표데이터(times, ma25));
+315:     상태.차트객체.MA99시리즈.setData(매핑지표데이터(times, ma99));
+316: 
+317:     // RSI 렌더링
+318:     const rsi = 계산RSI(closes, 14);
+319:     상태.차트객체.RSI시리즈.setData(매핑지표데이터(times, rsi));
+320: 
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

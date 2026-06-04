@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚡ 타점 체결 & 레버리지 맵 위젯 (Triggers & Leverage)</title>
+    <!-- 구글 폰트 & 아이콘 연동 -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            background: #0b0e11 !important;
+            padding: 16px;
+            margin: 0;
+            overflow-x: hidden;
+            height: 100vh;
+            box-sizing: border-box;
+        }
+        .widget-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        .widget-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--color-border);
+            padding-bottom: 12px;
+            margin-bottom: 12px;
+        }
+        .widget-title {
+            font-family: var(--font-display);
+            font-size: 16px;
+            font-weight: 800;
+            color: var(--color-yellow);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-shadow: 0 0 8px rgba(240, 185, 11, 0.2);
+        }
+        .btn-bring-back {
+            background: transparent;
+            border: 1px solid var(--color-yellow);
+            color: var(--color-yellow);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn-bring-back:hover {
+            background: var(--color-yellow);
+            color: #000;
+        }
+        .widget-body {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            flex: 1;
+            height: calc(100vh - 65px);
+            overflow-y: auto;
+        }
+        .section-box {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            padding: 12px;
+        }
+        .section-title {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: var(--color-yellow);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="widget-container">
+        <div class="widget-header">
+            <div class="widget-title">
+                <i class="fa-solid fa-bolt text-yellow"></i>
+                타점 체결 & 레버리지 맵 위젯
+            </div>
+            <button class="btn-bring-back" onclick="위젯회수()">화면 복귀</button>
+        </div>
+        <div class="widget-body">
+            <!-- 좌측: 실시간 대기 타점 목록 및 괴리율 -->
+            <div class="section-box">
+                <h4 class="section-title">
+                    <span><i class="fa-solid fa-radar" style="margin-right: 6px;"></i>실시간 대기 타점 감시 레이더</span>
+                    <span style="font-size: 10px; color: #848e9c; font-weight: normal;">*괴리율 0.5% 미만 시 경보 작동</span>
+                </h4>
+                <div class="table-scroll-container" style="max-height: 200px; overflow-y: auto;">
+                    <table class="dashboard-table" style="font-size: 12px;">
+                        <thead>
+                            <tr>
+                                <th>코인 (Symbol)</th>
+                                <th>방향 (Type)</th>
+                                <th>레버리지 (Lev)</th>
+                                <th>목표 타점 (Target)</th>
+                                <th>현재가 (Mark)</th>
+                                <th>실시간 괴리율 (Distance)</th>
+                                <th>액션 (Action)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="trigger-radar-body-widget">
+                            <tr class="empty-row">
+                                <td colspan="7"><i class="fa-solid fa-inbox empty-icon"></i> 등록된 대기 타점이 없습니다.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <!-- 우측: 코인별 레버리지 일괄 현황 맵 -->
+            <div class="section-box" style="flex: 1;">
+                <h4 class="section-title">
+                    <span><i class="fa-solid fa-sliders" style="margin-right: 6px;"></i>코인별 레버리지 일괄 현황 (Leverage Map)</span>
+                    <button type="button" class="btn-mini-gold" onclick="일괄레버리지모달()" style="cursor: pointer; font-size: 10px; padding: 1px 6px; border-radius: 3px; border: 1px solid var(--color-yellow); background: transparent; color: var(--color-yellow); font-weight: 700;">일괄 적용</button>
+                </h4>
+                <div id="leverage-map-container-widget" class="leverage-map-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; padding: 4px;">
+                    <!-- 자바스크립트로 동적 렌더링 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.onbeforeunload = function() {
+            if (window.opener && !window.opener.closed) {
+                window.opener.위젯회수액션('trigger');
+            }
+        };
+
+        function 위젯회수() {
+            window.close();
+        }
+
+        function 일괄레버리지모달() {
+            if (window.opener && window.opener.AI레버리지모달열기액션) {
+                window.opener.AI레버리지모달열기액션();
+                window.opener.focus();
+            }
+        }
+
+        // 부모 창의 레버리지 미세조정을 호출합니다.
+        window.개별레버리지미세조정 = function(symbol, delta) {
+            if (window.opener && window.opener.개별코인레버리지미세조정) {
+                window.opener.개별코인레버리지미세조정(symbol, delta);
+                // 즉시 팝업 뷰도 갱신
+                window.렌더링();
+            }
+        };
+
+        window.대기주문취소 = function(idx) {
+            if (window.opener && window.opener.대기주문취소) {
+                window.opener.대기주문취소(idx);
+                // 팝업 뷰도 즉시 갱신
+                setTimeout(window.렌더링, 50);
+            }
+        };
+
+        window.렌더링 = function() {
+            if (!window.opener || window.opener.closed) return;
+            
+            // 1. 대기 타점 레이더 테이블 복사 연동
+            const mainRadarBody = window.opener.document.getElementById("trigger-radar-body");
+            const widgetRadarBody = document.getElementById("trigger-radar-body-widget");
+            
+            if (mainRadarBody && widgetRadarBody) {
+                widgetRadarBody.innerHTML = mainRadarBody.innerHTML;
+                
+                // 액션 열의 취소 버튼 동작 바인딩 재건
+                const cancelBtns = widgetRadarBody.querySelectorAll("button");
+                cancelBtns.forEach(btn => {
+                    const idxStr = btn.getAttribute("onclick")?.match(/\d+/)?.[0];
+                    if (idxStr !== undefined) {
+                        btn.removeAttribute("onclick");
+                        btn.onclick = function() {
+                            window.대기주문취소(parseInt(idxStr));
+                        };
+                    }
+                });
+            }
+
+            // 2. 레버리지 맵 컨테이너 복사 연동
+            const mainLeverageContainer = window.opener.document.getElementById("leverage-map-container");
+            const widgetLeverageContainer = document.getElementById("leverage-map-container-widget");
+            
+            if (mainLeverageContainer && widgetLeverageContainer) {
+                widgetLeverageContainer.innerHTML = mainLeverageContainer.innerHTML;
+                
+                // 미세 조정 단추 이벤트 바인딩 재건
+                const cards = widgetLeverageContainer.querySelectorAll(".leverage-coin-card");
+                cards.forEach(card => {
+                    const symbol = card.querySelector("strong")?.textContent.trim();
+                    const minusBtn = card.querySelector("button:first-of-type");
+                    const plusBtn = card.querySelector("button:last-of-type");
+                    
+                    if (symbol && minusBtn && plusBtn) {
+                        minusBtn.removeAttribute("onclick");
+                        plusBtn.removeAttribute("onclick");
+                        
+                        minusBtn.onclick = function() {
+                            window.개별레버리지미세조정(symbol, -1);
+                        };
+                        plusBtn.onclick = function() {
+                            window.개별레버리지미세조정(symbol, 1);
+                        };
+                    }
+                });
+            }
+        };
+
+        window.onload = function() {
+            window.렌더링();
+        };
+    </script>
+</body>
+</html>

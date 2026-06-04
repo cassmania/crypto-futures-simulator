@@ -1,0 +1,79 @@
+Created At: 2026-05-28T23:10:00Z
+Completed At: 2026-05-28T23:10:00Z
+File Path: `file:///C:/Users/Administrator/source/repos/crypto-futures-simulator/app.js`
+Total Lines: 1493
+Total Bytes: 63878
+Showing lines 216 to 1015
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+216:         상태.차트객체.RSI차트.resize(rsiContainer.clientWidth, rsiContainer.clientHeight);
+217:         상태.차트객체.MACD차트.resize(macdContainer.clientWidth, macdContainer.clientHeight);
+218:     });
+219: 
+220:     차트데이터렌더링();
+221: }
+222: 
+223: // 특정 활성화된 코인의 데이터를 차트 인스턴스에 주입하는 함수
+224: function 차트데이터렌더링() {
+225:     const activeCoin = 상태.코인목록[상태.기본코인];
+226:     if (!activeCoin || !상태.차트객체.캔들시리즈) return;
+227: 
+228:     // 1. 캔들스틱 렌더링
+229:     상태.차트객체.캔들시리즈.setData(activeCoin.캔들데이터);
+230: 
+231:     // 2. 기술적 지표 연산 (Technical Analysis Calculations)
+232:     const closes = activeCoin.캔들데이터.map(c => c.close);
+233:     const times = activeCoin.캔들데이터.map(c => c.time);
+234: 
+235:     // A. 이동평균선(MA) 계산 및 입력
+236:     const ma7 = 계산SMA(closes, 7);
+237:     const ma25 = 계산SMA(closes, 25);
+238:     const ma99 = 계산SMA(closes, 99);
+239: 
+240:     상태.차트객체.MA7시리즈.setData(매핑지표데이터(times, ma7));
+241:     상태.차트객체.MA25시리즈.setData(매핑지표데이터(times, ma25));
+242:     상태.차트객체.MA99시리즈.setData(매핑지표데이터(times, ma99));
+243: 
+244:     // B. RSI(14) 계산 및 입력
+245:     const rsi = 계산RSI(closes, 14);
+246:     상태.차트객체.RSI시리즈.setData(매핑지표데이터(times, rsi));
+247: 
+248:     // C. MACD(12, 26, 9) 계산 
+<truncated 33604 bytes>
+price = parseFloat(document.getElementById("input-trigger-price").value) || coin.현재가;
+980:             const targetMargin = 상태.지갑잔고 * (pct / 100);
+981:             const qty = (targetMargin * leverage) / price;
+982:             
+983:             document.getElementById("input-quantity").value = parseFloat(qty.toFixed(coin.수량소수점));
+984:             주문비용재연산();
+985:         });
+986:     });
+987: 
+988:     // G. TP/SL 체크박스 보이기 토글
+989:     const chkTpsl = document.getElementById("chk-tpsl");
+990:     const tpslContainer = document.getElementById("tpsl-inputs-container");
+991:     chkTpsl.addEventListener("change", () => {
+992:         if (chkTpsl.checked) {
+993:             tpslContainer.classList.remove("hidden");
+994:         } else {
+995:             tpslContainer.classList.add("hidden");
+996:         }
+997:     });
+998: 
+999:     // H. 하단 탭 메뉴 전환
+1000:     document.querySelectorAll(".footer-tab").forEach(tab => {
+1001:         tab.addEventListener("click", (e) => {
+1002:             document.querySelectorAll(".footer-tab").forEach(t => t.classList.remove("active"));
+1003:             document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+1004:             
+1005:             const targetTab = e.currentTarget.dataset.tab;
+1006:             e.currentTarget.classList.add("active");
+1007:             document.getElementById(`tab-${targetTab}`).classList.add("active");
+1008:         });
+1009:     });
+1010: 
+1011:     // I. 초기화 리셋 버튼
+1012:     document.getElementById("btn-reset").addEventListener("click", () => {
+1013:         if (confirm("모든 모의 자산과 포지션을 처음 상태로 리셋하시겠습니까?")) {
+1014:             상태.지갑잔고 = 10000.00;
+1015:             상태.마진잔고 = 10000.00;
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.
