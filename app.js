@@ -5,6 +5,10 @@
    모든 변수(Variable)와 설명은 한국어로 상세히 서술하고 기술 용어는 영어를 병기하였습니다.
    ---------------------------------------------------- */
 
+window.onerror = function(msg, url, line) {
+    alert('브라우저 에러 감지!\n메시지: ' + msg + '\n파일: ' + url + '\n라인: ' + line);
+};
+
 // 1. 전역 상태 관리 객체 (Global State)
 const 상태 = {
     // 자산 정보 (Assets)
