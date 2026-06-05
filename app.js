@@ -5419,6 +5419,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if(!Kakao.isInitialized()) {
                 Kakao.init(window.KakaoAutoSendInfo.key);
                 console.log("Kakao SDK Initialized.");
+                
+                // 로컬 스토리지에 저장된 카카오 액세스 토큰이 있다면 세션 복원
+                const savedToken = localStorage.getItem('kakao_access_token');
+                if (savedToken) {
+                    Kakao.Auth.setAccessToken(savedToken);
+                    console.log("Kakao Access Token Restored.");
+                }
             }
         } catch(e) { console.error("Kakao Init Error:", e); }
     }
@@ -5484,7 +5491,9 @@ window.카카오로그인실행 = function() {
     Kakao.Auth.login({
         scope: 'talk_message',
         success: function(authObj) {
-            alert('카카오 로그인 성공! 이제 나에게 보내기 기능이 동작합니다.');
+            // 로그인 성공 시 액세스 토큰을 로컬 스토리지에 영구 저장하여 자동 로그인 지원
+            localStorage.setItem('kakao_access_token', authObj.access_token);
+            alert('카카오 로그인 성공! 이제 나에게 보내기 기능이 항상 자동 활성화됩니다.');
         },
         fail: function(err) {
             alert('카카오 로그인 실패: ' + JSON.stringify(err));
@@ -5511,7 +5520,12 @@ window.카카오알림테스트발송 = function() {
             alert("카카오톡 발송 테스트 성공! 내 카카오톡을 확인해보세요.");
         },
         fail: function(error) {
-            alert('카카오톡 발송 테스트 실패: ' + JSON.stringify(error));
+            if (error.code === -401) {
+                localStorage.removeItem('kakao_access_token');
+                alert('카카오 로그인 토큰이 만료되었거나 올바르지 않습니다. [🔑 카카오 로그인] 버튼을 눌러 다시 로그인해 주세요.');
+            } else {
+                alert('카카오톡 발송 테스트 실패: ' + JSON.stringify(error));
+            }
         }
     });
 };
@@ -5540,7 +5554,12 @@ window.카카오알림발송 = function(data, isSummary = false) {
             새신호알림(data.코인명, `[카카오톡 발송] ${data.코인명} 카톡 브리핑 전송 완료`, 'neutral');
         },
         fail: function(error) {
-            alert('카카오톡 발송 실패: ' + JSON.stringify(error));
+            if (error.code === -401) {
+                localStorage.removeItem('kakao_access_token');
+                alert('카카오 로그인 토큰이 만료되었거나 올바르지 않습니다. [🔑 카카오 로그인] 버튼을 눌러 다시 로그인해 주세요.');
+            } else {
+                alert('카카오톡 발송 실패: ' + JSON.stringify(error));
+            }
             console.error('카카오톡 발송 실패:', error);
         }
     });
