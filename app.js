@@ -5459,7 +5459,11 @@ window.카카오설정저장 = function() {
     };
 
     if(key && typeof Kakao !== 'undefined') {
-        try { if(!Kakao.isInitialized()) Kakao.init(key); } catch(e) {}
+        try { 
+            if(!Kakao.isInitialized()) Kakao.init(key); 
+        } catch(e) {
+            alert("카카오 SDK 초기화 오류: " + e.message);
+        }
     }
 
     window.카카오정기발송타이머시작();
