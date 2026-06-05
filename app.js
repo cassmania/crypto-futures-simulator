@@ -46,14 +46,14 @@ const 상태 = {
     // 8개 분할 차트 객체 배열 (8-Split Multi-Symbol/Timeframe Charts)
     차트객체: {
         분할차트들: [
-            { 메인차트: null, 캔들시리즈: null, MA7시리즈: null, MA25시리즈: null, MA99시리즈: null, 시간단위: "1m", 코인심볼: "BTCUSDT", 캔들데이터: [] },
-            { 메인차트: null, 캔들시리즈: null, MA7시리즈: null, MA25시리즈: null, MA99시리즈: null, 시간단위: "1h", 코인심볼: "ETHUSDT", 캔들데이터: [] },
-            { 메인차트: null, 캔들시리즈: null, MA7시리즈: null, MA25시리즈: null, MA99시리즈: null, 시간단위: "4h", 코인심볼: "SOLUSDT", 캔들데이터: [] },
-            { 메인차트: null, 캔들시리즈: null, MA7시리즈: null, MA25시리즈: null, MA99시리즈: null, 시간단위: "8h", 코인심볼: "HYPEUSDT", 캔들데이터: [] },
-            { 메인차트: null, 캔들시리즈: null, MA7시리즈: null, MA25시리즈: null, MA99시리즈: null, 시간단위: "12h", 코인심볼: "XRPUSDT", 캔들데이터: [] },
-            { 메인차트: null, 캔들시리즈: null, MA7시리즈: null, MA25시리즈: null, MA99시리즈: null, 시간단위: "1d", 코인심볼: "ADAUSDT", 캔들데이터: [] },
-            { 메인차트: null, 캔들시리즈: null, MA7시리즈: null, MA25시리즈: null, MA99시리즈: null, 시간단위: "1w", 코인심볼: "DOGEUSDT", 캔들데이터: [] },
-            { 메인차트: null, 캔들시리즈: null, MA7시리즈: null, MA25시리즈: null, MA99시리즈: null, 시간단위: "1d", 코인심볼: "LINKUSDT", 캔들데이터: [] }
+            { 메인차트: null, 캔들시리즈: null, EMA5시리즈: null, EMA20시리즈: null, SMA60시리즈: null, 시간단위: "1m", 코인심볼: "BTCUSDT", 캔들데이터: [] },
+            { 메인차트: null, 캔들시리즈: null, EMA5시리즈: null, EMA20시리즈: null, SMA60시리즈: null, 시간단위: "1h", 코인심볼: "ETHUSDT", 캔들데이터: [] },
+            { 메인차트: null, 캔들시리즈: null, EMA5시리즈: null, EMA20시리즈: null, SMA60시리즈: null, 시간단위: "4h", 코인심볼: "SOLUSDT", 캔들데이터: [] },
+            { 메인차트: null, 캔들시리즈: null, EMA5시리즈: null, EMA20시리즈: null, SMA60시리즈: null, 시간단위: "8h", 코인심볼: "HYPEUSDT", 캔들데이터: [] },
+            { 메인차트: null, 캔들시리즈: null, EMA5시리즈: null, EMA20시리즈: null, SMA60시리즈: null, 시간단위: "12h", 코인심볼: "XRPUSDT", 캔들데이터: [] },
+            { 메인차트: null, 캔들시리즈: null, EMA5시리즈: null, EMA20시리즈: null, SMA60시리즈: null, 시간단위: "1d", 코인심볼: "ADAUSDT", 캔들데이터: [] },
+            { 메인차트: null, 캔들시리즈: null, EMA5시리즈: null, EMA20시리즈: null, SMA60시리즈: null, 시간단위: "1w", 코인심볼: "DOGEUSDT", 캔들데이터: [] },
+            { 메인차트: null, 캔들시리즈: null, EMA5시리즈: null, EMA20시리즈: null, SMA60시리즈: null, 시간단위: "1d", 코인심볼: "LINKUSDT", 캔들데이터: [] }
         ]
     }
 };
@@ -337,9 +337,9 @@ function 차트시스템초기화() {
         });
 
         // 이동평균선(MA) 추가
-        chartData.MA7시리즈 = chartData.메인차트.addLineSeries({ color: '#F0B90B', lineWidth: 1, title: 'MA(7)' });
-        chartData.MA25시리즈 = chartData.메인차트.addLineSeries({ color: '#03A9F4', lineWidth: 1, title: 'MA(25)' });
-        chartData.MA99시리즈 = chartData.메인차트.addLineSeries({ color: '#E040FB', lineWidth: 1, title: 'MA(99)' });
+        chartData.EMA5시리즈 = chartData.메인차트.addLineSeries({ color: '#F0B90B', lineWidth: 1, title: 'MA(7)' });
+        chartData.EMA20시리즈 = chartData.메인차트.addLineSeries({ color: '#03A9F4', lineWidth: 1, title: 'MA(25)' });
+        chartData.SMA60시리즈 = chartData.메인차트.addLineSeries({ color: '#E040FB', lineWidth: 1, title: 'MA(99)' });
 
         // 화면 크기 반응형 리스너 개별 부착
         window.addEventListener("resize", () => {
@@ -441,13 +441,13 @@ async function 탭전환시분할차트데이터로드(symbol) {
                 const closes = chartData.캔들데이터.map(c => c.close);
                 const times = chartData.캔들데이터.map(c => c.time);
                 
-                const ma7 = 계산SMA(closes, 7);
-                const ma25 = 계산SMA(closes, 25);
-                const ma99 = 계산SMA(closes, 99);
+                const ema5 = 계산EMA(closes, 5);
+                const ema20 = 계산EMA(closes, 20);
+                const sma60 = 계산SMA(closes, 60);
                 
-                chartData.MA7시리즈.setData(매핑지표데이터(times, ma7));
-                chartData.MA25시리즈.setData(매핑지표데이터(times, ma25));
-                chartData.MA99시리즈.setData(매핑지표데이터(times, ma99));
+                chartData.EMA5시리즈.setData(매핑지표데이터(times, ema5));
+                chartData.EMA20시리즈.setData(매핑지표데이터(times, ema20));
+                chartData.SMA60시리즈.setData(매핑지표데이터(times, sma60));
                 
                 chartData.메인차트.timeScale().fitContent();
             }
@@ -611,13 +611,13 @@ function 분할차트들렌더링() {
         const closes = chartData.캔들데이터.map(c => c.close);
         const times = chartData.캔들데이터.map(c => c.time);
 
-        const ma7 = 계산SMA(closes, 7);
-        const ma25 = 계산SMA(closes, 25);
-        const ma99 = 계산SMA(closes, 99);
+        const ema5 = 계산EMA(closes, 5);
+        const ema20 = 계산EMA(closes, 20);
+        const sma60 = 계산SMA(closes, 60);
 
-        chartData.MA7시리즈.setData(매핑지표데이터(times, ma7));
-        chartData.MA25시리즈.setData(매핑지표데이터(times, ma25));
-        chartData.MA99시리즈.setData(매핑지표데이터(times, ma99));
+        chartData.EMA5시리즈.setData(매핑지표데이터(times, ema5));
+        chartData.EMA20시리즈.setData(매핑지표데이터(times, ema20));
+        chartData.SMA60시리즈.setData(매핑지표데이터(times, sma60));
 
         chartData.메인차트.timeScale().fitContent();
         
@@ -850,14 +850,14 @@ function 실시간캔들메시지파싱(data) {
 
         // 실시간 SMA 이동평균선(MA) 갱신
         const closesList = c.캔들데이터.map(x => x.close);
-        const ma7 = 계산SMA(closesList, 7);
-        const ma25 = 계산SMA(closesList, 25);
-        const ma99 = 계산SMA(closesList, 99);
+        const ema5 = 계산EMA(closesList, 5);
+        const ema20 = 계산EMA(closesList, 20);
+        const sma60 = 계산SMA(closesList, 60);
 
         const activeCandle = c.캔들데이터[c.캔들데이터.length - 1];
-        c.MA7시리즈.update({ time: activeCandle.time, value: ma7[ma7.length - 1] });
-        c.MA25시리즈.update({ time: activeCandle.time, value: ma25[ma25.length - 1] });
-        c.MA99시리즈.update({ time: activeCandle.time, value: ma99[ma99.length - 1] });
+        c.EMA5시리즈.update({ time: activeCandle.time, value: ema5[ema5.length - 1] });
+        c.EMA20시리즈.update({ time: activeCandle.time, value: ema20[ema20.length - 1] });
+        c.SMA60시리즈.update({ time: activeCandle.time, value: sma60[sma60.length - 1] });
     });
 
     // 상단 탭 가격 표시 갱신
@@ -1082,14 +1082,14 @@ function 분석및신호생성(symbol) {
     const 이전MACD = macdData.macd[idx - 1] || 0;
     const 이전MACD시그널 = macdData.signal[idx - 1] || 0;
 
-    const ma7 = 계산SMA(closes, 7)[idx] || coin.현재가;
+    const ema5 = 계산EMA(closes, 5)[idx] || coin.현재가;
     const ma20 = 계산SMA(closes, 20)[idx] || coin.현재가;
-    const ma25 = 계산SMA(closes, 25)[idx] || coin.현재가;
+    const ema20 = 계산EMA(closes, 20)[idx] || coin.현재가;
     const ma60 = 계산SMA(closes, 60)[idx] || coin.현재가;
     const ma120 = 계산SMA(closes, 120)[idx] || coin.현재가;
-    const ma200 = 계산SMA(closes, 100)[idx] || coin.현재가; // 100MA 장기 추세 필터
-    const 이전MA7 = 계산SMA(closes, 7)[idx - 1] || coin.현재가;
-    const 이전MA25 = 계산SMA(closes, 25)[idx - 1] || coin.현재가;
+    const sma200 = 계산SMA(closes, 200)[idx] || coin.현재가; // 100MA 장기 추세 필터
+    const 이전EMA5 = 계산EMA(closes, 5)[idx - 1] || coin.현재가;
+    const 이전EMA20 = 계산EMA(closes, 20)[idx - 1] || coin.현재가;
 
     const cciVal = 계산CCI(highs, lows, closes, 20)[idx] || 0;
     const stochData = 계산스토캐스틱(highs, lows, closes, 14, 3, 3);
@@ -1148,8 +1148,8 @@ function 분석및신호생성(symbol) {
         }
     }
 
-    const 슈퍼트렌드롱 = coin.현재가 > ma25 && rsiVal > 48;
-    const 슈퍼트렌드숏 = coin.현재가 < ma25 && rsiVal < 52;
+    const 슈퍼트렌드롱 = coin.현재가 > ema20 && rsiVal > 48;
+    const 슈퍼트렌드숏 = coin.현재가 < ema20 && rsiVal < 52;
     const MACD롱추세 = 현재MACD > 현재MACD시그널;
     const MACD숏추세 = 현재MACD < 현재MACD시그널;
 
@@ -1159,8 +1159,8 @@ function 분석및신호생성(symbol) {
     // [3단계: 오실레이터 진입 타이밍 조율 필터] (RSI & CCI & 스토캐스틱 K/D)
     const MACD골든크로스 = 이전MACD < 이전MACD시그널 && 현재MACD >= 현재MACD시그널;
     const MACD데드크로스 = 이전MACD > 이전MACD시그널 && 현재MACD <= 현재MACD시그널;
-    const MA골든크로스 = 이전MA7 < 이전MA25 && ma7 >= ma25;
-    const MA데드크로스 = 이전MA7 > 이전MA25 && ma7 <= 이전MA25;
+    const MA골든크로스 = 이전EMA5 < 이전EMA20 && ema5 >= ema20;
+    const MA데드크로스 = 이전EMA5 > 이전EMA20 && ema5 <= 이전EMA20;
 
     const RSI롱과매도 = rsiVal <= 38;
     const CCI롱침체 = cciVal <= -100;
@@ -3069,10 +3069,10 @@ function 지표신뢰도등급(점수) {
 }
 
 // 시장 상태를 먼저 구분해야 RSI/CCI 같은 과열 지표를 과신하지 않습니다.
-function 시장상태판정({ 현재가, ma25, ma99, bbUpper, bbLower, bbBasis, 현재MACD, 현재MACD시그널 }) {
+function 시장상태판정({ 현재가, ema20, sma60, bbUpper, bbLower, bbBasis, 현재MACD, 현재MACD시그널 }) {
     const 밴드폭 = bbBasis > 0 ? ((bbUpper - bbLower) / bbBasis) * 100 : 0;
-    const 이평괴리 = ma99 > 0 ? Math.abs(ma25 - ma99) / ma99 * 100 : 0;
-    const 추세방향 = 현재가 >= ma99 && 현재MACD >= 현재MACD시그널 ? "UP" : (현재가 < ma99 && 현재MACD < 현재MACD시그널 ? "DOWN" : "MIXED");
+    const 이평괴리 = sma60 > 0 ? Math.abs(ema20 - sma60) / sma60 * 100 : 0;
+    const 추세방향 = 현재가 >= sma60 && 현재MACD >= 현재MACD시그널 ? "UP" : (현재가 < sma60 && 현재MACD < 현재MACD시그널 ? "DOWN" : "MIXED");
 
     if (밴드폭 >= 8 || 이평괴리 >= 4) {
         return {
@@ -3174,10 +3174,10 @@ function AI추천분석및업데이트(symbol) {
     const 현재MACD시그널 = macdData.signal[idx] || 0;
     const 현재MACD히스토그램 = macdData.histogram[idx] || 0;
 
-    const ma7 = 계산SMA(closes, 7)[idx] || coin.현재가;
-    const ma25 = 계산SMA(closes, 25)[idx] || coin.현재가;
-    const ma99 = 계산SMA(closes, 99)[idx] || coin.현재가;
-    const ma200 = 계산SMA(closes, 100)[idx] || coin.현재가; // 100MA 장기 추세 필터 (데이터 한계상 100봉 사용)
+    const ema5 = 계산EMA(closes, 5)[idx] || coin.현재가;
+    const ema20 = 계산EMA(closes, 20)[idx] || coin.현재가;
+    const sma60 = 계산SMA(closes, 60)[idx] || coin.현재가;
+    const sma200 = 계산SMA(closes, 200)[idx] || coin.현재가; // 100MA 장기 추세 필터 (데이터 한계상 100봉 사용)
 
     const cciVal = 계산CCI(highs, lows, closes, 20)[idx] || 0;
     const stochData = 계산스토캐스틱(highs, lows, closes, 14, 3, 3);
@@ -3244,7 +3244,7 @@ function AI추천분석및업데이트(symbol) {
     }
 
     // 슈퍼트렌드 모방 연산 (RSI 및 MA 기반 모멘텀 추적 모델)
-    const 슈퍼트렌드롱 = coin.현재가 > ma25 && rsiVal > 48;
+    const 슈퍼트렌드롱 = coin.현재가 > ema20 && rsiVal > 48;
     const 슈퍼트렌드텍스트 = 슈퍼트렌드롱 ? "롱 (LONG / Bullish)" : "숏 (SHORT / Bearish)";
     const 슈퍼트렌드클래스 = 슈퍼트렌드롱 ? "text-green" : "text-red";
 
@@ -3325,7 +3325,7 @@ function AI추천분석및업데이트(symbol) {
     }
 
     // MVRV & SOPR 온체인 지표 추론
-    const mvrv = 1.2 + (coin.현재가 / ma200 - 1) * 2;
+    const mvrv = 1.2 + (coin.현재가 / sma200 - 1) * 2;
     const sopr = 1.0 + (rsiVal - 50) * 0.002 + (호가비율 - 0.5) * 0.05;
     const elMVRVSOPR = document.getElementById("metric-mvrv-sopr");
     if (elMVRVSOPR) {
@@ -3379,8 +3379,8 @@ function AI추천분석및업데이트(symbol) {
 
     const 시장상태 = 시장상태판정({
         현재가: coin.현재가,
-        ma25,
-        ma99,
+        ema20,
+        sma60,
         bbUpper,
         bbLower,
         bbBasis,
@@ -3415,9 +3415,9 @@ function AI추천분석및업데이트(symbol) {
     }
 
     // C. SMA 추세 분석
-    const 이평정배열 = ma7 > ma25 && ma25 > ma99;
-    const 이평역배열 = ma7 < ma25 && ma25 < ma99;
-    if (coin.현재가 > ma99) {
+    const 이평정배열 = ema5 > ema20 && ema20 > sma60;
+    const 이평역배열 = ema5 < ema20 && ema20 < sma60;
+    if (coin.현재가 > sma60) {
         점수 += 5 * 시장상태.추세가중치;
         롱근거수++;
         추세합의수++;
@@ -3800,13 +3800,13 @@ window.시간단위변경액션 = async function(chartIdx, tf) {
         const times = chartData.캔들데이터.map(c => c.time);
         
         // 이동평균선(MA: Moving Average) 7, 25, 99 라인 재생성
-        const ma7 = 계산SMA(closes, 7);
-        const ma25 = 계산SMA(closes, 25);
-        const ma99 = 계산SMA(closes, 99);
+        const ema5 = 계산EMA(closes, 5);
+        const ema20 = 계산EMA(closes, 20);
+        const sma60 = 계산SMA(closes, 60);
         
-        chartData.MA7시리즈.setData(매핑지표데이터(times, ma7));
-        chartData.MA25시리즈.setData(매핑지표데이터(times, ma25));
-        chartData.MA99시리즈.setData(매핑지표데이터(times, ma99));
+        chartData.EMA5시리즈.setData(매핑지표데이터(times, ema5));
+        chartData.EMA20시리즈.setData(매핑지표데이터(times, ema20));
+        chartData.SMA60시리즈.setData(매핑지표데이터(times, sma60));
         
         // 차트 뷰포트 맞춤 조절
         chartData.메인차트.timeScale().fitContent();
@@ -3847,13 +3847,13 @@ window.차트코인변경액션 = async function(chartIdx, symbol) {
         const closes = chartData.캔들데이터.map(c => c.close);
         const times = chartData.캔들데이터.map(c => c.time);
         
-        const ma7 = 계산SMA(closes, 7);
-        const ma25 = 계산SMA(closes, 25);
-        const ma99 = 계산SMA(closes, 99);
+        const ema5 = 계산EMA(closes, 5);
+        const ema20 = 계산EMA(closes, 20);
+        const sma60 = 계산SMA(closes, 60);
         
-        chartData.MA7시리즈.setData(매핑지표데이터(times, ma7));
-        chartData.MA25시리즈.setData(매핑지표데이터(times, ma25));
-        chartData.MA99시리즈.setData(매핑지표데이터(times, ma99));
+        chartData.EMA5시리즈.setData(매핑지표데이터(times, ema5));
+        chartData.EMA20시리즈.setData(매핑지표데이터(times, ema20));
+        chartData.SMA60시리즈.setData(매핑지표데이터(times, sma60));
         
         chartData.메인차트.timeScale().fitContent();
     }
@@ -4349,14 +4349,14 @@ function REST폴링데이터수입(symbol, 현재가, asks, bids) {
         }
 
         const closesList = c.캔들데이터.map(x => x.close);
-        const ma7 = 계산SMA(closesList, 7);
-        const ma25 = 계산SMA(closesList, 25);
-        const ma99 = 계산SMA(closesList, 99);
+        const ema5 = 계산EMA(closesList, 5);
+        const ema20 = 계산EMA(closesList, 20);
+        const sma60 = 계산SMA(closesList, 60);
         
         const activeCandle = c.캔들데이터[c.캔들데이터.length - 1];
-        c.MA7시리즈.update({ time: activeCandle.time, value: ma7[ma7.length - 1] });
-        c.MA25시리즈.update({ time: activeCandle.time, value: ma25[ma25.length - 1] });
-        c.MA99시리즈.update({ time: activeCandle.time, value: ma99[ma99.length - 1] });
+        c.EMA5시리즈.update({ time: activeCandle.time, value: ema5[ema5.length - 1] });
+        c.EMA20시리즈.update({ time: activeCandle.time, value: ema20[ema20.length - 1] });
+        c.SMA60시리즈.update({ time: activeCandle.time, value: sma60[sma60.length - 1] });
     });
 
     // 상단 탭(Tab) 가격 정보 실시간 연동
@@ -5143,10 +5143,10 @@ window.퀀트분석데이터추출 = function(symbol) {
     const 현재MACD시그널 = macdData.signal[idx] || 0;
     const 현재MACD히스토그램 = macdData.histogram[idx] || 0;
 
-    const ma7 = 계산SMA(closes, 7)[idx] || coin.현재가;
-    const ma25 = 계산SMA(closes, 25)[idx] || coin.현재가;
-    const ma99 = 계산SMA(closes, 99)[idx] || coin.현재가;
-    const ma200 = 계산SMA(closes, 100)[idx] || coin.현재가;
+    const ema5 = 계산EMA(closes, 5)[idx] || coin.현재가;
+    const ema20 = 계산EMA(closes, 20)[idx] || coin.현재가;
+    const sma60 = 계산SMA(closes, 60)[idx] || coin.현재가;
+    const sma200 = 계산SMA(closes, 200)[idx] || coin.현재가;
 
     const cciVal = 계산CCI(highs, lows, closes, 20)[idx] || 0;
     const stochData = 계산스토캐스틱(highs, lows, closes, 14, 3, 3);
@@ -5216,8 +5216,8 @@ window.퀀트분석데이터추출 = function(symbol) {
 
     const 시장상태 = 시장상태판정({
         현재가: coin.현재가,
-        ma25,
-        ma99,
+        ema20,
+        sma60,
         bbUpper,
         bbLower,
         bbBasis,
@@ -5249,17 +5249,17 @@ window.퀀트분석데이터추출 = function(symbol) {
         if (현재MACD히스토그램 < 0) 점수 -= 5 * 시장상태.추세가중치;
     }
 
-    if (coin.현재가 > ma99) {
+    if (coin.현재가 > sma60) {
         점수 += 5 * 시장상태.추세가중치;
         롱근거수++;
         추세합의수++;
-        const 이평정배열 = ma7 > ma25 && ma25 > ma99;
+        const 이평정배열 = ema5 > ema20 && ema20 > sma60;
         if (이평정배열) 점수 += 4 * 시장상태.추세가중치;
     } else {
         점수 -= 5 * 시장상태.추세가중치;
         숏근거수++;
         추세합의수++;
-        const 이평역배열 = ma7 < ma25 && ma25 < ma99;
+        const 이평역배열 = ema5 < ema20 && ema20 < sma60;
         if (이평역배열) 점수 -= 4 * 시장상태.추세가중치;
     }
 
