@@ -453,11 +453,11 @@
                     <div class="form-group leverage-group">
                         <div class="form-label-row">
                             <span>레버리지 배수 (Leverage)</span>
-                            <span id="leverage-display" class="leverage-badge text-yellow">20x</span>
+                            <span id="leverage-display" class="leverage-badge text-yellow">3x</span>
                         </div>
                         <div class="leverage-slider-wrapper">
-                            <input type="range" id="input-leverage" min="1" max="125" value="20" class="slider-leverage">
-                            <input type="number" id="input-leverage-num" min="1" max="125" value="20" class="input-leverage-num">
+                            <input type="range" id="input-leverage" min="1" max="125" value="3" class="slider-leverage">
+                            <input type="number" id="input-leverage-num" min="1" max="125" value="3" class="input-leverage-num">
                         </div>
                     </div>
 
@@ -690,7 +690,7 @@
                                     <!-- 2. 배후 레버리지 표시 -->
                                     <div class="config-row-flex">
                                         <span>실시간 연동 레버리지 배수</span>
-                                        <span id="txt-ai-leverage-display" class="text-yellow" style="font-family: var(--font-display); font-weight:700; font-size:11.5px;">20x</span>
+                                        <span id="txt-ai-leverage-display" class="text-yellow" style="font-family: var(--font-display); font-weight:700; font-size:11.5px;">3x</span>
                                     </div>
 
                                     <!-- 3. 익절(TP) 타점 설정 -->
@@ -1027,7 +1027,7 @@
                     <label>배후 레버리지 (Leverage)</label>
                     <div class="modal-slider-container">
                         <input type="range" id="modal-leverage" min="1" max="125" step="1" class="modal-slider" oninput="window.AI모달수치동기화()">
-                        <span id="modal-leverage-txt" class="modal-value-display">20x</span>
+                        <span id="modal-leverage-txt" class="modal-value-display">3x</span>
                     </div>
                     <span class="modal-sub-desc">선물 거래 배수입니다. 높을수록 청산 위험이 증가합니다.</span>
                 </div>

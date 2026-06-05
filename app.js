@@ -131,7 +131,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
         const 기본코인객체 = 상태.코인목록[상태.기본코인];
         if (기본코인객체) {
-            const 기본레버리지 = 기본코인객체.레버리지 || 20;
+            const 기본레버리지 = 기본코인객체.레버리지 || 3;
             const inputLeverage = document.getElementById("input-leverage");
             const inputLeverageNum = document.getElementById("input-leverage-num");
             const leverageDisplay = document.getElementById("leverage-display");
@@ -216,7 +216,7 @@ function 초기코인데이터정의() {
             호가매수: [], 
             소수점: 소수점,
             수량소수점: 수량소수점,
-            레버리지: 20, // ⚡ 기본 레버리지 값 20배 강제 바인딩 (Leverage Lock)
+            레버리지: 3, // ⚡ 기본 레버리지 값 20배 강제 바인딩 (Leverage Lock)
             자동매매활성화: !!자동매매맵[symbol], // 스토리지에 기록된 값이 있다면 복원
             가상시세여부: false // 가상 시세 상태 플래그 기본값 초기화 (가상 시세 감지 락)
         };
@@ -241,7 +241,7 @@ function 초기코인데이터정의() {
                         호가매수: [],
                         소수점: symbol.startsWith("BTC") ? 2 : 3,
                         수량소수점: symbol.startsWith("BTC") ? 3 : 2,
-                        레버리지: 20, // ⚡ 기본 레버리지 값 20배 강제 바인딩
+                        레버리지: 3, // ⚡ 기본 레버리지 값 20배 강제 바인딩
                         자동매매활성화: !!자동매매맵[symbol], // 스토리지에 기록된 값이 있다면 복원
                         가상시세여부: false // 가상 시세 상태 플래그 기본값 초기화 (가상 시세 감지 락)
                     };
@@ -1266,7 +1266,7 @@ function AI자동매매실행(symbol, 방향) {
 
     // 2. 사용자가 설정한 슬라이더의 레버리지(Leverage) 배수 동적 크롤링
     const leverageInput = document.getElementById("input-leverage");
-    const leverage = leverageInput ? parseInt(leverageInput.value) : 20;
+    const leverage = leverageInput ? parseInt(leverageInput.value) : 3;
 
     // 3. 사용자가 설정한 진입 비율(Entry Ratio)에 따른 가용 지갑 잔고 비례 투자 증거금 산출
     const 진입가 = coin.현재가;
@@ -1473,7 +1473,7 @@ function 포지션체결실행(주문, 체결가) {
         청산가: parseFloat(청산가.toFixed(상태.코인목록[주문.심볼].소수점)),
         익절가: 주문.익절가,
         손절가: 주문.손절가,
-        자동마진: false, // 🛡️ 실시간 청산 예방용 자동 증거금 추가 가드 기본값 비활성화
+        자동마진: true, // 🛡️ 실시간 청산 예방용 자동 증거금 추가 가드 기본값 비활성화
         체결시간: 얻는현재시각텍스트()
     };
 
@@ -1964,14 +1964,14 @@ window.코인탭전환 = async function(symbol) {
     await 탭전환시분할차트데이터로드(symbol);
 
     // ⚡ 코인 고유 레버리지 정보 획득 및 폼 역동기화 (State Lock & Reverse Sync)
-    let coinLeverage = 20;
+    let coinLeverage = 3;
     if (coin.레버리지 !== undefined) {
         coinLeverage = coin.레버리지;
     } else if (상태.코인별레버리지 && 상태.코인별레버리지[symbol] !== undefined) {
         coinLeverage = 상태.코인별레버리지[symbol];
         coin.레버리지 = coinLeverage; // 메모리에 동기화
     } else {
-        coin.레버리지 = 20;
+        coin.레버리지 = 3;
     }
     
     // 우측 주문 폼 슬라이더 및 입력 필드 동기화
@@ -3585,7 +3585,7 @@ function AI추천분석및업데이트(symbol) {
     let 추천진입가 = coin.현재가;
     let 추천익절가 = coin.현재가;
     let 추천손절가 = coin.현재가;
-    const 레버리지 = parseInt(document.getElementById("input-leverage").value) || 20;
+    const 레버리지 = parseInt(document.getElementById("input-leverage").value) || 3;
 
     if (추천방향 === "LONG") {
         // 롱 타점: 0.786 파동 분석 기법 투영 (피보나치 78.6% 지지선과 BB Lower의 융합 진입)
@@ -4796,7 +4796,7 @@ window.AI설정모달열기액션 = function(symbol) {
     
     const initialRatio = 상태.자동매매설정.진입비율 || 10;
     if (ratioInput) ratioInput.value = initialRatio;
-    if (leverageInput) leverageInput.value = actualLeverage ? parseInt(actualLeverage.value) : 20;
+    if (leverageInput) leverageInput.value = actualLeverage ? parseInt(actualLeverage.value) : 3;
     if (usdtInput) {
         usdtInput.value = Math.round(상태.지갑잔고 * (initialRatio / 100));
     }
@@ -4820,7 +4820,7 @@ window.AI모달수치동기화 = function(triggerType) {
     if (!ratioInput || !leverageInput) return;
 
     let ratioVal = parseInt(ratioInput.value) || 10;
-    const leverageVal = parseInt(leverageInput.value) || 20;
+    const leverageVal = parseInt(leverageInput.value) || 3;
 
     if (triggerType === "usdt" && usdtInput) {
         const usdtVal = parseFloat(usdtInput.value) || 0;
@@ -4952,7 +4952,7 @@ window.코인레버리지복원 = function() {
             Object.keys(레버리지맵).forEach(symbol => {
                 const coin = 상태.코인목록[symbol];
                 if (coin) {
-                    coin.레버리지 = parseInt(레버리지맵[symbol]) || 20;
+                    coin.레버리지 = parseInt(레버리지맵[symbol]) || 3;
                 }
             });
         }
