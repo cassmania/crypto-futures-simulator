@@ -3443,6 +3443,17 @@ function AI추천분석및업데이트(symbol) {
                 elCMELive.className = "metric-val " + cache.클래스;
             }
         }
+        // [수정] 비동기 분석 완료 시점에 현재 탭에 선택되어 있는 코인과 일치하면 광고판 밑 요약창도 동시 최신화
+        if (symbol === 상태.기본코인) {
+            const adCmeStatusElLive = document.getElementById("ad-cme-gap-status");
+            if (adCmeStatusElLive) {
+                const cache = 상태.CME갭캐시[symbol];
+                if (cache) {
+                    adCmeStatusElLive.innerText = cache.간단결과 || cache.결과;
+                    adCmeStatusElLive.className = "briefing-value " + cache.클래스;
+                }
+            }
+        }
     });
 
     // 4. 프로젝트 및 기본적 분석 바인딩 (Tab 3 - Fundamental Briefs)
