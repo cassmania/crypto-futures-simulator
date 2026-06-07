@@ -2566,7 +2566,7 @@ function 이벤트리스너바인딩() {
 
     // 초기화 버튼
     document.getElementById("btn-reset").addEventListener("click", () => {
-        if (confirm("모든 모의 거래 상태와 지갑을 10,000 USDT 원금으로 리셋하시겠습니까?")) {
+        if (confirm("모든 거래 상태와 지갑을 10,000 USDT 원금으로 리셋하시겠습니까?")) {
             상태.지갑잔고 = 10000.00;
             상태.마진잔고 = 10000.00;
             상태.미실현손익 = 0.00;
@@ -2600,7 +2600,7 @@ function 이벤트리스너바인딩() {
 
             if (orderType === "market") {
                 triggerPriceGroup.classList.add("hidden");
-                submitBtn.innerHTML = `<i class="fa-solid fa-bolt animate-pulse"></i> 시장가 모의 체결`;
+                submitBtn.innerHTML = `<i class="fa-solid fa-bolt animate-pulse"></i> 시장가 체결`;
             } else {
                 triggerPriceGroup.classList.remove("hidden");
                 submitBtn.innerHTML = `<i class="fa-solid fa-bolt animate-pulse"></i> 자동 체결 예약 활성화`;
