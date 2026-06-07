@@ -110,6 +110,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     // 3.5단계: 로컬 스토리지로부터 모의 매매 잔고, 대기 주문, 포지션 정보 복원
     모의매매상태복원();
 
+    // [보완] 최초 코인 실시간 실제 시세(Spot API) 로딩으로 가격 괴리 사전 차단
+    await 최초시세로딩();
+
     // 4단계: 바이낸스 REST API 기반 초기 과거 캔들 데이터 로딩
     await 최초과거데이터로드();
 
@@ -409,6 +412,41 @@ function 차트설정저장() {
     localStorage.setItem("선물시뮬레이터_차트시간설정", JSON.stringify(시간설정));
 }
 
+// [신규] 전체 등록 코인의 실시간 실제 시세 일괄 로딩 (CORS 친화적 Spot API 활용)
+async function 최초시세로딩() {
+    try {
+        console.log("[Binance API] 초기 전체 시세 동기화 시작...");
+        let res = await fetch("https://fapi.binance.com/fapi/v1/ticker/price");
+        if (!res.ok) {
+            res = await fetch("https://api.binance.com/api/v3/ticker/price");
+        }
+        if (res.ok) {
+            const tickers = await res.json();
+            const priceMap = {};
+            tickers.forEach(t => {
+                priceMap[t.symbol] = parseFloat(t.price);
+            });
+            Object.keys(상태.코인목록).forEach(symbol => {
+                if (priceMap[symbol]) {
+                    const price = priceMap[symbol];
+                    const coin = 상태.코인목록[symbol];
+                    coin.현재가 = price;
+                    coin.어제종가 = price * 0.98;
+                    coin.최고24h = price * 1.02;
+                    coin.최저24h = price * 0.97;
+                    const { 소수점, 수량소수점 } = 자동소수점결정(price);
+                    coin.소수점 = 소수점;
+                    coin.수량소수점 = 수량소수점;
+                    coin.가상시세여부 = false;
+                }
+            });
+            console.log("[Binance API] 초기 전체 코인 실제 시세 로드 완료.");
+        }
+    } catch (err) {
+        console.warn("[Binance API] 초기 실시간 시세 일괄 로드 실패:", err.message);
+    }
+}
+
 // 4. 바이낸스 REST API 연동 및 데이터 파싱 (Historical Data Loader for 8-Split Charts)
 async function 최초과거데이터로드() {
     await 전체분할차트데이터로드();
@@ -491,8 +529,15 @@ async function 분할차트캔들데이터로드(chartIdx) {
     if (!coin) return;
 
     try {
-        const response = await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=${interval}&limit=150`);
-        if (!response.ok) throw new Error(`${interval} API 호출 실패`);
+        let response;
+        try {
+            response = await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=${interval}&limit=150`);
+            if (!response.ok) throw new Error(`${interval} Futures API 호출 실패`);
+        } catch (fErr) {
+            console.log(`[CORS/Network Fallback] ${symbol} ${interval} 현물(Spot) API로 백업 캔들 로드 시도.`);
+            response = await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=150`);
+            if (!response.ok) throw new Error(`${interval} Spot API 백업 호출 실패`);
+        }
 
         const rawData = await response.json();
         const formattedCandles = rawData.map(c => ({
@@ -4201,6 +4246,7 @@ function 실시간시세REST폴러() {
         const currentCoin = 상태.코인목록[targetSymbol];
 
         // A. 웹소켓 연결이 정상이고 호가 데이터가 이미 안정적으로 유입되는 경우, 폴링 생략
+        // 단, 백그라운드/포지션 코인의 시세 이탈 방지를 위해 정기적으로 일괄 폴링 진행
         if (상태.웹소켓연결상태 && currentCoin && currentCoin.호가매도 && currentCoin.호가매도.length > 0) {
             const statusDot = document.getElementById("binance-status-dot");
             const statusText = document.getElementById("binance-status-text");
@@ -4209,6 +4255,9 @@ function 실시간시세REST폴러() {
                 statusDot.className = "status-dot green";
                 statusText.innerText = "Binance 라이브 시세 연동 중";
                 statusText.className = "status-text text-green";
+            }
+            if (Math.random() < 0.15) {
+                백그라운드전체시세폴링();
             }
             return;
         }
@@ -4224,12 +4273,21 @@ function 실시간시세REST폴러() {
         }
 
         // C. 현재 보고 있는 메인 코인의 실시간 시세와 호가 데이터를 병렬 수집
-
         try {
-            const [priceRes, depthRes] = await Promise.all([
-                fetch(`https://fapi.binance.com/fapi/v1/ticker/price?symbol=${targetSymbol}`),
-                fetch(`https://fapi.binance.com/fapi/v1/depth?symbol=${targetSymbol}&limit=5`)
-            ]);
+            let priceRes, depthRes;
+            try {
+                [priceRes, depthRes] = await Promise.all([
+                    fetch(`https://fapi.binance.com/fapi/v1/ticker/price?symbol=${targetSymbol}`),
+                    fetch(`https://fapi.binance.com/fapi/v1/depth?symbol=${targetSymbol}&limit=5`)
+                ]);
+                if (!priceRes.ok || !depthRes.ok) throw new Error("Futures API 응답 에러");
+            } catch (fErr) {
+                // Futures API CORS 차단 시 Spot API로 폴백
+                [priceRes, depthRes] = await Promise.all([
+                    fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${targetSymbol}`),
+                    fetch(`https://api.binance.com/api/v3/depth?symbol=${targetSymbol}&limit=5`)
+                ]);
+            }
 
             if (priceRes.ok && depthRes.ok) {
                 const priceData = await priceRes.json();
@@ -4244,24 +4302,38 @@ function 실시간시세REST폴러() {
             console.warn("[REST Polling Alert] 메인 코인 시세 폴링 실패:", e.message);
         }
 
-        // D. 백그라운드에 대기 중인 다른 코인들도 API 부하 한계(Rate Limit) 범위 안에서 순차 업데이트 (25%의 빈도로만 분배 실행)
-        if (Math.random() < 0.25) {
-            Object.keys(상태.코인목록).forEach(async (symbol) => {
-                if (symbol === targetSymbol) return; // 활성 코인은 실시간 처리 완료함
+        // D. 백그라운드 및 포지션 대기 코인 전체 실시간 동기화
+        await 백그라운드전체시세폴링();
+    }, 1500);
+}
 
-                try {
-                    const priceRes = await fetch(`https://fapi.binance.com/fapi/v1/ticker/price?symbol=${symbol}`);
-                    if (priceRes.ok) {
-                        const priceData = await priceRes.json();
-                        const 현재가 = parseFloat(priceData.price);
-                        REST폴링데이터수입(symbol, 현재가, [], []);
+// 백그라운드 전체 코인의 시세를 단 한 번의 API 호출로 안전하게 업데이트 (CORS 친화적 Spot API 활용)
+async function 백그라운드전체시세폴링() {
+    try {
+        let res = await fetch("https://fapi.binance.com/fapi/v1/ticker/price");
+        if (!res.ok) {
+            res = await fetch("https://api.binance.com/api/v3/ticker/price");
+        }
+        if (res.ok) {
+            const tickers = await res.json();
+            const priceMap = {};
+            tickers.forEach(t => {
+                priceMap[t.symbol] = parseFloat(t.price);
+            });
+            Object.keys(상태.코인목록).forEach(symbol => {
+                if (priceMap[symbol]) {
+                    const 현재가 = priceMap[symbol];
+                    const coin = 상태.코인목록[symbol];
+                    if (coin) {
+                        coin.가상시세여부 = false;
+                        coin.현재가 = 현재가;
                     }
-                } catch (err) {
-                    // 백그라운드 폴링 예외 생략
                 }
             });
         }
-    }, 1500);
+    } catch (err) {
+        console.warn("[REST Polling Alert] 백그라운드 전체 시세 폴링 실패:", err.message);
+    }
 }
 
 // REST API로 긁어온 가격 패킷을 실시간 틱 데이터 형식으로 가공하여 파이프라인에 주입
