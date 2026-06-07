@@ -3025,10 +3025,7 @@ function 상태바업데이트() {
     pnlEl.innerText = `${sign}${pnl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT (${sign}${pnlPct.toFixed(2)}%)`;
     pnlEl.className = "info-value " + (pnl > 0 ? "text-green" : (pnl < 0 ? "text-red" : "text-neutral"));
 
-    const activeSymbols = 상태.활성포지션.map(p => p.심볼.replace("USDT", ""));
-    const uniqueSymbols = [...new Set(activeSymbols)];
-    const symbolStr = uniqueSymbols.length > 0 ? ` (${uniqueSymbols.join(", ")})` : "";
-    document.getElementById("active-positions-count").innerText = `${상태.활성포지션.length}${symbolStr}`;
+    document.getElementById("active-positions-count").innerText = 상태.활성포지션.length;
     document.getElementById("pos-badge").innerText = 상태.활성포지션.length;
     document.getElementById("trigger-badge").innerText = 상태.대기주문.length;
 }
