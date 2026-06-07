@@ -6,6 +6,11 @@
    ---------------------------------------------------- */
 
 window.onerror = function(msg, url, line) {
+    // 크로스오리진 외부 SDK(예: 카카오톡 SDK 등)에서 던지는 상세 정보 없는 단순 "Script error." 경고는 얼럿을 띄우지 않고 콘솔로만 수집하여 무시 처리
+    if (msg === "Script error." || (!url && line === 0)) {
+        console.warn("[Cross-Origin SDK Warning Ignore]:", msg);
+        return true; // 브라우저 기본 에러 동작 전파 차단
+    }
     alert('브라우저 에러 감지!\n메시지: ' + msg + '\n파일: ' + url + '\n라인: ' + line);
 };
 
@@ -190,6 +195,16 @@ function 자동소수점결정(가격) {
 
 // 코인 데이터 기본 정적 정의 및 localStorage 알트코인 목록 복원
 function 초기코인데이터정의() {
+    // ⚡ 구버전 20배 레버리지 스토리지 데이터 마이그레이션 초기화
+    try {
+        if (!localStorage.getItem("선물시뮬레이터_레버리지초기화_v3")) {
+            localStorage.removeItem("선물시뮬레이터_코인레버리지");
+            localStorage.setItem("선물시뮬레이터_레버리지초기화_v3", "true");
+        }
+    } catch (e) {
+        console.error("레버리지 마이그레이션 에러:", e);
+    }
+
     // 로컬스토리지 저장된 자동매매 활성화 맵 복원 시도
     let 자동매매맵 = {};
     try {
@@ -1761,6 +1776,10 @@ function 코인탭렌더링() {
         const 즐겨찾기여부 = 상태.즐겨찾기목록.includes(symbol);
         const starClass = 즐겨찾기여부 ? "fa-solid fa-star text-yellow" : "fa-regular fa-star";
         
+        // 해당 코인의 활성 모의 포지션 존재 여부 검사
+        const 포지션보유중 = 상태.활성포지션.some(p => p.심볼 === symbol);
+        const 포지션배지 = 포지션보유중 ? `<span class="pulse-dot" style="display:inline-block; margin-left:4px; vertical-align:middle;" title="활성 포지션 보유 중"></span>` : "";
+        
         // 24시간 변동률 기반 실시간 컬러 피드백 반영
         const 변동률 = ((coin.현재가 - coin.어제종가) / coin.어제종가 * 100).toFixed(2);
         const 변동률클래스 = 변동률 >= 0 ? "text-green" : "text-red";
@@ -1768,7 +1787,7 @@ function 코인탭렌더링() {
         html += `
             <button class="coin-tab ${isActive}" data-symbol="${symbol}" onclick="코인탭전환('${symbol}')">
                 <i class="${starClass} btn-fav-star" onclick="즐겨찾기토글('${symbol}', event)" style="font-size:11px; margin-right:4px;" title="즐겨찾기 토글"></i>
-                ${symbol.replace("USDT", "")} 
+                ${symbol.replace("USDT", "")}${포지션배지} 
                 <span class="tab-price ${변동률클래스}" id="tab-price-${symbol}">
                     ${coin.현재가.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}
                 </span>
@@ -1874,6 +1893,10 @@ function 드롭다운목록렌더링() {
         const 즐겨찾기여부 = 상태.즐겨찾기목록.includes(symbol);
         const starClass = 즐겨찾기여부 ? "fa-solid fa-star text-yellow" : "fa-regular fa-star";
         
+        // 해당 코인의 활성 모의 포지션 존재 여부 검사
+        const 포지션보유중 = 상태.활성포지션.some(p => p.심볼 === symbol);
+        const 포지션배지 = 포지션보유중 ? `<span class="pulse-dot" style="display:inline-block; margin-right:6px;" title="활성 포지션 보유 중"></span>` : "";
+        
         // 24시간 변동률 구하기
         const 변동률 = ((coin.현재가 - coin.어제종가) / coin.어제종가 * 100).toFixed(2);
         const 변동률클래스 = 변동률 >= 0 ? "text-green" : "text-red";
@@ -1881,8 +1904,9 @@ function 드롭다운목록렌더링() {
 
         html += `
             <div class="dropdown-coin-row ${isActive}" onclick="드롭다운코인선택('${symbol}')">
-                <div class="coin-meta-col">
-                    <i class="${starClass} btn-fav-star" onclick="즐겨찾기토글('${symbol}', event)" style="font-size:11px;"></i>
+                <div class="coin-meta-col" style="display: flex; align-items: center;">
+                    <i class="${starClass} btn-fav-star" onclick="즐겨찾기토글('${symbol}', event)" style="font-size:11px; margin-right:6px;"></i>
+                    ${포지션배지}
                     <span class="symbol-name">${symbol.replace("USDT", "")}</span>
                     <span class="symbol-desc">/USDT</span>
                 </div>
@@ -2041,6 +2065,7 @@ window.검색코인강제등록액션 = async function(symbol) {
         호가매수: [],
         소수점: 3,
         수량소수점: 2,
+        레버리지: 3, // ⚡ 동적 등록 코인의 기본 레버리지를 3배로 고정
         자동매매활성화: 자동매매활성화,
         가상시세여부: false // 동적 등록 코인 가상 시세 상태 플래그 기본값 초기화 (가상 시세 감지 락)
     };
@@ -3000,7 +3025,10 @@ function 상태바업데이트() {
     pnlEl.innerText = `${sign}${pnl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT (${sign}${pnlPct.toFixed(2)}%)`;
     pnlEl.className = "info-value " + (pnl > 0 ? "text-green" : (pnl < 0 ? "text-red" : "text-neutral"));
 
-    document.getElementById("active-positions-count").innerText = 상태.활성포지션.length;
+    const activeSymbols = 상태.활성포지션.map(p => p.심볼.replace("USDT", ""));
+    const uniqueSymbols = [...new Set(activeSymbols)];
+    const symbolStr = uniqueSymbols.length > 0 ? ` (${uniqueSymbols.join(", ")})` : "";
+    document.getElementById("active-positions-count").innerText = `${상태.활성포지션.length}${symbolStr}`;
     document.getElementById("pos-badge").innerText = 상태.활성포지션.length;
     document.getElementById("trigger-badge").innerText = 상태.대기주문.length;
 }
