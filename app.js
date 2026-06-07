@@ -4454,6 +4454,7 @@ async function CME갭연산및업데이트(symbol) {
             // 주말 캔들을 찾을 수 없거나 데이터 누락 시 (예: 주중에 막 상장했거나 API 제한 등)
             상태.CME갭캐시[symbol] = {
                 결과: "갭 미발생 (데이터 부족)",
+                간단결과: "갭 미발생 (데이터 부족)",
                 클래스: "text-neutral",
                 갱신시간: Date.now()
             };
@@ -4469,6 +4470,7 @@ async function CME갭연산및업데이트(symbol) {
         if (gapSize < threshold) {
             상태.CME갭캐시[symbol] = {
                 결과: "갭 미발생 (안정적 흐름)",
+                간단결과: "갭 미발생 (안정적 흐름)",
                 클래스: "text-neutral",
                 갱신시간: Date.now()
             };
