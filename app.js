@@ -3475,6 +3475,29 @@ function AI추천분석및업데이트(symbol) {
     document.getElementById("project-news").innerText = pInfo.호재뉴스;
     document.getElementById("project-levels").innerText = pInfo.지지저항;
 
+    // [NEW] 광고 아래 모니터링 섹션 값 업데이트
+    const adCmeStatusEl = document.getElementById("ad-cme-gap-status");
+    if (adCmeStatusEl) {
+        const cache = 상태.CME갭캐시[symbol];
+        if (cache) {
+            adCmeStatusEl.innerText = cache.결과;
+            adCmeStatusEl.className = "briefing-value " + cache.클래스;
+        } else {
+            adCmeStatusEl.innerText = (symbol === "BTCUSDT" || symbol === "ETHUSDT") ? "분석 연산 중..." : "N/A (CME 미상장 자산)";
+            adCmeStatusEl.className = "briefing-value text-neutral";
+        }
+    }
+
+    const adLongShortEl = document.getElementById("ad-long-short-flow");
+    if (adLongShortEl) {
+        adLongShortEl.innerHTML = `롱 풀 <span class="text-green" style="font-weight:700;">${liqLongRatio}%</span> vs 숏 풀 <span class="text-red" style="font-weight:700;">${liqShortRatio}%</span> <span style="font-size:0.85em; color:var(--color-text-muted); margin-left:6px;">(고래 유입: ${whaleRatio >= 0 ? '+' : ''}${whaleRatio}%)</span>`;
+    }
+
+    const adNewsEl = document.getElementById("ad-live-news-content");
+    if (adNewsEl) {
+        adNewsEl.innerText = pInfo.호재뉴스;
+    }
+
     const 시장상태 = 시장상태판정({
         현재가: coin.현재가,
         ema20,

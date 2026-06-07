@@ -204,7 +204,7 @@ body {
     gap: 8px;
     padding: 8px;
     flex: 1;
-    height: calc(100vh - 64px - 460px); /* 헤더와 하단 포지션 영역 제외 */
+    height: calc(100vh - 64px - 290px); /* 헤더와 줄어든 하단 포지션 영역(280px + 여백 10px) 제외 */
     background-color: var(--color-bg-deep);
 }
 
@@ -1386,7 +1386,7 @@ body {
 
 /* 9. 하단 포지션 및 이력 패널 (Bottom Positions Panel) */
 .app-footer {
-    height: 450px;
+    height: 280px;
     padding: 0 8px 8px 8px;
     background-color: var(--color-bg-deep);
 }
@@ -3317,3 +3317,72 @@ body {
 .coupang-banner:hover .fa-arrow-right {
     color: #cb1400;
 }
+
+/* =========================================
+   📊 프리미엄 모니터링 브리핑룸 스타일 (Briefing Room)
+========================================= */
+.monitoring-briefing-room {
+    display: flex;
+    gap: 12px;
+    margin-top: 12px;
+    padding: 12px;
+    background: linear-gradient(135deg, rgba(30, 32, 38, 0.6) 0%, rgba(43, 49, 57, 0.4) 100%);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.briefing-box {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px 10px;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-sm);
+    transition: all 0.2s ease;
+}
+
+.briefing-box:hover {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(240, 185, 11, 0.2);
+}
+
+.briefing-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--color-text-muted);
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.briefing-value {
+    font-size: 11.5px;
+    font-weight: 500;
+    line-height: 1.4;
+    color: var(--color-text-primary);
+}
+
+.cme-gap-box .briefing-value {
+    font-family: var(--font-display);
+}
+
+.volume-flow-box .briefing-value {
+    font-family: var(--font-display);
+}
+
+.live-news-box .briefing-value {
+    word-break: keep-all;
+}
+
+@media (max-width: 768px) {
+    .monitoring-briefing-room {
+        flex-direction: column;
+        gap: 8px;
+    }
+}
+
