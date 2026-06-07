@@ -3480,7 +3480,7 @@ function AI추천분석및업데이트(symbol) {
     if (adCmeStatusEl) {
         const cache = 상태.CME갭캐시[symbol];
         if (cache) {
-            adCmeStatusEl.innerText = cache.결과;
+            adCmeStatusEl.innerText = cache.간단결과 || cache.결과;
             adCmeStatusEl.className = "briefing-value " + cache.클래스;
         } else {
             adCmeStatusEl.innerText = (symbol === "BTCUSDT" || symbol === "ETHUSDT") ? "분석 연산 중..." : "N/A (CME 미상장 자산)";
@@ -4488,17 +4488,21 @@ async function CME갭연산및업데이트(symbol) {
         let 결과텍스트 = "";
         let 클래스 = "";
 
+        let 간단결과 = "";
+        const gapTypeKo = gapPrice > 0 ? "상승 갭" : "하락 갭";
         if (filled) {
             결과텍스트 = `갭 메움 완료 (직전 갭: ${fridayClose.toLocaleString()} ~ ${sundayOpen.toLocaleString()} USDT, 채워진 시점: ${filledTime})`;
+            간단결과 = `갭 메움 완료 (직전 ${gapTypeKo})`;
             클래스 = "text-green";
         } else {
-            const gapType = gapPrice > 0 ? "상승 갭 (Buy Gap)" : "하락 갭 (Sell Gap)";
-            결과텍스트 = `⚠️ 미해소 갭 존재 (${gapType}, 갭 가격대: ${gapMin.toLocaleString()} ~ ${gapMax.toLocaleString()} USDT, 크기: ${gapSize.toFixed(2)} USDT)`;
+            결과텍스트 = `⚠️ 미해소 갭 존재 (${gapTypeKo}, 갭 가격대: ${gapMin.toLocaleString()} ~ ${gapMax.toLocaleString()} USDT, 크기: ${gapSize.toFixed(2)} USDT)`;
+            간단결과 = `⚠️ 미해소 ${gapTypeKo} 존재 (크기: ${gapSize.toFixed(2)} USDT)`;
             클래스 = "text-red animate-pulse";
         }
 
         상태.CME갭캐시[symbol] = {
             결과: 결과텍스트,
+            간단결과: 간단결과,
             클래스: 클래스,
             갱신시간: Date.now()
         };
