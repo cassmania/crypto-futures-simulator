@@ -24,6 +24,7 @@ const 상태 = {
     // 코인 및 시장 데이터 (Market Data)
     기본코인: "BTCUSDT",       // 현재 활성화되어 차트에 그릴 코인 심볼 (Active Symbol)
     코인목록: {},              // 각 코인의 실시간 데이터 및 히스토리 관리용 딕셔너리
+    CME갭캐시: {},             // 각 코인별 CME 갭 분석 결과 캐싱 (symbol: { 결과: '', 클래스: '', 갱신시간: 0 })
     
     // 즐겨찾기 및 카테고리 관리 (Favorites & Categories)
     즐겨찾기목록: ["BTCUSDT", "ETHUSDT"], // 즐겨찾기 코인 심볼 배열 (Favorites List)
@@ -3421,6 +3422,29 @@ function AI추천분석및업데이트(symbol) {
         elVPVR.innerText = `POC 매물 중심: ${vpvrPOC.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })} USDT`;
     }
 
+    // CME 갭 (CME Gap) 분석 화면 연동
+    const elCME = document.getElementById("metric-cme-gap");
+    if (elCME) {
+        const cache = 상태.CME갭캐시[symbol];
+        if (cache) {
+            elCME.innerText = cache.결과;
+            elCME.className = "metric-val " + cache.클래스;
+        } else {
+            elCME.innerText = "분석 중...";
+            elCME.className = "metric-val text-neutral";
+        }
+    }
+    CME갭연산및업데이트(symbol).then(() => {
+        const elCMELive = document.getElementById("metric-cme-gap");
+        if (elCMELive) {
+            const cache = 상태.CME갭캐시[symbol];
+            if (cache) {
+                elCMELive.innerText = cache.결과;
+                elCMELive.className = "metric-val " + cache.클래스;
+            }
+        }
+    });
+
     // 4. 프로젝트 및 기본적 분석 바인딩 (Tab 3 - Fundamental Briefs)
     let pInfo = 프로젝트데이터베이스[symbol];
     if (!pInfo) {
@@ -4333,6 +4357,138 @@ async function 백그라운드전체시세폴링() {
         }
     } catch (err) {
         console.warn("[REST Polling Alert] 백그라운드 전체 시세 폴링 실패:", err.message);
+    }
+}
+
+// [신규] CME 갭 (CME Gap) 연산 및 업데이트 (CORS 친화적 Spot API 활용)
+async function CME갭연산및업데이트(symbol) {
+    // 1. BTCUSDT, ETHUSDT 외의 알트코인은 CME 분석 비대상으로 즉각 반환 처리
+    if (symbol !== "BTCUSDT" && symbol !== "ETHUSDT") {
+        상태.CME갭캐시[symbol] = {
+            결과: "N/A (CME 미상장 자산)",
+            클래스: "text-neutral",
+            갱신시간: Date.now()
+        };
+        return;
+    }
+
+    // 캐시 기간 검사 (5분 캐시)
+    const 캐시 = 상태.CME갭캐시[symbol];
+    if (캐시 && (Date.now() - 캐시.갱신시간 < 300000)) {
+        return; // 5분 이내이면 기존 캐시 활용
+    }
+
+    try {
+        console.log(`[CME Gap Analyzer] ${symbol} CME 갭 분석 및 연산 시도...`);
+        // 8일간의 1시간봉 데이터(200개) 로드
+        const res = await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=1h&limit=200`);
+        if (!res.ok) throw new Error("Spot Klines API fetch failed");
+
+        const klines = await res.json();
+        
+        // 금요일 폐장(CME Close: 금요일 21:00 UTC)과 일요일 개장(CME Open: 일요일 22:00 UTC) 찾기
+        let fridayCloseCandle = null;
+        let sundayOpenCandle = null;
+        let sundayOpenIdx = -1;
+
+        // 최근 200개 캔들 중 가장 최근의 주말 경계선 탐색
+        // 역순(최신부터 과거로)으로 찾아감
+        for (let i = klines.length - 1; i >= 0; i--) {
+            const timeMs = klines[i][0];
+            const date = new Date(timeMs);
+            const day = date.getUTCDay(); // 0: Sunday, 5: Friday
+            const hour = date.getUTCHours();
+
+            // 가장 최신의 일요일 개장 캔들 (CME Open: 일요일 22시)
+            if (!sundayOpenCandle && day === 0 && hour === 22) {
+                sundayOpenCandle = klines[i];
+                sundayOpenIdx = i;
+            }
+
+            // 가장 최신의 금요일 폐장 캔들 (CME Close: 금요일 21시)
+            // 단, 이미 발견한 일요일 개장 캔들보다 시간상 과거여야 함
+            if (sundayOpenCandle && !fridayCloseCandle && day === 5 && hour === 21 && i < sundayOpenIdx) {
+                fridayCloseCandle = klines[i];
+            }
+
+            if (sundayOpenCandle && fridayCloseCandle) {
+                break;
+            }
+        }
+
+        if (!fridayCloseCandle || !sundayOpenCandle) {
+            // 주말 캔들을 찾을 수 없거나 데이터 누락 시 (예: 주중에 막 상장했거나 API 제한 등)
+            상태.CME갭캐시[symbol] = {
+                결과: "갭 미발생 (데이터 부족)",
+                클래스: "text-neutral",
+                갱신시간: Date.now()
+            };
+            return;
+        }
+
+        const fridayClose = parseFloat(fridayCloseCandle[4]); // 금요일 21시 캔들 종가
+        const sundayOpen = parseFloat(sundayOpenCandle[1]);   // 일요일 22시 캔들 시가
+        const gapPrice = sundayOpen - fridayClose;
+        const gapSize = Math.abs(gapPrice);
+        const threshold = symbol === "BTCUSDT" ? 100 : 10; // BTC는 100달러, ETH는 10달러 기준
+
+        if (gapSize < threshold) {
+            상태.CME갭캐시[symbol] = {
+                결과: "갭 미발생 (안정적 흐름)",
+                클래스: "text-neutral",
+                갱신시간: Date.now()
+            };
+            return;
+        }
+
+        // 갭 영역 정의
+        const gapMin = Math.min(fridayClose, sundayOpen);
+        const gapMax = Math.max(fridayClose, sundayOpen);
+
+        // 갭 메움 여부 분석 (일요일 개장 캔들 이후의 캔들들을 전수 조사)
+        let filled = false;
+        let filledTime = "";
+
+        for (let i = sundayOpenIdx; i < klines.length; i++) {
+            const low = parseFloat(klines[i][3]);
+            const high = parseFloat(klines[i][2]);
+
+            // 금요일 종가(CME close) 가격을 캔들 고가/저가가 관통했거나 터치했는지 확인
+            if (low <= fridayClose && high >= fridayClose) {
+                filled = true;
+                const fillDate = new Date(klines[i][0]);
+                filledTime = `${fillDate.getMonth()+1}/${fillDate.getDate()} ${fillDate.getHours()}시`;
+                break;
+            }
+        }
+
+        let 결과텍스트 = "";
+        let 클래스 = "";
+
+        if (filled) {
+            결과텍스트 = `갭 메움 완료 (직전 갭: ${fridayClose.toLocaleString()} ~ ${sundayOpen.toLocaleString()} USDT, 채워진 시점: ${filledTime})`;
+            클래스 = "text-green";
+        } else {
+            const gapType = gapPrice > 0 ? "상승 갭 (Buy Gap)" : "하락 갭 (Sell Gap)";
+            결과텍스트 = `⚠️ 미해소 갭 존재 (${gapType}, 갭 가격대: ${gapMin.toLocaleString()} ~ ${gapMax.toLocaleString()} USDT, 크기: ${gapSize.toFixed(2)} USDT)`;
+            클래스 = "text-red animate-pulse";
+        }
+
+        상태.CME갭캐시[symbol] = {
+            결과: 결과텍스트,
+            클래스: 클래스,
+            갱신시간: Date.now()
+        };
+
+        console.log(`[CME Gap Analyzer] ${symbol} 분석 완료: ${결과텍스트}`);
+
+    } catch (err) {
+        console.warn(`[CME Gap Analyzer Alert] ${symbol} CME 갭 계산 실패:`, err.message);
+        상태.CME갭캐시[symbol] = {
+            결과: "분석 실패 (네트워크 오류)",
+            클래스: "text-red",
+            갱신시간: Date.now() - 240000 // 실패 시 1분 뒤 재시도할 수 있도록 세팅
+        };
     }
 }
 
