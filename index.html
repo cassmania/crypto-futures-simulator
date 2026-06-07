@@ -430,7 +430,13 @@
                 <div class="monitoring-briefing-room">
                     <div class="briefing-box cme-gap-box">
                         <div class="briefing-title">
-                            <i class="fa-solid fa-chart-line text-yellow"></i> CME 갭 (CME Gap) 상태
+                            <span style="display: flex; align-items: center; gap: 4px;">
+                                <i class="fa-solid fa-chart-line text-yellow"></i> CME 갭 (CME Gap) 상태
+                            </span>
+                            <div class="info-tooltip-container">
+                                <i class="fa-regular fa-circle-question tooltip-trigger"></i>
+                                <span class="tooltip-text">CME 갭(CME Gap)은 세계 최대 시카고상품거래소(CME)가 주말에 폐장한 사이(금요일 21시~일요일 22시 UTC) 발생한 현물 가격의 변동으로 인해 생기는 빈 공간입니다. 시장은 통상 이 빈 가격대를 다시 메우려는(Gap Fill) 회귀 경향을 보입니다.</span>
+                            </div>
                         </div>
                         <div class="briefing-value" id="ad-cme-gap-status">
                             분석 중...

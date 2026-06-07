@@ -3357,7 +3357,69 @@ body {
     letter-spacing: 0.5px;
     display: flex;
     align-items: center;
-    gap: 6px;
+    justify-content: space-between;
+    width: 100%;
+}
+
+/* ℹ️ CME 갭 설명 툴팁 스타일 */
+.info-tooltip-container {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.tooltip-trigger {
+    color: var(--color-text-muted);
+    font-size: 11px;
+    transition: color 0.15s ease;
+}
+
+.tooltip-trigger:hover {
+    color: var(--color-yellow);
+}
+
+.tooltip-text {
+    visibility: hidden;
+    width: 250px;
+    background-color: hsl(220, 20%, 5%);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-primary);
+    text-align: left;
+    border-radius: var(--radius-sm);
+    padding: 8px 10px;
+    font-size: 10.5px;
+    line-height: 1.4;
+    font-weight: 400;
+    
+    /* 위치 제어 (CME 갭 박스 상단 노출) */
+    position: absolute;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    opacity: 0;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    pointer-events: none;
+    word-break: keep-all;
+}
+
+/* 말꼬리 화살표 */
+.tooltip-text::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: var(--color-border) transparent transparent transparent;
+}
+
+.info-tooltip-container:hover .tooltip-text {
+    visibility: visible;
+    opacity: 1;
 }
 
 .briefing-value {
