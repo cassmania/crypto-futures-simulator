@@ -4406,11 +4406,11 @@ async function CME갭연산및업데이트(symbol) {
         return;
     }
 
-    // 캐시 기간 검사 (5분 캐시)
-    const 캐시 = 상태.CME갭캐시[symbol];
-    if (캐시 && (Date.now() - 캐시.갱신시간 < 300000)) {
-        return; // 5분 이내이면 기존 캐시 활용
-    }
+    // 캐시 기간 검사 (5분 캐시) - 실시간 시뮬레이션을 위해 디버그 기간 동안 캐시 무시
+    // const 캐시 = 상태.CME갭캐시[symbol];
+    // if (캐시 && (Date.now() - 캐시.갱신시간 < 300000)) {
+    //     return; // 5분 이내이면 기존 캐시 활용
+    // }
 
     try {
         console.log(`[CME Gap Analyzer] ${symbol} CME 갭 분석 및 연산 시도...`);
