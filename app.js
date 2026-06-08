@@ -4430,18 +4430,18 @@ async function CME갭연산및업데이트(symbol) {
         for (let i = klines.length - 1; i >= 0; i--) {
             const timeMs = klines[i][0];
             const date = new Date(timeMs);
-            const day = date.getUTCDay(); // 0: Sunday, 5: Friday
+            const day = date.getUTCDay(); // 0: Sunday, 5: Friday, 6: Saturday
             const hour = date.getUTCHours();
 
-            // 가장 최신의 일요일 개장 캔들 (CME Open: 일요일 22시)
-            if (!sundayOpenCandle && day === 0 && hour === 22) {
+            // 가장 최신의 일요일 개장 부근 캔들 (CME Open: 일요일 21시 ~ 23시 사이 첫 캔들)
+            if (!sundayOpenCandle && day === 0 && (hour >= 21 && hour <= 23)) {
                 sundayOpenCandle = klines[i];
                 sundayOpenIdx = i;
             }
 
-            // 가장 최신의 금요일 폐장 캔들 (CME Close: 금요일 21시)
+            // 가장 최신의 금요일 폐장 부근 캔들 (CME Close: 금요일 20시 ~ 22시 사이 마지막 캔들)
             // 단, 이미 발견한 일요일 개장 캔들보다 시간상 과거여야 함
-            if (sundayOpenCandle && !fridayCloseCandle && day === 5 && hour === 21 && i < sundayOpenIdx) {
+            if (sundayOpenCandle && !fridayCloseCandle && day === 5 && (hour >= 20 && hour <= 22) && i < sundayOpenIdx) {
                 fridayCloseCandle = klines[i];
             }
 
