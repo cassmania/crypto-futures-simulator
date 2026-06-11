@@ -70,7 +70,7 @@ const 코인정의 = {
     "BTCUSDT": { 이름: "BTC/USDT Perpetual", 시작가: 73000.00, 소수점: 2, 수량소수점: 3 },
     "ETHUSDT": { 이름: "ETH/USDT Perpetual", 시작가: 2000.00, 소수점: 2, 수량소수점: 2 },
     "SOLUSDT": { 이름: "SOL/USDT Perpetual", 시작가: 150.00, 소수점: 2, 수량소수점: 2 },
-    "HYPEUSDT": { name: "HYPE/USDT Perpetual", 시작가: 0.338, 소수점: 3, 수량소수점: 2 },
+    "HYPEUSDT": { 이름: "HYPE/USDT Perpetual", 시작가: 0.338, 소수점: 3, 수량소수점: 2 },
     "XRPUSDT": { 이름: "XRP/USDT Perpetual", 시작가: 0.5500, 소수점: 4, 수량소수점: 1 },
     "ADAUSDT": { 이름: "ADA/USDT Perpetual", 시작가: 0.4500, 소수점: 4, 수량소수점: 1 },
     "DOGEUSDT": { 이름: "DOGE/USDT Perpetual", 시작가: 0.14500, 소수점: 5, 수량소수점: 0 },
@@ -1354,7 +1354,7 @@ function 포지션종료실행(인덱스, 종료가, 사유) {
         진입가: pos.진입가,
         종료가: 종료가,
         수량: pos.수량,
-        수수료: hCommission => 수수료, // 호환용 필드
+        수수료: 수수료,
         실현손익: pnl,
         종료원인: 사유
     });
@@ -1639,7 +1639,7 @@ function 이벤트리스너바인딩() {
                         상태.단일차트.메인차트.resize(container.clientWidth, container.clientHeight);
                         상태.단일차트.메인차트.timeScale().fitContent();
                     }
-                }, 100);
+                }, 200); // ⚡ 모바일 기기 DOM 리플로우 타이밍을 고려해 200ms로 안전 지연 상향 조정
             }
         });
     });
@@ -1774,6 +1774,8 @@ function 이벤트리스너바인딩() {
             const coin = 상태.코인목록[상태.기본코인];
             if (!coin) return 0.01;
             if (coin.수량소수점 === 3) return 0.001;
+            if (coin.수량소수점 === 2) return 0.01;
+            if (coin.수량소수점 === 1) return 0.1;
             if (coin.수량소수점 === 0) return 10.0;
             return 0.01;
         };
@@ -1783,7 +1785,7 @@ function 이벤트리스너바인딩() {
             let currentVal = parseFloat(inputQty.value) || 0;
             const coin = 상태.코인목록[상태.기본코인];
             currentVal = Math.max(0.0001, currentVal - step);
-            inputQty.value = parseFloat(currentVal.toFixed(coin ? coin.수량소수점 : 3));
+            inputQty.value = parseFloat(currentVal.toFixed(coin ? coin.수량소수점 : 4));
             주문비용재연산();
         });
 
@@ -1792,7 +1794,7 @@ function 이벤트리스너바인딩() {
             let currentVal = parseFloat(inputQty.value) || 0;
             const coin = 상태.코인목록[상태.기본코인];
             currentVal = currentVal + step;
-            inputQty.value = parseFloat(currentVal.toFixed(coin ? coin.수량소수점 : 3));
+            inputQty.value = parseFloat(currentVal.toFixed(coin ? coin.수량소수점 : 4));
             주문비용재연산();
         });
     }
@@ -1895,6 +1897,17 @@ function 이벤트리스너바인딩() {
             else tpslContainer.classList.add("hidden");
         });
     }
+
+    // 수량, 감시가격, 익절/손절 입력 필드 실시간 변경 시 리스크 카드 재연산 바인딩
+    const inputQuantity = document.getElementById("input-quantity");
+    const inputTriggerPrice = document.getElementById("input-trigger-price");
+    const inputTpPrice = document.getElementById("input-tp-price");
+    const inputSlPrice = document.getElementById("input-sl-price");
+
+    if (inputQuantity) inputQuantity.addEventListener("input", 주문비용재연산);
+    if (inputTriggerPrice) inputTriggerPrice.addEventListener("input", 주문비용재연산);
+    if (inputTpPrice) inputTpPrice.addEventListener("input", 주문비용재연산);
+    if (inputSlPrice) inputSlPrice.addEventListener("input", 주문비용재연산);
 
     // AI 설정 탭 내 필드 갱신 리스너들
     const settingRatio = document.getElementById("setting-ai-ratio");
