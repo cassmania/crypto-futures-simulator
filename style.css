@@ -1799,6 +1799,11 @@ body {
     transform: translateY(0);
 }
 
+/* 모바일 전용 차트 선택기는 데스크톱에서 기본 숨김 */
+.mobile-chart-selector {
+    display: none;
+}
+
 /* 8분할 차트 레이아웃 스타일 (8-Split 2x4 Charts Grid) */
 .charts-container-8split {
     display: grid;
@@ -2967,47 +2972,70 @@ body {
         display: flex !important;
         flex: 1;
     }
-    /* 주문 탭일 때는 AI 어드바이저 숨김 */
+    /* 주문 탭일 때 AI 분석 카드를 숨기지 않고 데스크톱처럼 아래에 세로 스크롤로 배치 */
     .app-container[data-mobile-active-tab="trade"] .ai-advisor-card {
-        display: none !important;
-    }
-
-    .app-container[data-mobile-active-tab="ai"] .order-panel {
-        display: flex !important;
-        flex: 1;
-    }
-    /* AI 분석 탭일 때는 주문 폼 관련 영역을 숨기고 AI 분석 바이블과 결과 카드만 극대화 */
-    .app-container[data-mobile-active-tab="ai"] .order-type-tabs,
-    .app-container[data-mobile-active-tab="ai"] .position-direction-selector,
-    .app-container[data-mobile-active-tab="ai"] .leverage-group,
-    .app-container[data-mobile-active-tab="ai"] #risk-check-card,
-    .app-container[data-mobile-active-tab="ai"] #trigger-price-group,
-    .app-container[data-mobile-active-tab="ai"] .form-group:not(.leverage-group),
-    .app-container[data-mobile-active-tab="ai"] .tpsl-checkbox-row,
-    .app-container[data-mobile-active-tab="ai"] .tpsl-inputs-container,
-    .app-container[data-mobile-active-tab="ai"] #btn-submit-order {
-        display: none !important;
-    }
-    .app-container[data-mobile-active-tab="ai"] .ai-advisor-card {
         display: flex !important;
         flex-direction: column !important;
-        margin-top: 0;
+        margin-top: 12px;
         border-color: var(--color-border);
     }
 
-    .app-container[data-mobile-active-tab="position"] .info-panel,
-    .app-container[data-mobile-active-tab="position"] .app-footer {
+    /* 호가/신호 탭 단독 노출 제어 */
+    .app-container[data-mobile-active-tab="info"] .info-panel {
         display: flex !important;
+        flex: 1;
+        height: 100%;
     }
 
+    /* 포지션 탭 단독 노출 제어 (내 포지션 테이블이 상단에 배치되도록 호가 패널 숨김) */
+    .app-container[data-mobile-active-tab="position"] .app-footer {
+        display: flex !important;
+        flex: 1;
+        height: 100%;
+    }
     .app-container[data-mobile-active-tab="position"] .dashboard-grid {
         height: auto;
         overflow: visible;
     }
-    
-    .app-container[data-mobile-active-tab="position"] .info-panel {
-        display: grid !important;
-        grid-template-rows: auto auto; /* 호가창과 매매신호가 세로로 나열 */
+
+    /* 3. 모바일 차트 영역 단일화 & 탭 칩스타일 */
+    .mobile-chart-selector {
+        display: flex !important;
+        flex-shrink: 0; /* 아래 차트 높이에 밀려 찌그러지는 현상 완전 방지 */
+        gap: 6px;
+        padding: 8px 10px;
+        background-color: hsl(220, 18%, 8%);
+        border-bottom: 1px solid var(--color-border);
+        overflow-x: auto;
+        white-space: nowrap;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+        z-index: 10;
+    }
+
+    .mobile-chart-selector::-webkit-scrollbar {
+        display: none;
+    }
+
+    .mobile-chart-tab {
+        background-color: var(--color-bg-card);
+        border: 1px solid var(--color-border);
+        color: var(--color-text-muted);
+        padding: 6px 12px;
+        font-size: 11px;
+        font-weight: 700;
+        border-radius: 20px;
+        cursor: pointer;
+        display: inline-block;
+        transition: var(--transition-fast);
+        user-select: none;
+    }
+
+    .mobile-chart-tab.active {
+        color: var(--color-yellow);
+        border-color: var(--color-yellow);
+        background-color: hsla(45, 100%, 53%, 0.12);
+        box-shadow: 0 0 10px rgba(243, 186, 47, 0.25);
     }
 
     /* 3. 모바일 차트 영역 단일화 & 탭 칩스타일 */

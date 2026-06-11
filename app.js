@@ -160,7 +160,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     const 초기idx = 상태.차트객체.분할차트들.findIndex(c => c.코인심볼 === 상태.기본코인);
     if (초기idx !== -1) 활성차트강조테두리(초기idx);
 
-
+    // [모바일 대응] 최초 진입 시 모바일 차트 선택기 및 액티브 차트 동기화
+    if (window.innerWidth <= 768) {
+        setTimeout(() => {
+            const 포커스idx = 상태.차트객체.분할차트들.findIndex(c => c.코인심볼 === 상태.기본코인);
+            const 실제idx = 포커스idx !== -1 ? 포커스idx : 0;
+            
+            // 모바일용 차트 선택기 라벨 렌더링
+            if (typeof window.모바일차트선택기렌더링 === "function") {
+                window.모바일차트선택기렌더링();
+            }
+            // 해당 차트 활성화 및 찌그러짐 해소
+            if (typeof window.모바일차트포커스변경 === "function") {
+                window.모바일차트포커스변경(실제idx);
+            }
+        }, 350);
+    }
 });
 
 // [퀀트 정밀도 보정 엔진 V3] 코인 실시간 가격에 따른 지능형 소수점 자동 조율 함수 (한글 주석 준수)
@@ -403,6 +418,11 @@ function 시간단위UI동기화() {
             badgeEl.innerText = tfText;
         }
     });
+
+    // [모바일 대응] 모바일 차트 선택기 정보 동기화 및 렌더링
+    if (typeof window.모바일차트선택기렌더링 === "function") {
+        window.모바일차트선택기렌더링();
+    }
 }
 
 // 8개 차트 개별 코인 및 시간 설정 로컬스토리지 저장
@@ -692,6 +712,17 @@ function 분할차트들렌더링() {
 
     // C. AI 실시간 타점 진단 갱신 (차트 1의 1시간봉 데이터 기준)
     AI추천분석및업데이트(상태.기본코인);
+
+    // [모바일 대응] 최초 로딩이 완료된 후 데이터가 제대로 채워진 상태에서 모바일 초기 탭 스위칭 및 강제 리사이징 1회 수행
+    if (window.innerWidth <= 768) {
+        setTimeout(() => {
+            const 포커스idx = 상태.차트객체.분할차트들.findIndex(c => c.코인심볼 === 상태.기본코인);
+            const 실제idx = 포커스idx !== -1 ? 포커스idx : 0;
+            if (typeof window.모바일차트포커스변경 === "function") {
+                window.모바일차트포커스변경(실제idx);
+            }
+        }, 150);
+    }
 }
 
 function 매핑지표데이터(times, values) {
@@ -4117,6 +4148,15 @@ window.활성차트강조테두리 = function(activeIdx) {
                 wrapper.classList.remove("active-chart");
             }
         }
+        // [모바일 대응] 모바일 차트 선택기 탭의 active 클래스 동기화
+        const mobileTab = document.getElementById(`mobile-chart-tab-${i}`);
+        if (mobileTab) {
+            if (i === activeIdx) {
+                mobileTab.classList.add("active");
+            } else {
+                mobileTab.classList.remove("active");
+            }
+        }
     }
 };
 
@@ -5444,6 +5484,48 @@ window.모바일탭스위치 = function(tabName) {
                 }
             });
         }, 80); // 모바일 렌더링 리플로우 타이밍 고려한 80ms 지연
+    } else if (tabName === "position") {
+        // 포지션 탭 전환 시 모바일 뷰 스크롤 최상단 보정
+        window.scrollTo(0, 0);
+    }
+};
+
+// [모바일 반응형 V2] 8분할 차트 간 가로 스크롤 전환 탭 렌더링 기능 (Mobile Chart Tab Renderer)
+window.모바일차트선택기렌더링 = function() {
+    for (let i = 0; i < 8; i++) {
+        const tabBtn = document.getElementById(`mobile-chart-tab-${i}`);
+        if (!tabBtn) continue;
+        const chartData = 상태.차트객체.분할차트들[i];
+        if (chartData) {
+            const cleanSymbol = chartData.코인심볼.replace("USDT", "");
+            tabBtn.innerHTML = `차트 ${i+1}: <span style="color: var(--color-yellow); font-weight:800;">${cleanSymbol}</span> <span style="opacity: 0.7; font-size:9.5px;">(${chartData.시간단위})</span>`;
+        }
+    }
+};
+
+// [모바일 반응형 V3] 모바일 탭 전환 및 포커스 동적 스위칭 (Mobile Chart Focus Switch)
+window.모바일차트포커스변경 = function(idx) {
+    // 1. 활성차트 테두리 적용 (이 내부에서 모바일 탭도 함께 active 상태로 업데이트)
+    window.활성차트강조테두리(idx);
+    
+    // 모바일 차트 선택기 정보 동기화 및 렌더링
+    if (typeof window.모바일차트선택기렌더링 === "function") {
+        window.모바일차트선택기렌더링();
+    }
+    
+    // 2. 해당 차트로 기본코인 핫스왑 연동 및 타점 드로잉
+    const chartData = 상태.차트객체.분할차트들[idx];
+    if (chartData) {
+        window.차트클릭포커스액션(idx);
+        
+        // 3. 찌그러진 TradingView 차트를 초정밀 리사이징
+        setTimeout(() => {
+            const container = document.getElementById(`split-chart-canvas-${idx}`);
+            if (chartData.메인차트 && container) {
+                chartData.메인차트.resize(container.clientWidth, container.clientHeight);
+                chartData.메인차트.timeScale().fitContent();
+            }
+        }, 100); // DOM 리플로우 대기
     }
 };
 

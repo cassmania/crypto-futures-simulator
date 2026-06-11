@@ -16,7 +16,7 @@
     <link rel="icon" href="data:,">
 
     <!-- 자체 스타일시트(Style CSS) 연동 -->
-    <link rel="stylesheet" href="style.css?v=3">
+    <link rel="stylesheet" href="style.css?v=4">
 
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-C60CWQZ62S"></script>
@@ -133,6 +133,18 @@
                             <span id="price-low-24h" class="stat-val">0.00</span>
                         </div>
                     </div>
+                </div>
+
+                <!-- 모바일 전용 8분할 차트 신속 전환 탭바 (Mobile Chart Selector) -->
+                <div class="mobile-chart-selector" id="mobile-chart-selector">
+                    <button type="button" class="mobile-chart-tab active" onclick="window.모바일차트포커스변경(0)" id="mobile-chart-tab-0">차트 1</button>
+                    <button type="button" class="mobile-chart-tab" onclick="window.모바일차트포커스변경(1)" id="mobile-chart-tab-1">차트 2</button>
+                    <button type="button" class="mobile-chart-tab" onclick="window.모바일차트포커스변경(2)" id="mobile-chart-tab-2">차트 3</button>
+                    <button type="button" class="mobile-chart-tab" onclick="window.모바일차트포커스변경(3)" id="mobile-chart-tab-3">차트 4</button>
+                    <button type="button" class="mobile-chart-tab" onclick="window.모바일차트포커스변경(4)" id="mobile-chart-tab-4">차트 5</button>
+                    <button type="button" class="mobile-chart-tab" onclick="window.모바일차트포커스변경(5)" id="mobile-chart-tab-5">차트 6</button>
+                    <button type="button" class="mobile-chart-tab" onclick="window.모바일차트포커스변경(6)" id="mobile-chart-tab-6">차트 7</button>
+                    <button type="button" class="mobile-chart-tab" onclick="window.모바일차트포커스변경(7)" id="mobile-chart-tab-7">차트 8</button>
                 </div>
 
                 <!-- 8분할 다중 코인/시간프레임 차트 컨테이너 (8-Split Multi-Symbol/Timeframe Charts Container) -->
@@ -1169,21 +1181,21 @@
     </div>
     <!-- 모바일 전용 하단 고정 탭바 (Mobile Bottom Navigation Bar) -->
     <nav class="mobile-bottom-nav">
-        <button class="nav-item active" data-tab="chart" onclick="window.모바일탭스위치('chart')">
+        <button type="button" class="nav-item active" data-tab="chart" onclick="window.모바일탭스위치('chart')">
             <i class="fa-solid fa-chart-line"></i>
             <span>차트</span>
         </button>
-        <button class="nav-item" data-tab="trade" onclick="window.모바일탭스위치('trade')">
+        <button type="button" class="nav-item" data-tab="trade" onclick="window.모바일탭스위치('trade')">
             <i class="fa-solid fa-bolt"></i>
-            <span>주문</span>
+            <span>주문/AI</span>
         </button>
-        <button class="nav-item" data-tab="ai" onclick="window.모바일탭스위치('ai')">
-            <i class="fa-solid fa-robot"></i>
-            <span>AI분석</span>
+        <button type="button" class="nav-item" data-tab="info" onclick="window.모바일탭스위치('info')">
+            <i class="fa-solid fa-bars-staggered"></i>
+            <span>호가/신호</span>
         </button>
-        <button class="nav-item" data-tab="position" onclick="window.모바일탭스위치('position')">
+        <button type="button" class="nav-item" data-tab="position" onclick="window.모바일탭스위치('position')">
             <i class="fa-solid fa-wallet"></i>
-            <span>현황/신호</span>
+            <span>포지션</span>
         </button>
     </nav>
 
@@ -1191,6 +1203,6 @@
     <script src="https://t1.kakaocdn.net/kakao_js_sdk/1.43.1/kakao.min.js"></script>
 
     <!-- 메인 트레이딩 엔진 로직 JavaScript 연동 -->
-    <script src="app.js?v=3"></script>
+    <script src="app.js?v=4"></script>
 </body>
 </html>
