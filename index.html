@@ -94,7 +94,7 @@
                         <!-- [NEW] 프리미엄 다크 글라스 통합 코인 검색창 -->
                         <div class="dropdown-search-wrapper">
                             <i class="fa-solid fa-magnifying-glass search-icon"></i>
-                            <input type="text" id="coin-search-input" placeholder="코인 심볼 검색 (예: SOL, XRP...)" class="input-dropdown-search" autocomplete="off">
+                            <input type="text" id="coin-search-input" placeholder="코인 심볼 검색 (예: SOL, XRP...)" class="input-dropdown-search" autocomplete="off" aria-label="코인 심볼 검색">
                             <button id="btn-clear-search" class="btn-clear-search hidden" type="button" title="검색어 초기화">
                                 <i class="fa-solid fa-circle-xmark"></i>
                             </button>
@@ -142,7 +142,7 @@
                         <div class="split-chart-header">
                             <div class="split-chart-title-area">
                                 <i class="fa-solid fa-chart-line text-yellow" style="margin-right:4px;"></i>
-                                <select class="chart-symbol-select" id="chart-symbol-select-0" onchange="차트코인변경액션(0, this.value)">
+                                <select class="chart-symbol-select" id="chart-symbol-select-0" onchange="차트코인변경액션(0, this.value)" aria-label="차트 1 코인 선택">
                                     <option value="BTCUSDT">BTC</option>
                                     <option value="ETHUSDT">ETH</option>
                                     <option value="SOLUSDT">SOL</option>
@@ -175,7 +175,7 @@
                         <div class="split-chart-header">
                             <div class="split-chart-title-area">
                                 <i class="fa-solid fa-chart-line text-yellow" style="margin-right:4px;"></i>
-                                <select class="chart-symbol-select" id="chart-symbol-select-1" onchange="차트코인변경액션(1, this.value)">
+                                <select class="chart-symbol-select" id="chart-symbol-select-1" onchange="차트코인변경액션(1, this.value)" aria-label="차트 2 코인 선택">
                                     <option value="BTCUSDT">BTC</option>
                                     <option value="ETHUSDT">ETH</option>
                                     <option value="SOLUSDT">SOL</option>
@@ -208,7 +208,7 @@
                         <div class="split-chart-header">
                             <div class="split-chart-title-area">
                                 <i class="fa-solid fa-chart-line text-yellow" style="margin-right:4px;"></i>
-                                <select class="chart-symbol-select" id="chart-symbol-select-2" onchange="차트코인변경액션(2, this.value)">
+                                <select class="chart-symbol-select" id="chart-symbol-select-2" onchange="차트코인변경액션(2, this.value)" aria-label="차트 3 코인 선택">
                                     <option value="BTCUSDT">BTC</option>
                                     <option value="ETHUSDT">ETH</option>
                                     <option value="SOLUSDT">SOL</option>
@@ -241,7 +241,7 @@
                         <div class="split-chart-header">
                             <div class="split-chart-title-area">
                                 <i class="fa-solid fa-chart-line text-yellow" style="margin-right:4px;"></i>
-                                <select class="chart-symbol-select" id="chart-symbol-select-3" onchange="차트코인변경액션(3, this.value)">
+                                <select class="chart-symbol-select" id="chart-symbol-select-3" onchange="차트코인변경액션(3, this.value)" aria-label="차트 4 코인 선택">
                                     <option value="BTCUSDT">BTC</option>
                                     <option value="ETHUSDT">ETH</option>
                                     <option value="SOLUSDT">SOL</option>
@@ -274,7 +274,7 @@
                         <div class="split-chart-header">
                             <div class="split-chart-title-area">
                                 <i class="fa-solid fa-chart-line text-yellow" style="margin-right:4px;"></i>
-                                <select class="chart-symbol-select" id="chart-symbol-select-4" onchange="차트코인변경액션(4, this.value)">
+                                <select class="chart-symbol-select" id="chart-symbol-select-4" onchange="차트코인변경액션(4, this.value)" aria-label="차트 5 코인 선택">
                                     <option value="BTCUSDT">BTC</option>
                                     <option value="ETHUSDT">ETH</option>
                                     <option value="SOLUSDT">SOL</option>
@@ -307,7 +307,7 @@
                         <div class="split-chart-header">
                             <div class="split-chart-title-area">
                                 <i class="fa-solid fa-chart-line text-yellow" style="margin-right:4px;"></i>
-                                <select class="chart-symbol-select" id="chart-symbol-select-5" onchange="차트코인변경액션(5, this.value)">
+                                <select class="chart-symbol-select" id="chart-symbol-select-5" onchange="차트코인변경액션(5, this.value)" aria-label="차트 6 코인 선택">
                                     <option value="BTCUSDT">BTC</option>
                                     <option value="ETHUSDT">ETH</option>
                                     <option value="SOLUSDT">SOL</option>
@@ -340,7 +340,7 @@
                         <div class="split-chart-header">
                             <div class="split-chart-title-area">
                                 <i class="fa-solid fa-chart-line text-yellow" style="margin-right:4px;"></i>
-                                <select class="chart-symbol-select" id="chart-symbol-select-6" onchange="차트코인변경액션(6, this.value)">
+                                <select class="chart-symbol-select" id="chart-symbol-select-6" onchange="차트코인변경액션(6, this.value)" aria-label="차트 7 코인 선택">
                                     <option value="BTCUSDT">BTC</option>
                                     <option value="ETHUSDT">ETH</option>
                                     <option value="SOLUSDT">SOL</option>
@@ -373,7 +373,7 @@
                         <div class="split-chart-header">
                             <div class="split-chart-title-area">
                                 <i class="fa-solid fa-chart-line text-yellow" style="margin-right:4px;"></i>
-                                <select class="chart-symbol-select" id="chart-symbol-select-7" onchange="차트코인변경액션(7, this.value)">
+                                <select class="chart-symbol-select" id="chart-symbol-select-7" onchange="차트코인변경액션(7, this.value)" aria-label="차트 8 코인 선택">
                                     <option value="BTCUSDT">BTC</option>
                                     <option value="ETHUSDT">ETH</option>
                                     <option value="SOLUSDT">SOL</option>
@@ -490,8 +490,8 @@
                             <span id="leverage-display" class="leverage-badge text-yellow">3x</span>
                         </div>
                         <div class="leverage-slider-wrapper">
-                            <input type="range" id="input-leverage" min="1" max="125" value="3" class="slider-leverage">
-                            <input type="number" id="input-leverage-num" min="1" max="125" value="3" class="input-leverage-num">
+                            <input type="range" id="input-leverage" min="1" max="125" value="3" class="slider-leverage" aria-label="레버리지 설정 슬라이더">
+                            <input type="number" id="input-leverage-num" min="1" max="125" value="3" class="input-leverage-num" aria-label="레버리지 배수 직접 입력">
                         </div>
                     </div>
 
@@ -549,7 +549,7 @@
                         <div class="quantity-controller-wrapper">
                             <div class="input-with-addon qty-input-box">
                                 <button type="button" id="btn-qty-minus" class="btn-qty-adjust" title="주문 크기 감소">-</button>
-                                <input type="number" id="input-quantity" value="0.1" step="0.001" min="0.0001" style="text-align: center;">
+                                <input type="number" id="input-quantity" value="0.1" step="0.001" min="0.0001" style="text-align: center;" aria-label="주문 수량 직접 입력">
                                 <button type="button" id="btn-qty-plus" class="btn-qty-adjust" title="주문 크기 증가">+</button>
                                 <span class="addon" id="qty-symbol-addon">BTC</span>
                             </div>
@@ -557,7 +557,7 @@
                         <!-- 마우스 드래그 정밀 퍼센트 슬라이더 추가 -->
                         <div class="quantity-slider-group" style="margin-top: 4px;">
                             <div class="qty-slider-wrapper">
-                                <input type="range" id="input-qty-slider" min="0" max="100" value="10" class="slider-leverage" style="background: linear-gradient(to right, var(--color-yellow) 10%, var(--color-border) 10%);">
+                                <input type="range" id="input-qty-slider" min="0" max="100" value="10" class="slider-leverage" style="background: linear-gradient(to right, var(--color-yellow) 10%, var(--color-border) 10%);" aria-label="주문 크기 비율 슬라이더">
                                 <span id="qty-slider-display" class="qty-slider-badge text-yellow" style="font-family: var(--font-display); font-size: 11px; font-weight: 700; min-width: 35px; text-align: right;">10%</span>
                             </div>
                         </div>
@@ -572,7 +572,7 @@
                     <!-- 익절 / 손절 설정 (Take Profit / Stop Loss) -->
                     <div class="tpsl-checkbox-row">
                         <label class="checkbox-container">
-                            <input type="checkbox" id="chk-tpsl">
+                            <input type="checkbox" id="chk-tpsl" aria-label="익절 / 손절 설정 활성화">
                             <span class="checkmark"></span>
                             익절 / 손절 (TP / SL) 설정
                         </label>
@@ -713,12 +713,12 @@
                                         <div class="config-label-area" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                                             <span>진입 증거금 비율 (Margin Allocation)</span>
                                             <div style="display: flex; align-items: center; gap: 6px;">
-                                                <input type="number" id="input-ai-margin-usdt" min="1" step="1" class="config-num-input" style="width: 85px; text-align: right; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(240, 185, 11, 0.4); color: #fff; border-radius: 4px; padding: 2px 6px; font-family: var(--font-display);" oninput="window.AI설정수치동기화('usdt')">
+                                                <input type="number" id="input-ai-margin-usdt" min="1" step="1" class="config-num-input" style="width: 85px; text-align: right; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(240, 185, 11, 0.4); color: #fff; border-radius: 4px; padding: 2px 6px; font-family: var(--font-display);" oninput="window.AI설정수치동기화('usdt')" aria-label="AI 진입 마진(USDT)">
                                                 <span style="color: #848e9c; font-size: 11px;">USDT</span>
                                                 <span id="txt-ai-margin-ratio" class="text-yellow" style="font-family: var(--font-display); font-weight:700; margin-left: 6px;">10%</span>
                                             </div>
                                         </div>
-                                        <input type="range" id="input-ai-margin-ratio" min="1" max="100" step="1" value="10" class="config-slider" style="margin-top: 6px;" oninput="window.AI설정수치동기화('ratio')">
+                                        <input type="range" id="input-ai-margin-ratio" min="1" max="100" step="1" value="10" class="config-slider" style="margin-top: 6px;" oninput="window.AI설정수치동기화('ratio')" aria-label="AI 진입 마진 비율">
                                     </div>
                                     
                                     <!-- 2. 배후 레버리지 표시 -->
@@ -732,10 +732,10 @@
                                         <span>익절 타점 설정 (Take Profit)</span>
                                         <div class="config-radio-group">
                                             <label class="config-radio-label">
-                                                <input type="radio" name="ai-tp-type" value="ai" checked onchange="window.AI설정수치동기화()"> AI 정밀 자동 연산 (피보나치 & BB 기반)
+                                                <input type="radio" name="ai-tp-type" value="ai" checked onchange="window.AI설정수치동기화()" aria-label="AI 정밀 자동 익절 연산"> AI 정밀 자동 연산 (피보나치 & BB 기반)
                                             </label>
                                             <label class="config-radio-label">
-                                                <input type="radio" name="ai-tp-type" value="manual" onchange="window.AI설정수치동기화()"> 수동 지정: 진입가 대비 +<input type="number" id="input-ai-tp-rate" min="1" max="200" value="10" class="config-num-input" oninput="window.AI설정수치동기화()">%
+                                                <input type="radio" name="ai-tp-type" value="manual" onchange="window.AI설정수치동기화()" aria-label="수동 익절 지정 설정"> 수동 지정: 진입가 대비 +<input type="number" id="input-ai-tp-rate" min="1" max="200" value="10" class="config-num-input" oninput="window.AI설정수치동기화()" aria-label="수동 익절 비율">%
                                             </label>
                                         </div>
                                     </div>
@@ -745,10 +745,10 @@
                                         <span>손절 타점 설정 (Stop Loss)</span>
                                         <div class="config-radio-group">
                                             <label class="config-radio-label">
-                                                <input type="radio" name="ai-sl-type" value="ai" checked onchange="window.AI설정수치동기화()"> AI 정밀 자동 연산 (스탑 헌팅 가드 버퍼)
+                                                <input type="radio" name="ai-sl-type" value="ai" checked onchange="window.AI설정수치동기화()" aria-label="AI 정밀 자동 손절 연산"> AI 정밀 자동 연산 (스탑 헌팅 가드 버퍼)
                                             </label>
                                             <label class="config-radio-label">
-                                                <input type="radio" name="ai-sl-type" value="manual" onchange="window.AI설정수치동기화()"> 수동 지정: 진입가 대비 -<input type="number" id="input-ai-sl-rate" min="1" max="100" value="5" class="config-num-input" oninput="window.AI설정수치동기화()">%
+                                                <input type="radio" name="ai-sl-type" value="manual" onchange="window.AI설정수치동기화()" aria-label="수동 손절 지정 설정"> 수동 지정: 진입가 대비 -<input type="number" id="input-ai-sl-rate" min="1" max="100" value="5" class="config-num-input" oninput="window.AI설정수치동기화()" aria-label="수동 손절 비율">%
                                             </label>
                                         </div>
                                     </div>
@@ -757,7 +757,7 @@
                                     <div class="config-row-flex">
                                         <span>동일 코인 중복 진입 방지 (Anti-Overlapping)</span>
                                         <label class="config-switch">
-                                            <input type="checkbox" id="input-ai-anti-overlap" checked onchange="window.AI설정수치동기화()">
+                                            <input type="checkbox" id="input-ai-anti-overlap" checked onchange="window.AI설정수치동기화()" aria-label="동일 코인 중복 진입 방지">
                                             <span class="config-switch-slider"></span>
                                         </label>
                                     </div>
@@ -1050,12 +1050,12 @@
                     <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                         <label>진입 증거금 비율 (Wallet Margin Ratio)</label>
                         <div style="display: flex; align-items: center; gap: 6px;">
-                            <input type="number" id="modal-margin-usdt" min="1" step="1" class="modal-num-input" style="width: 100px; text-align: right; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(240, 185, 11, 0.4); color: #fff; border-radius: 4px; padding: 2px 6px; font-family: var(--font-display);" oninput="window.AI모달수치동기화('usdt')">
+                            <input type="number" id="modal-margin-usdt" min="1" step="1" class="modal-num-input" style="width: 100px; text-align: right; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(240, 185, 11, 0.4); color: #fff; border-radius: 4px; padding: 2px 6px; font-family: var(--font-display);" oninput="window.AI모달수치동기화('usdt')" aria-label="진입 증거금(USDT)">
                             <span style="color: #848e9c; font-size: 11px;">USDT</span>
                         </div>
                     </div>
                     <div class="modal-slider-container" style="margin-top: 6px;">
-                        <input type="range" id="modal-margin-ratio" min="1" max="100" step="1" class="modal-slider" oninput="window.AI모달수치동기화('ratio')">
+                        <input type="range" id="modal-margin-ratio" min="1" max="100" step="1" class="modal-slider" oninput="window.AI모달수치동기화('ratio')" aria-label="진입 증거금 비율 슬라이더">
                         <span id="modal-margin-ratio-txt" class="modal-value-display">10%</span>
                     </div>
                     <span class="modal-sub-desc">가용 지갑 자산 대비 1회 진입 시의 보증금 비율입니다.</span>
@@ -1064,7 +1064,7 @@
                 <div class="modal-field">
                     <label>배후 레버리지 (Leverage)</label>
                     <div class="modal-slider-container">
-                        <input type="range" id="modal-leverage" min="1" max="125" step="1" class="modal-slider" oninput="window.AI모달수치동기화()">
+                        <input type="range" id="modal-leverage" min="1" max="125" step="1" class="modal-slider" oninput="window.AI모달수치동기화()" aria-label="레버리지 설정 슬라이더">
                         <span id="modal-leverage-txt" class="modal-value-display">3x</span>
                     </div>
                     <span class="modal-sub-desc">선물 거래 배수입니다. 높을수록 청산 위험이 증가합니다.</span>
@@ -1105,11 +1105,11 @@
                 </p>
                 <div class="modal-field">
                     <label>Kakao JavaScript Key</label>
-                    <input type="text" id="input-kakao-key" placeholder="카카오 디벨로퍼스 JavaScript 키 입력" class="modal-num-input" style="width: 100%; text-align: left; padding: 8px; margin-top: 4px;">
+                    <input type="text" id="input-kakao-key" placeholder="카카오 디벨로퍼스 JavaScript 키 입력" class="modal-num-input" style="width: 100%; text-align: left; padding: 8px; margin-top: 4px;" aria-label="카카오 JavaScript 키 입력">
                 </div>
                 <div class="modal-field" style="margin-top: 12px; margin-bottom: 20px;">
                     <label>자동 발송 대상 코인 (Symbol)</label>
-                    <input type="text" id="input-kakao-symbol" placeholder="예: BTCUSDT" class="modal-num-input" style="width: 100%; text-align: left; padding: 8px; margin-top: 4px;">
+                    <input type="text" id="input-kakao-symbol" placeholder="예: BTCUSDT" class="modal-num-input" style="width: 100%; text-align: left; padding: 8px; margin-top: 4px;" aria-label="자동 발송 대상 코인 입력">
                 </div>
 
                 <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 15px 0;">
@@ -1119,7 +1119,7 @@
                     <div style="display: flex; align-items: center; justify-content: space-between;">
                         <label style="font-weight: 600; color: var(--color-green);">[A] 매매 신호 발생 시 즉시 발송</label>
                         <label class="config-switch">
-                            <input type="checkbox" id="chk-kakao-auto-a">
+                            <input type="checkbox" id="chk-kakao-auto-a" aria-label="매매 신호 발생 시 즉시 발송 활성화">
                             <span class="config-switch-slider"></span>
                         </label>
                     </div>
@@ -1131,13 +1131,13 @@
                     <div style="display: flex; align-items: center; justify-content: space-between;">
                         <label style="font-weight: 600; color: var(--color-yellow);">[B] 정기 요약 브리핑 발송</label>
                         <label class="config-switch">
-                            <input type="checkbox" id="chk-kakao-auto-b">
+                            <input type="checkbox" id="chk-kakao-auto-b" aria-label="정기 요약 브리핑 발송 활성화">
                             <span class="config-switch-slider"></span>
                         </label>
                     </div>
                     <div style="margin-top: 8px; display: flex; align-items: center; gap: 8px;">
                         <span style="font-size: 13px;">발송 간격:</span>
-                        <input type="number" id="input-kakao-interval-b" value="60" min="1" class="modal-num-input" style="width: 70px; padding: 4px;">
+                        <input type="number" id="input-kakao-interval-b" value="60" min="1" class="modal-num-input" style="width: 70px; padding: 4px;" aria-label="정기 브리핑 발송 간격(분)">
                         <span style="font-size: 13px;">분마다 발송</span>
                     </div>
                 </div>
@@ -1147,14 +1147,14 @@
                     <div style="display: flex; align-items: center; justify-content: space-between;">
                         <label style="font-weight: 600; color: var(--color-red);">[C] RSI 과열/침체 도달 시 발송</label>
                         <label class="config-switch">
-                            <input type="checkbox" id="chk-kakao-auto-c">
+                            <input type="checkbox" id="chk-kakao-auto-c" aria-label="RSI 임계값 도달 시 발송 활성화">
                             <span class="config-switch-slider"></span>
                         </label>
                     </div>
                     <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">입력한 기준값 이하 또는 (100 - 기준값) 이상일 때 발송</p>
                     <div style="margin-top: 8px; display: flex; align-items: center; gap: 8px;">
                         <span style="font-size: 13px;">RSI 임계값:</span>
-                        <input type="number" id="input-kakao-rsi-c" value="30" min="1" max="50" class="modal-num-input" style="width: 70px; padding: 4px;">
+                        <input type="number" id="input-kakao-rsi-c" value="30" min="1" max="50" class="modal-num-input" style="width: 70px; padding: 4px;" aria-label="RSI 과열/침체 경고 임계값">
                         <span style="font-size: 13px;">(예: 30 입력 시 RSI 30이하 또는 70이상)</span>
                     </div>
                 </div>

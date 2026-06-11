@@ -3124,8 +3124,66 @@ function 재생효과음(audioId) {
     if (audio) {
         audio.currentTime = 0;
         audio.play().catch(e => {
-            console.log("오디오 재생 실패:", e.message);
+            console.warn(`[Audio Backup] 오디오 재생 실패 (${audioId}), Web Audio API로 백업 사운드(Backup Sound)를 발생시킵니다:`, e.message);
+            백업사운드재생(audioId);
         });
+    } else {
+        백업사운드재생(audioId);
+    }
+}
+
+// [사운드 합성 엔진 V1] 외부 리소스가 차단되어 효과음이 재생되지 않을 때 Web Audio API로 주파수를 합성하는 백업 함수 (한글 주석 준수)
+function 백업사운드재생(audioId) {
+    try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        const ctx = new AudioContext();
+        const osc = ctx.createOscillator(); // 오실레이터(Oscillator) 객체 생성
+        const gain = ctx.createGain(); // 게인(Gain) 볼륨 조절 객체 생성
+        
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        
+        const now = ctx.currentTime;
+        
+        if (audioId === "sound-trigger") {
+            // 주문 및 타점 체결음: 맑게 상승하는 비프음 (C5 -> G5)
+            osc.type = "sine";
+            osc.frequency.setValueAtTime(523.25, now);
+            osc.frequency.exponentialRampToValueAtTime(783.99, now + 0.15);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+            osc.start(now);
+            osc.stop(now + 0.2);
+        } else if (audioId === "sound-signal") {
+            // 신호 포착 알림음: 부드럽고 상큼한 비프음 (E5 -> G5)
+            osc.type = "triangle";
+            osc.frequency.setValueAtTime(659.25, now);
+            osc.frequency.exponentialRampToValueAtTime(783.99, now + 0.1);
+            gain.gain.setValueAtTime(0.08, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+            osc.start(now);
+            osc.stop(now + 0.15);
+        } else if (audioId === "sound-liquid") {
+            // 청산 알림음: 무겁고 하강하는 경고음 (E4 -> A2)
+            osc.type = "sawtooth";
+            osc.frequency.setValueAtTime(329.63, now);
+            osc.frequency.linearRampToValueAtTime(110.00, now + 0.5);
+            gain.gain.setValueAtTime(0.12, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+            osc.start(now);
+            osc.stop(now + 0.5);
+        } else {
+            // 기본 경고 비프음
+            osc.type = "sine";
+            osc.frequency.setValueAtTime(440, now);
+            gain.gain.setValueAtTime(0.05, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+            osc.start(now);
+            osc.stop(now + 0.15);
+        }
+    } catch (e) {
+        console.error("Web Audio API 백업 사운드 재생 에러:", e);
     }
 }
 
@@ -5868,10 +5926,14 @@ window.카카오정기발송타이머시작 = function() {
         window.KakaoIntervalTimer = setInterval(() => {
             let summaryLines = [];
             info.symbols.forEach(sym => {
-                const coin = 상태.코인데이터[sym];
-                if (!coin) return;
-                const 지표 = 지표계산(coin);
-                const rsi = 지표.RSI.length > 0 ? 지표.RSI[지표.RSI.length - 1] : 50;
+                const coin = 상태.코인목록[sym]; // [오류 수정] 상태.코인데이터가 아닌 상태.코인목록 참조
+                if (!coin || !coin.캔들데이터 || coin.캔들데이터.length === 0) return;
+                
+                // [오류 수정] 정의되지 않은 지표계산(coin) 함수 호출 제거 및 직접 RSI 연산 호출
+                const closes = coin.캔들데이터.map(c => c.close);
+                const rsiArr = 계산RSI(closes, 14);
+                const rsi = rsiArr.length > 0 ? rsiArr[rsiArr.length - 1] : 50;
+                
                 summaryLines.push(`[${sym}] ${coin.현재가.toLocaleString()} (RSI: ${rsi.toFixed(1)}%)`);
             });
             
