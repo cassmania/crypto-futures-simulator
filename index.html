@@ -1,6 +1,19 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
+    <!-- 모바일 디바이스 자동 감지 및 리다이렉트(Redirect) 스크립트 -->
+    <script>
+        (function() {
+            var urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('nomobile') === 'true') {
+                return;
+            }
+            var isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            if (isMobile || window.innerWidth <= 768) {
+                window.location.href = "mobile.html" + window.location.search;
+            }
+        })();
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Binance Real-time Trading Signal & Auto-Execution Simulator</title>
@@ -415,7 +428,7 @@
                 </div>
 
                 <!-- 거래소 레퍼럴 배너 (Referral Banners) -->
-                <div class="referral-banner-container">
+                <div class="referral-banner-container desktop-only">
                     <a href="https://www.binance.com/referral/earn-together/refer2earn-usdc/claim?hl=en&ref=GRO_28502_927WY&utm_source=referral_entrance" target="_blank" class="referral-banner binance-banner">
                         <i class="fa-solid fa-coins"></i>
                         <span>바이낸스(Binance) <strong>수수료 20% 할인</strong></span>
@@ -439,7 +452,7 @@
                 </div>
 
                 <!-- 📊 [NEW] 프리미엄 다기능 모니터링 섹션: CME 갭 & 실시간 수급 및 주요 뉴스 브리핑룸 -->
-                <div class="monitoring-briefing-room">
+                <div class="monitoring-briefing-room desktop-only">
                     <div class="briefing-box cme-gap-box">
                         <div class="briefing-title">
                             <span style="display: flex; align-items: center; gap: 4px;">
@@ -450,7 +463,7 @@
                                 <span class="tooltip-text">CME 갭(CME Gap)은 세계 최대 시카고상품거래소(CME)가 주말에 폐장한 사이(금요일 21시~일요일 22시 UTC) 발생한 현물 가격의 변동으로 인해 생기는 빈 공간입니다. 시장은 통상 이 빈 가격대를 다시 메우려는(Gap Fill) 회귀 경향을 보입니다.</span>
                             </div>
                         </div>
-                        <div class="briefing-value" id="ad-cme-gap-status">
+                        <div class="briefing-value ad-cme-gap-status" id="ad-cme-gap-status">
                             분석 중...
                         </div>
                     </div>
@@ -458,7 +471,7 @@
                         <div class="briefing-title">
                             <i class="fa-solid fa-arrows-up-down text-yellow"></i> 롱 / 숏 물량 정보 (Long/Short Flow)
                         </div>
-                        <div class="briefing-value" id="ad-long-short-flow">
+                        <div class="briefing-value ad-long-short-flow" id="ad-long-short-flow">
                             분석 중...
                         </div>
                     </div>
@@ -466,7 +479,7 @@
                         <div class="briefing-title">
                             <i class="fa-solid fa-newspaper text-yellow"></i> 주요 뉴스 브리핑룸 (Market News)
                         </div>
-                        <div class="briefing-value" id="ad-live-news-content">
+                        <div class="briefing-value ad-live-news-content" id="ad-live-news-content">
                             호재 뉴스를 수집하는 중입니다...
                         </div>
                     </div>
@@ -936,6 +949,64 @@
                         <div class="signal-item welcome">
                             <span class="signal-time">System</span>
                             <span class="signal-msg text-yellow">CORS 제한이 없는 바이낸스 실시간 라이브 네트워크 연동에 성공했습니다. 알트코인 심볼을 추가하면 실시간 보조지표(RSI/MACD/MA) 분석 신호가 즉시 출력됩니다!</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 모바일 전용 거래소 레퍼럴 배너 (Mobile Referral Banners) -->
+                <div class="referral-banner-container mobile-only">
+                    <a href="https://www.binance.com/referral/earn-together/refer2earn-usdc/claim?hl=en&ref=GRO_28502_927WY&utm_source=referral_entrance" target="_blank" class="referral-banner binance-banner">
+                        <i class="fa-solid fa-coins"></i>
+                        <span>바이낸스(Binance) <strong>수수료 20% 할인</strong></span>
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </a>
+                    <a href="https://www.mexc.com/acquisition/custom-sign-up?shareCode=mexc-2jSch" target="_blank" class="referral-banner mexc-banner">
+                        <i class="fa-solid fa-gift"></i>
+                        <span>MEXC 가입하고 <strong>신규 특별 혜택</strong></span>
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </a>
+                    <a href="https://lite.tiktok.com/t/ZS92QxQgB8SSo-erirw/" target="_blank" class="referral-banner tiktok-banner">
+                        <i class="fa-brands fa-tiktok"></i>
+                        <span>흥미진진한 이벤트를 경험하고 <strong>특별한 리워드 등을 획득하세요!</strong></span>
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </a>
+                    <a href="https://link.coupang.com/a/ejNTwSewLs" target="_blank" class="referral-banner coupang-banner">
+                        <i class="fa-solid fa-bag-shopping"></i>
+                        <span>쿠팡에서 쇼핑하고 <strong>빠른 로켓배송 받기!</strong></span>
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </a>
+                </div>
+
+                <!-- 📊 모바일 전용 프리미엄 다기능 모니터링 섹션 (Mobile Briefing Room) -->
+                <div class="monitoring-briefing-room mobile-only">
+                    <div class="briefing-box cme-gap-box">
+                        <div class="briefing-title">
+                            <span style="display: flex; align-items: center; gap: 4px;">
+                                <i class="fa-solid fa-chart-line text-yellow"></i> CME 갭 (CME Gap) 상태
+                            </span>
+                            <div class="info-tooltip-container">
+                                <i class="fa-regular fa-circle-question tooltip-trigger"></i>
+                                <span class="tooltip-text">CME 갭(CME Gap)은 세계 최대 시카고상품거래소(CME)가 주말에 폐장한 사이(금요일 21시~일요일 22시 UTC) 발생한 현물 가격의 변동으로 인해 생기는 빈 공간입니다. 시장은 통상 이 빈 가격대를 다시 메우려는(Gap Fill) 회귀 경향을 보입니다.</span>
+                            </div>
+                        </div>
+                        <div class="briefing-value ad-cme-gap-status" id="mo-cme-gap-status">
+                            분석 중...
+                        </div>
+                    </div>
+                    <div class="briefing-box volume-flow-box">
+                        <div class="briefing-title">
+                            <i class="fa-solid fa-arrows-up-down text-yellow"></i> 롱 / 숏 물량 정보 (Long/Short Flow)
+                        </div>
+                        <div class="briefing-value ad-long-short-flow" id="mo-long-short-flow">
+                            분석 중...
+                        </div>
+                    </div>
+                    <div class="briefing-box live-news-box">
+                        <div class="briefing-title">
+                            <i class="fa-solid fa-newspaper text-yellow"></i> 주요 뉴스 브리핑룸 (Market News)
+                        </div>
+                        <div class="briefing-value ad-live-news-content" id="mo-live-news-content">
+                            호재 뉴스를 수집하는 중입니다...
                         </div>
                     </div>
                 </div>

@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <!-- 모바일 환경에서 터치 딜레이 및 강제 배율 확대 현상을 차단하고 세로형 화면 최적화를 위해 meta viewport 설정 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Binance Futures Simulator - Mobile</title>
+    <!-- 구글 폰트(Google Fonts) Outfit & Inter 연동 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- 폰트어썸(FontAwesome) 아이콘 연동 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 트레이딩뷰 차트 라이브러리(TradingView Lightweight Charts) CDN 연동 -->
+    <script src="https://unpkg.com/lightweight-charts@3.8.0/dist/lightweight-charts.standalone.production.js"></script>
+    <link rel="stylesheet" href="mobile.css">
+</head>
+<body class="mobile-body" data-active-tab="chart">
+
+    <!-- 모바일 전체 컨테이너 -->
+    <div class="mobile-app-container">
+        
+        <!-- 1. 미니 상단 헤더 (자산 요약 및 연결 상태 표시) -->
+        <header class="mobile-header">
+            <div class="header-logo-row">
+                <div class="logo-area">
+                    <i class="fa-solid fa-satellite-dish logo-icon animate-pulse text-yellow"></i>
+                    <h1>BINANCE <span>LIVE</span></h1>
+                </div>
+                <!-- 바이낸스 연결 상태 표시등 -->
+                <div class="status-indicator" id="binance-status-badge">
+                    <span class="status-dot pulse-red" id="binance-status-dot"></span>
+                    <span id="binance-status-text">연결 대기</span>
+                </div>
+                <!-- 데스크톱 버전 강제 이동 버튼 -->
+                <button class="btn-goto-desktop" onclick="location.href='index.html?nomobile=true'" title="PC 버전으로 보기">
+                    <i class="fa-solid fa-desktop"></i> PC버전
+                </button>
+            </div>
+            
+            <!-- 간편 자산 현황 그리드 -->
+            <div class="header-assets-grid">
+                <div class="asset-item">
+                    <span class="asset-label">지갑 잔고</span>
+                    <span id="wallet-balance" class="asset-val text-yellow">10,000.00 USDT</span>
+                </div>
+                <div class="asset-item">
+                    <span class="asset-label">마진 잔고</span>
+                    <span id="margin-balance" class="asset-val">10,000.00 USDT</span>
+                </div>
+                <div class="asset-item">
+                    <span class="asset-label">미실현 손익</span>
+                    <span id="header-unrealized-pnl" class="asset-val text-neutral">0.00 USDT (0.00%)</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- 2. 메인 탭 콘텐츠 영역 -->
+        <main class="mobile-main-content">
+            
+            <!-- (A) 차트 화면 탭 -->
+            <section id="tab-sec-chart" class="mobile-section active">
+                <!-- 코인 탭바 (즐겨찾기 코인 중심 가로 스크롤) -->
+                <div class="coin-tabs-wrapper">
+                    <div id="coin-tabs" class="coin-tabs">
+                        <!-- 동적으로 코인 탭 렌더링 -->
+                    </div>
+                    <!-- 코인 검색 및 드롭다운 토글 버튼 -->
+                    <button class="btn-toggle-search" id="btn-toggle-search"><i class="fa-solid fa-magnifying-glass"></i></button>
+                </div>
+
+                <!-- 검색/추가 드롭다운 레이어 -->
+                <div class="coin-dropdown-menu hidden" id="coin-dropdown-menu">
+                    <div class="dropdown-header">
+                        <span id="dropdown-title-text"><i class="fa-solid fa-globe text-yellow"></i> 전체 목록</span>
+                        <div class="search-input-wrapper">
+                            <input type="text" id="coin-search-input" placeholder="코인 심볼 입력 (예: BTC, SOL)">
+                            <button id="btn-clear-search" class="hidden"><i class="fa-solid fa-circle-xmark"></i></button>
+                        </div>
+                        <button class="btn-close-dropdown" id="btn-close-dropdown"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <div class="dropdown-filter-buttons">
+                        <button id="filter-all-coins" class="btn-filter active">전체</button>
+                        <button id="filter-fav-coins" class="btn-filter">★ 즐겨찾기</button>
+                    </div>
+                    <div class="dropdown-coin-list" id="dropdown-coin-list">
+                        <!-- 동적 코인 행들 -->
+                    </div>
+                </div>
+
+                <!-- 현재 심볼 가격 상태 바 -->
+                <div class="active-symbol-price-bar">
+                    <div class="symbol-meta">
+                        <span id="current-coin-title" class="coin-title">BTC/USDT Perpetual</span>
+                        <span id="price-change-percent" class="price-change text-neutral">0.00%</span>
+                    </div>
+                    <div class="price-display-wrapper">
+                        <span id="current-price" class="ticker-price text-neutral">0.00</span>
+                        <span class="price-currency">USDT</span>
+                    </div>
+                </div>
+
+                <!-- 단일 트레이딩뷰 차트 슬롯 -->
+                <div class="chart-outer-container">
+                    <div class="chart-control-row">
+                        <!-- 시간 단위 변경 버튼 그룹 -->
+                        <div class="tf-selector-group">
+                            <button class="btn-tf" data-tf="1m">1m</button>
+                            <button class="btn-tf" data-tf="1h">1h</button>
+                            <button class="btn-tf active" data-tf="4h">4h</button>
+                            <button class="btn-tf" data-tf="1d">1d</button>
+                        </div>
+                        <div class="chart-stats-info">
+                            <span>고: <strong id="price-high-24h" class="text-green">0.00</strong></span>
+                            <span style="margin-left: 8px;">저: <strong id="price-low-24h" class="text-red">0.00</strong></span>
+                        </div>
+                    </div>
+                    <div class="mobile-chart-canvas" id="mobile-chart-canvas">
+                        <!-- TradingView Canvas 바인딩 -->
+                    </div>
+                </div>
+
+                <!-- AI 간편 브리핑 영역 (차트 탭 하단에 밀어넣어 직관성 증대) -->
+                <div class="ai-simple-brief-card">
+                    <div class="brief-title-row">
+                        <span><i class="fa-solid fa-robot text-yellow"></i> AI 퀀트 분석 종합 신호</span>
+                        <span id="ai-status-badge" class="advisor-badge badge-neutral">대기 중</span>
+                    </div>
+                    <div class="brief-stats-row">
+                        <div class="stat-box">
+                            <span class="lbl">시장 국면</span>
+                            <span id="market-regime-label" class="val">데이터 수집 중</span>
+                        </div>
+                        <div class="stat-box">
+                            <span class="lbl">신뢰도</span>
+                            <span id="signal-confidence-label" class="val text-neutral">--</span>
+                        </div>
+                        <div class="stat-box">
+                            <span class="lbl">CME 갭</span>
+                            <span id="ad-cme-gap-status" class="val text-neutral">분석 대기</span>
+                        </div>
+                    </div>
+                    <!-- 롱/숏 강도 바 -->
+                    <div class="sentiment-bar-container">
+                        <div class="sentiment-labels">
+                            <span class="lbl-side">SHORT 숏</span>
+                            <span id="ai-sentiment-score" class="lbl-score">50%</span>
+                            <span class="lbl-side">LONG 롱</span>
+                        </div>
+                        <div class="sentiment-bar-track">
+                            <div id="ai-sentiment-bar" class="sentiment-bar-fill" style="width: 50%;"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- (B) 주문 및 AI 타점 화면 탭 -->
+            <section id="tab-sec-order" class="mobile-section">
+                <div class="order-panel-container">
+                    <div class="order-form-header">
+                        <h2>선물 모의투자 주문서</h2>
+                        <button id="btn-reset" class="btn-reset-simulator" title="시뮬레이터 초기화"><i class="fa-solid fa-rotate-right"></i> 리셋</button>
+                    </div>
+
+                    <!-- 주문 타입 탭 (시장가 / 지정가 자동체결) -->
+                    <div class="order-type-tabs">
+                        <button class="order-tab active" data-type="market"><i class="fa-solid fa-bolt"></i> 시장가</button>
+                        <button class="order-tab" data-type="trigger"><i class="fa-solid fa-clock"></i> 자동 체결 예약</button>
+                    </div>
+
+                    <!-- 롱 / 숏 진입 방향 선택 버튼 -->
+                    <div class="order-direction-buttons">
+                        <button id="btn-direction-long" class="btn-dir btn-long active" data-dir="LONG"><i class="fa-solid fa-arrow-trend-up"></i> BUY / LONG</button>
+                        <button id="btn-direction-short" class="btn-dir btn-short" data-dir="SHORT"><i class="fa-solid fa-arrow-trend-down"></i> SELL / SHORT</button>
+                    </div>
+
+                    <!-- 레버리지 슬라이더 및 수치 직접 입력 -->
+                    <div class="form-group-card">
+                        <div class="group-title-row">
+                            <label>레버리지 배수 (Leverage)</label>
+                            <span id="leverage-display" class="highlight-display text-yellow">3x</span>
+                        </div>
+                        <div class="leverage-control-row">
+                            <input type="range" id="input-leverage" min="1" max="125" value="3" class="range-slider">
+                            <input type="number" id="input-leverage-num" min="1" max="125" value="3" class="input-num-direct">
+                        </div>
+                    </div>
+
+                    <!-- 자동 감시 타점 가격 (지정가일 경우만 활성화) -->
+                    <div class="form-group-card hidden" id="trigger-price-group">
+                        <div class="group-title-row">
+                            <label>자동 감시 타점 가격 (Trigger Price)</label>
+                            <button id="btn-set-current-price" class="btn-inline-action">현재가 입력</button>
+                        </div>
+                        <div class="input-with-addon">
+                            <input type="number" id="input-trigger-price" step="any" placeholder="시세 도달 시 자동 체결할 가격">
+                            <span class="addon">USDT</span>
+                        </div>
+                    </div>
+
+                    <!-- 주문 수량 및 가용 마진 비율 조정 -->
+                    <div class="form-group-card">
+                        <div class="group-title-row">
+                            <label>주문 수량 (Quantity)</label>
+                            <span id="qty-slider-display" class="highlight-display">0%</span>
+                        </div>
+                        <div class="qty-stepper-row">
+                            <button class="btn-step" id="btn-qty-minus"><i class="fa-solid fa-minus"></i></button>
+                            <div class="input-with-addon flex-1">
+                                <input type="number" id="input-quantity" step="any" value="0.1">
+                                <span class="addon" id="qty-symbol-addon">BTC</span>
+                            </div>
+                            <button class="btn-step" id="btn-qty-plus"><i class="fa-solid fa-plus"></i></button>
+                        </div>
+                        <!-- 퍼센트 슬라이더 -->
+                        <div class="qty-percentage-slider">
+                            <input type="range" id="input-qty-slider" min="0" max="100" value="0" class="range-slider">
+                            <div class="pct-quick-buttons">
+                                <button class="btn-pct" data-pct="10">10%</button>
+                                <button class="btn-pct" data-pct="25">25%</button>
+                                <button class="btn-pct" data-pct="50">50%</button>
+                                <button class="btn-pct" data-pct="100">100%</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TP / SL 동시 예약 체크박스 및 입력 폼 -->
+                    <div class="form-group-card tpsl-wrapper-card">
+                        <div class="checkbox-label-row">
+                            <input type="checkbox" id="chk-tpsl" class="checkbox-custom">
+                            <label for="chk-tpsl" class="checkbox-custom-label">익절 / 손절 예약 동시 접수 (TP/SL)</label>
+                        </div>
+                        <div id="tpsl-inputs-container" class="tpsl-inputs-container hidden">
+                            <div class="tpsl-row">
+                                <div class="tpsl-col">
+                                    <label>익절가 (Take Profit)</label>
+                                    <input type="number" id="input-tp-price" step="any" placeholder="목표 이익 가격">
+                                </div>
+                                <div class="tpsl-col">
+                                    <label>손절가 (Stop Loss)</label>
+                                    <input type="number" id="input-sl-price" step="any" placeholder="손실 제한 가격">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 실시간 리스크 가드 (Risk Guard - 청산 분석 카드) -->
+                    <div class="risk-check-card safe" id="risk-check-card">
+                        <div class="risk-card-header">
+                            <span class="lbl"><i class="fa-solid fa-shield-halved"></i> Precision Risk Guard</span>
+                            <div id="risk-level-badge" class="risk-level-badge risk-safe">WAIT</div>
+                        </div>
+                        <div class="risk-stats-rows">
+                            <div class="stat-row">
+                                <span>예상 투입 마진</span>
+                                <strong id="risk-estimated-margin">0.00 USDT</strong>
+                            </div>
+                            <div class="stat-row">
+                                <span>실질 주문 규모 (Notional)</span>
+                                <strong id="risk-notional-size">0.00 USDT</strong>
+                            </div>
+                            <div class="stat-row">
+                                <span>추정 청산 가격 (Liq. Price)</span>
+                                <strong id="risk-liquidation-price" class="text-red">--</strong>
+                            </div>
+                            <div class="stat-row">
+                                <span>청산 가격과의 거리</span>
+                                <strong id="risk-distance">--</strong>
+                            </div>
+                        </div>
+                        <div class="risk-decision-box">
+                            <span id="risk-level-title" class="title">대기 중</span>
+                            <p id="risk-message" class="desc">주문 수량을 입력하면 실시간 리스크 감시 시스템이 연산됩니다.</p>
+                        </div>
+                    </div>
+
+                    <!-- AI 추천 타점 적용하기 (카드형 퀵바) -->
+                    <div class="ai-advisor-card">
+                        <div class="advisor-head">
+                            <span><i class="fa-solid fa-wand-magic-sparkles text-yellow animate-pulse"></i> AI 추천 최적 타점</span>
+                            <button id="btn-apply-rec" class="btn-apply-advisor">타점 자동 주입</button>
+                        </div>
+                        <div class="advisor-prices">
+                            <div><span>추천 지지 (LONG 진입)</span> <strong id="rec-support" class="text-green">--</strong></div>
+                            <div><span>추천 저항 (SHORT 진입)</span> <strong id="rec-resistance" class="text-red">--</strong></div>
+                        </div>
+                        <div class="advisor-extra-row">
+                            <span>지지선 정밀도: <strong id="sup-accuracy">--</strong></span>
+                            <span>신뢰도: <span id="sup-confidence">--</span></span>
+                        </div>
+                        <div class="advisor-extra-row">
+                            <span>저항선 정밀도: <strong id="res-accuracy">--</strong></span>
+                            <span>신뢰도: <span id="res-confidence">--</span></span>
+                        </div>
+                        <div class="advisor-guide" id="rec-guide-msg">대기 중</div>
+                    </div>
+
+                    <!-- 주문 최종 제출 버튼 -->
+                    <button id="btn-submit-order" class="btn-submit-order btn-buy-long">
+                        <i class="fa-solid fa-bolt animate-pulse"></i> 시장가 체결
+                    </button>
+                </div>
+            </section>
+
+            <!-- (C) 호가창 및 분석 화면 탭 -->
+            <section id="tab-sec-orderbook" class="mobile-section">
+                <!-- 2분할 레이아웃: 좌측 호가창 / 우측 상세 퀀트 지표 -->
+                <div class="orderbook-metrics-split">
+                    
+                    <!-- 호가창 패널 -->
+                    <div class="mobile-orderbook-panel">
+                        <div class="panel-head-title">Binance Real-time Orderbook</div>
+                        <!-- 매도 호가창 (Asks) -->
+                        <div class="asks-container" id="orderbook-asks">
+                            <!-- JS 동적 주입 -->
+                        </div>
+                        <!-- 중간 현재가 영역 -->
+                        <div class="mid-price-row">
+                            <span id="orderbook-mid-price" class="mid-price">0.00</span>
+                            <span id="orderbook-spread-value" class="spread-val">스프레드: --</span>
+                        </div>
+                        <!-- 매수 호가창 (Bids) -->
+                        <div class="bids-container" id="orderbook-bids">
+                            <!-- JS 동적 주입 -->
+                        </div>
+                    </div>
+
+                    <!-- 퀀트 분석 계기판 -->
+                    <div class="mobile-metrics-panel">
+                        <div class="panel-head-title"><i class="fa-solid fa-chart-line text-yellow"></i> 퀀트 분석 모니터</div>
+                        
+                        <div class="quant-tabs-navigation">
+                            <button class="quant-tab-btn active" data-quant-tab="quant-tab-indicators">보조지표</button>
+                            <button class="quant-tab-btn" data-quant-tab="quant-tab-derivatives">파생상품</button>
+                            <button class="quant-tab-btn" data-quant-tab="quant-tab-fundamental">기본적분석</button>
+                        </div>
+
+                        <!-- 서브탭 1: 보조지표 -->
+                        <div id="quant-tab-indicators" class="quant-tab-panel active">
+                            <div class="metric-row"><span>RSI / SuperTrend</span><strong id="metric-rsi-supertrend" class="text-neutral">--</strong></div>
+                            <div class="metric-row"><span>MACD (12, 26, 9)</span><strong id="metric-macd" class="text-neutral">--</strong></div>
+                            <div class="metric-row"><span>Stochastic (14,3,3)</span><strong id="metric-stoch" class="text-neutral">--</strong></div>
+                            <div class="metric-row"><span>볼린저 밴드 (20,2)</span><strong id="metric-bb" class="text-neutral">--</strong></div>
+                            <div class="metric-row"><span>VWAP (분봉 기준)</span><strong id="metric-vwap" class="text-neutral">--</strong></div>
+                            <div class="metric-row"><span>Fibonacci Retrace</span><strong id="metric-fibo" class="text-neutral">--</strong></div>
+                        </div>
+
+                        <!-- 서브탭 2: 파생상품 지표 -->
+                        <div id="quant-tab-derivatives" class="quant-tab-panel">
+                            <div class="metric-row"><span>예상 펀딩비율 (Funding)</span><strong id="metric-funding-rate" class="text-neutral">--</strong></div>
+                            <div class="metric-row"><span>미결제약정 변동 (OI)</span><strong id="metric-oi" class="text-neutral">--</strong></div>
+                            <div class="metric-row"><span>추정 청산 맵 (Liq Map)</span><strong id="metric-liq-map" class="text-neutral">--</strong></div>
+                            <div class="metric-row"><span>온체인 MVRV / SOPR</span><strong id="metric-mvrv-sopr" class="text-neutral">--</strong></div>
+                            <div class="metric-row"><span>고래 자금 유입 (Whale)</span><strong id="metric-whale-flow" class="text-neutral">--</strong></div>
+                            <div class="metric-row"><span>주요 거래 중심 (POC)</span><strong id="metric-vpvr" class="text-neutral">--</strong></div>
+                            <div class="metric-row"><span>CME Gap 분석 이력</span><strong id="metric-cme-gap" class="text-neutral">--</strong></div>
+                        </div>
+
+                        <!-- 서브탭 3: 기본적 분석 -->
+                        <div id="quant-tab-fundamental" class="quant-tab-panel">
+                            <div class="fundamental-box">
+                                <h4>자산 개요 및 프로필</h4>
+                                <p id="project-desc">정보 로딩 중...</p>
+                            </div>
+                            <div class="fundamental-metrics-grid">
+                                <div><span>유동성 등급</span> <strong id="project-liquidity">--</strong></div>
+                                <div><span>네트워크 확장성</span> <strong id="project-scalability">--</strong></div>
+                                <div><span>기관 선호 지수</span> <strong id="project-institutional">--</strong></div>
+                                <div><span>락업 해제 일정</span> <strong id="project-lockup">--</strong></div>
+                            </div>
+                            <div class="fundamental-box" style="margin-top: 8px;">
+                                <h4>실시간 커뮤니티 호재 / 악재</h4>
+                                <p id="project-news" class="text-yellow">--</p>
+                            </div>
+                            <div class="fundamental-box" style="margin-top: 8px;">
+                                <h4>강력 지지 및 저항 대기선</h4>
+                                <p id="project-levels" style="font-family: var(--font-display); font-weight: 600;">--</p>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </section>
+
+            <!-- (D) 활성 포지션 및 거래이력 화면 탭 -->
+            <section id="tab-sec-position" class="mobile-section">
+                <!-- 활성 포지션 리스트 -->
+                <div class="section-card">
+                    <div class="card-header-title">
+                        <span>활성화된 포지션 (Active Positions)</span>
+                        <span class="badge" id="pos-badge">0</span>
+                    </div>
+                    <div class="mobile-list-container" id="positions-list-container">
+                        <!-- JS로 모바일용 세로 카드형 리스트 렌더링 -->
+                    </div>
+                </div>
+
+                <!-- 대기 주문 리스트 -->
+                <div class="section-card">
+                    <div class="card-header-title">
+                        <span>대기 중인 자동체결 주문 (Pending Orders)</span>
+                        <span class="badge" id="trigger-badge">0</span>
+                    </div>
+                    <div class="mobile-list-container" id="pending-orders-list-container">
+                        <!-- JS로 모바일용 세로 카드형 리스트 렌더링 -->
+                    </div>
+                </div>
+
+                <!-- 최근 거래 이력 리스트 -->
+                <div class="section-card">
+                    <div class="card-header-title">
+                        <span>최근 거래 정리 이력 (Trade History)</span>
+                    </div>
+                    <div class="mobile-list-container" id="history-list-container">
+                        <!-- JS로 모바일용 세로 카드형 리스트 렌더링 -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- (E) AI 자동매매 환경 설정 탭 -->
+            <section id="tab-sec-ai" class="mobile-section">
+                <div class="ai-config-container">
+                    <div class="ai-config-header">
+                        <h2>🤖 AI 퀀트 자동매매 센터</h2>
+                        <p>바이낸스 실시간 시그널 발생 시 설정된 규칙에 맞추어 포지션을 100% 자동으로 진입하고 청산하는 지능형 모듈입니다.</p>
+                    </div>
+
+                    <!-- AI 자동매매 마스터 스위치 -->
+                    <div class="master-switch-card">
+                        <div class="switch-label-col">
+                            <h3>자동매매 시스템 가동</h3>
+                            <p>현재 기본 코인 심볼에 대해 자동 매매를 시작합니다.</p>
+                        </div>
+                        <button id="btn-ai-autotrade" class="btn-master-ai-switch">
+                            <i class="fa-solid fa-robot"></i> AI 자동매매 OFF
+                        </button>
+                    </div>
+
+                    <!-- AI 자동매매 세부 파라미터 구성 -->
+                    <div class="config-settings-card">
+                        <h3>자동매매 정밀 파라미터 설정</h3>
+                        
+                        <!-- 설정 1: 가용 잔고 진입 비율 -->
+                        <div class="setting-item-row">
+                            <div class="desc-col">
+                                <label>1회 진입 비율 (%)</label>
+                                <p>포지션 진입 시 가용 USDT 지갑 잔고 비중</p>
+                            </div>
+                            <div class="control-col">
+                                <input type="number" id="setting-ai-ratio" min="1" max="100" value="10" class="input-setting">
+                            </div>
+                        </div>
+
+                        <!-- 설정 2: 레버리지 동기화 모니터 -->
+                        <div class="setting-item-row">
+                            <div class="desc-col">
+                                <label>적용 레버리지 배수</label>
+                                <p>주문 패널에 설정한 레버리지가 공유됩니다.</p>
+                            </div>
+                            <div class="control-col">
+                                <strong id="txt-ai-leverage-display" class="text-yellow">3x</strong>
+                            </div>
+                        </div>
+
+                        <!-- 설정 3: 익절 모드 선택 -->
+                        <div class="setting-item-row flex-column">
+                            <div class="desc-col w-100">
+                                <label>익절(Take Profit) 옵션 지정</label>
+                                <p>지능형 AI 자동익절 또는 설정 퍼센트 강제 익절</p>
+                            </div>
+                            <div class="control-select-row w-100">
+                                <select id="setting-ai-tp-option" class="select-setting">
+                                    <option value="ai">AI 정밀 자동 익절 (추천)</option>
+                                    <option value="manual">수동 고정 퍼센트 지정</option>
+                                </select>
+                                <input type="number" id="setting-ai-tp-pct" min="1" max="1000" value="10" class="input-setting-sub hidden">
+                            </div>
+                        </div>
+
+                        <!-- 설정 4: 손절 모드 선택 -->
+                        <div class="setting-item-row flex-column">
+                            <div class="desc-col w-100">
+                                <label>손절(Stop Loss) 옵션 지정</label>
+                                <p>스탑헌팅가드 자동손절 또는 설정 퍼센트 강제 손절</p>
+                            </div>
+                            <div class="control-select-row w-100">
+                                <select id="setting-ai-sl-option" class="select-setting">
+                                    <option value="ai">AI 스탑헌팅가드 자동 손절 (추천)</option>
+                                    <option value="manual">수동 고정 퍼센트 지정</option>
+                                </select>
+                                <input type="number" id="setting-ai-sl-pct" min="1" max="100" value="5" class="input-setting-sub hidden">
+                            </div>
+                        </div>
+
+                        <!-- 설정 5: 중복 진입 방지 스위치 -->
+                        <div class="setting-item-row">
+                            <div class="desc-col">
+                                <label>동일 코인 다중 진입 방지</label>
+                                <p>이미 포지션이 있을 때 중복 진입 거부</p>
+                            </div>
+                            <div class="control-col">
+                                <label class="config-switch">
+                                    <input type="checkbox" id="setting-ai-prevent-dup" checked>
+                                    <span class="config-switch-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- 3. 실시간 알림 피드 패널 (하단 탭바 바로 위에 위치하여 터치 간섭 없이 알림 노출) -->
+        <div class="mobile-notification-area">
+            <div class="notification-header">
+                <span><i class="fa-solid fa-list-ul"></i> 실시간 시뮬레이션 알림 피드</span>
+                <span class="tip">(터치 시 해당 코인으로 전환)</span>
+            </div>
+            <div class="signal-feed-list" id="signal-feed-list">
+                <!-- 실시간 모의 투자 체결 및 청산, 시그널 내역 동적 노출 -->
+            </div>
+        </div>
+
+        <!-- 4. 모바일 전용 하단 고정 탭바 (Bottom Navigation Tab Bar) -->
+        <nav class="mobile-bottom-nav">
+            <button class="nav-item active" data-tab="chart">
+                <i class="fa-solid fa-chart-line"></i>
+                <span>차트</span>
+            </button>
+            <button class="nav-item" data-tab="order">
+                <i class="fa-solid fa-file-invoice-dollar"></i>
+                <span>주문</span>
+            </button>
+            <button class="nav-item" data-tab="orderbook">
+                <i class="fa-solid fa-list-ol"></i>
+                <span>호가/지표</span>
+            </button>
+            <button class="nav-item" data-tab="position">
+                <i class="fa-solid fa-wallet"></i>
+                <span>포지션</span>
+            </button>
+            <button class="nav-item" data-tab="ai">
+                <i class="fa-solid fa-robot"></i>
+                <span>AI설정</span>
+            </button>
+        </nav>
+
+    </div>
+
+    <!-- 비프음 효과용 오디오 소스 -->
+    <audio id="sound-trigger" src="https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav" preload="auto"></audio>
+    <audio id="sound-signal" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-84.wav" preload="auto"></audio>
+    <audio id="sound-liquid" src="https://assets.mixkit.co/active_storage/sfx/950/950-84.wav" preload="auto"></audio>
+
+    <!-- 모바일 전용 비즈니스 로직 스크립트 연동 -->
+    <script src="mobile.js"></script>
+</body>
+</html>

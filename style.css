@@ -197,6 +197,11 @@ body {
     background-color: var(--color-bg-hover);
 }
 
+/* 기본적으로 모바일 전용 요소는 숨김 */
+.mobile-only {
+    display: none !important;
+}
+
 /* 5. 메인 대시보드 그리드 레이아웃 (Dashboard Grid Layout) */
 .dashboard-grid {
     display: grid;
@@ -2942,13 +2947,48 @@ body {
     }
 
     /* 메인 그리드 및 패널 표시 제어 */
+    /* 모바일에서 데스크톱 전용 요소 숨김 및 모바일 전용 요소 활성화 */
+    .desktop-only {
+        display: none !important;
+    }
+    .mobile-only {
+        display: flex !important;
+    }
+    .monitoring-briefing-room.mobile-only {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 8px !important;
+        padding: 12px;
+        background: linear-gradient(135deg, rgba(30, 32, 38, 0.8) 0%, rgba(43, 49, 57, 0.6) 100%);
+        margin: 12px 6px;
+    }
+    .referral-banner-container.mobile-only {
+        display: flex !important;
+        flex-direction: column !important;
+        padding: 0 6px;
+        margin-top: 16px;
+    }
+
+    /* 메인 그리드 및 패널 표시 제어 */
     .dashboard-grid {
         display: flex;
         flex-direction: column;
         padding: 6px;
         gap: 6px;
-        height: calc(100vh - 170px); /* 헤더 크기와 하단 탭바 크기를 뺀 가용 영역 */
+        flex: 1 !important; /* 남는 세로 공간을 가득 점유 */
+        min-height: 0 !important;
+        height: auto !important; /* calc(100vh - 170px) 고정 높이 제거 */
+        margin-bottom: 60px !important; /* 하단 고정 탭바 높이만큼 여백 확보 */
         overflow-y: auto;
+    }
+
+    /* 차트 탭 활성화 시 스크롤 잠금 및 높이 최적화 */
+    .app-container[data-mobile-active-tab="chart"] .dashboard-grid {
+        overflow: hidden !important;
+        flex: 1 !important;
+        min-height: 0 !important;
+        height: auto !important; /* 고정 높이 제거 */
+        margin-bottom: 60px !important;
     }
 
     .app-footer {
@@ -2964,8 +3004,10 @@ body {
     /* 탭별 노출 제어 */
     .app-container[data-mobile-active-tab="chart"] .chart-panel {
         display: flex !important;
-        flex: 1;
-        height: 100%;
+        flex-direction: column !important;
+        height: 100% !important;
+        overflow: hidden !important;
+        flex: 1 !important;
     }
 
     .app-container[data-mobile-active-tab="trade"] .order-panel {
@@ -2994,8 +3036,9 @@ body {
         height: 100%;
     }
     .app-container[data-mobile-active-tab="position"] .dashboard-grid {
-        height: auto;
-        overflow: visible;
+        height: auto !important;
+        overflow: visible !important;
+        margin-bottom: 60px !important;
     }
 
     /* 3. 모바일 차트 영역 단일화 & 탭 칩스타일 */
@@ -3045,6 +3088,7 @@ body {
         flex: 1;
         height: 100%;
         position: relative;
+        min-height: 0 !important; /* flex 하위 요소 축소 제한 제거 */
     }
 
     /* 모바일에서는 8개 차트 중 .active-chart 클래스를 가진 포커스 차트 1개만 노출 */
@@ -3052,6 +3096,7 @@ body {
         display: none !important;
         border-radius: var(--radius-md) !important;
         height: 100% !important;
+        min-height: 0 !important;
     }
 
     .split-chart-wrapper.active-chart {
@@ -3059,16 +3104,48 @@ body {
         flex-direction: column;
         height: 100% !important;
         width: 100% !important;
+        min-height: 0 !important;
     }
 
     .split-chart-header {
         padding: 8px 10px;
+        flex-shrink: 0; /* 헤더는 리사이징 시 찌그러짐 방지 */
     }
 
     .split-chart-canvas {
         flex: 1;
-        min-height: 280px;
+        min-height: unset !important; /* 고정 최소 높이 제거하여 반응형 레이아웃 핏 완벽 적용 */
         height: 100%;
+    }
+
+    /* 모바일 전용 차트 최대화(전체화면) 구현 */
+    .split-chart-wrapper.maximized {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        z-index: 9999 !important;
+        background-color: #0b0e11 !important;
+        border-radius: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+
+    .split-chart-wrapper.maximized .split-chart-header {
+        padding: 6px 10px !important;
+        background-color: #15181f !important;
+        flex-shrink: 0 !important;
+    }
+
+    .split-chart-wrapper.maximized .split-chart-canvas {
+        flex: 1 !important;
+        height: 100% !important;
+        min-height: unset !important;
     }
 
     /* 4. 모바일 포지션 테이블 카드화 (Table Cardification) */
