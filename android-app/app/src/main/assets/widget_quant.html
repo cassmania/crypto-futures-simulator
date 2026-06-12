@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🤖 Antigravity AI 팩트체크 퀀트 분석 센터 위젯 (Quant Radar)</title>
+    <!-- 구글 폰트 & 아이콘 연동 -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            background: #0b0e11 !important;
+            padding: 16px;
+            margin: 0;
+            overflow-x: hidden;
+            height: 100vh;
+            box-sizing: border-box;
+        }
+        .widget-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        .widget-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--color-border);
+            padding-bottom: 12px;
+            margin-bottom: 12px;
+        }
+        .widget-title {
+            font-family: var(--font-display);
+            font-size: 16px;
+            font-weight: 800;
+            color: var(--color-yellow);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-shadow: 0 0 8px rgba(240, 185, 11, 0.2);
+        }
+        .btn-bring-back {
+            background: transparent;
+            border: 1px solid var(--color-yellow);
+            color: var(--color-yellow);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn-bring-back:hover {
+            background: var(--color-yellow);
+            color: #000;
+        }
+        .widget-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+        /* 스크롤바 커스텀 */
+        .widget-body::-webkit-scrollbar {
+            width: 5px;
+        }
+        .widget-body::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.1);
+        }
+        .widget-body::-webkit-scrollbar-thumb {
+            background: rgba(240,185,11,0.2);
+            border-radius: 3px;
+        }
+        .widget-body::-webkit-scrollbar-thumb:hover {
+            background: var(--color-yellow);
+        }
+        
+        /* 디버그 콘솔 스타일 */
+        .ai-debug-panel {
+            background: rgba(0, 0, 0, 0.5) !important;
+            border: 1px solid rgba(240, 185, 11, 0.2) !important;
+            border-radius: 6px;
+            padding: 8px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 9.5px; /* 팝업 위젯 내에서도 가독성 높은 슬림 폰트 적용 */
+            color: #848e9c;
+            max-height: 150px;
+            overflow-y: auto;
+            overflow-x: auto;
+            white-space: nowrap; /* 수식 찌그러짐 방지 */
+            margin-top: 8px;
+        }
+        .ai-debug-panel-title {
+            font-size: 11px;
+            font-weight: bold;
+            color: var(--color-yellow);
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border-bottom: 1px dashed rgba(240, 185, 11, 0.2);
+            padding-bottom: 4px;
+        }
+        .debug-log-line {
+            margin-bottom: 4px;
+            line-height: 1.4;
+        }
+        .debug-tag {
+            font-weight: bold;
+            padding: 1px 3px;
+            border-radius: 3px;
+            font-size: 9px;
+            margin-right: 4px;
+        }
+        .debug-tag.info { background: rgba(0, 102, 255, 0.2); color: #0066ff; }
+        .debug-tag.math { background: rgba(240, 185, 11, 0.2); color: var(--color-yellow); }
+        .debug-tag.formula { background: rgba(0, 255, 136, 0.2); color: #00ff88; }
+        .debug-tag.trigger { background: rgba(246, 70, 93, 0.2); color: #f6465d; }
+        .debug-tag.status { background: rgba(132, 142, 156, 0.2); color: #848e9c; }
+    </style>
+</head>
+<body>
+    <div class="widget-container">
+        <div class="widget-header">
+            <div class="widget-title">
+                <i class="fa-solid fa-robot text-yellow animate-bounce"></i>
+                AI 팩트체크 퀀트 분석 센터
+            </div>
+            <button class="btn-bring-back" onclick="위젯회수()">화면 복귀</button>
+        </div>
+        <div class="widget-body">
+            <!-- 메인 카드 복제 컨테이너 -->
+            <div id="ai-advisor-card-widget" class="ai-advisor-card" style="border:none; background:transparent; padding:0;">
+                <!-- 부모 창의 퀀트 분석 바디 내용이 여기에 실시간 주입 복사됩니다 -->
+            </div>
+            
+            <!-- 🔬 AI 타점 실시간 진단 & 디버그 패널 (AI Diagnostic Console) -->
+            <div class="ai-debug-panel">
+                <div class="ai-debug-panel-title">
+                    <span class="status-dot pulse-red" style="width:6px; height:6px; background:#00ff88; box-shadow:0 0 6px #00ff88;"></span>
+                    ★ AI 타점 실시간 진단 & 디버그 패널 (AI Diagnostic Console)
+                </div>
+                <div id="ai-debug-console-widget-body">
+                    <div class="debug-log-line"><span class="debug-tag status">[진단]</span> 실시간 K라인 가격 데이터 수집 및 팩트체크 준비 완료...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.onbeforeunload = function() {
+            if (window.opener && !window.opener.closed) {
+                window.opener.위젯회수액션('quant');
+            }
+        };
+
+        function 위젯회수() {
+            window.close();
+        }
+
+        // 부모 창의 탭 전환 등을 호출할 수 있는 핸들러 대행
+        window.자동매매토글 = function() {
+            if (window.opener && window.opener.AI자동매매토글액션) {
+                window.opener.AI자동매매토글액션();
+                setTimeout(window.렌더링, 50);
+            }
+        };
+
+        window.설정토글 = function() {
+            if (window.opener && window.opener.AI설정토글액션) {
+                window.opener.AI설정토글액션();
+            }
+        };
+
+        window.추천가반영 = function() {
+            if (window.opener && window.opener.document.getElementById("btn-apply-rec")) {
+                window.opener.document.getElementById("btn-apply-rec").click();
+            }
+        };
+
+        // 탭 버튼 클릭 이벤트 바인딩 함수
+        function bindTabEvents() {
+            const tabs = document.querySelectorAll(".quant-tab-btn");
+            tabs.forEach(tab => {
+                tab.onclick = function(e) {
+                    e.stopPropagation();
+                    const targetId = tab.getAttribute("data-quant-tab");
+                    
+                    // 탭 버튼 active 클래스 조율
+                    tabs.forEach(t => t.classList.remove("active"));
+                    tab.classList.add("active");
+                    
+                    // 탭 패널 display 조율
+                    const panels = document.querySelectorAll(".quant-tab-panel");
+                    panels.forEach(p => {
+                        if (p.getAttribute("id") === targetId) {
+                            p.classList.add("active");
+                        } else {
+                            p.classList.remove("active");
+                        }
+                    });
+
+                    // 부모창의 동일 탭도 연동 동기화해주면 wowed!
+                    if (window.opener) {
+                        const parentTab = window.opener.document.querySelector(`.quant-tab-btn[data-quant-tab="${targetId}"]`);
+                        if (parentTab) parentTab.click();
+                    }
+                };
+            });
+        }
+
+        window.렌더링 = function() {
+            if (!window.opener || window.opener.closed) return;
+            
+            const mainCardBody = window.opener.document.querySelector(".ai-advisor-card .advisor-body");
+            const widgetCardContainer = document.getElementById("ai-advisor-card-widget");
+            
+            // 퀀트 센터 헤더의 코인명 핫스왑 동기화
+            const mainCoinTarget = window.opener.document.getElementById("quant-coin-target");
+            const widgetHeaderTitle = document.querySelector(".widget-title");
+            if (mainCoinTarget && widgetHeaderTitle) {
+                widgetHeaderTitle.innerHTML = `<i class="fa-solid fa-robot text-yellow animate-bounce"></i> AI 팩트체크 퀀트 분석 센터 <span style="color:var(--color-yellow); font-size:13px; font-weight:800;">${mainCoinTarget.textContent}</span>`;
+            }
+            
+            if (mainCardBody && widgetCardContainer) {
+                // 현재 선택되어 있었던 탭을 기억
+                const activeTab = document.querySelector(".quant-tab-btn.active")?.getAttribute("data-quant-tab") || "quant-indicators";
+
+                // 부모의 HTML을 복사
+                widgetCardContainer.innerHTML = mainCardBody.innerHTML;
+                
+                // 아코디언 설정 패널은 팝업 내부에서 불필요하므로 숨김/제거 처리하여 공간 최적화
+                const configAccordion = widgetCardContainer.querySelector(".ai-config-accordion");
+                if (configAccordion) {
+                    configAccordion.style.display = "none";
+                }
+
+                // 탭 원상복구
+                const tabs = widgetCardContainer.querySelectorAll(".quant-tab-btn");
+                tabs.forEach(t => {
+                    if (t.getAttribute("data-quant-tab") === activeTab) {
+                        t.classList.add("active");
+                    } else {
+                        t.classList.remove("active");
+                    }
+                });
+
+                const panels = widgetCardContainer.querySelectorAll(".quant-tab-panel");
+                panels.forEach(p => {
+                    if (p.getAttribute("id") === activeTab) {
+                        p.classList.add("active");
+                    } else {
+                        p.classList.remove("active");
+                    }
+                });
+
+                // 이벤트 재바인딩
+                bindTabEvents();
+
+                // 팝업 내부의 추천가 반영 단추 연동
+                const applyBtn = widgetCardContainer.querySelector("#btn-apply-rec");
+                if (applyBtn) {
+                    applyBtn.onclick = window.추천가반영;
+                }
+
+                // 팝업 내부 툴팁 마우스 호버 처리 재바인딩
+                window.툴팁이벤트재연동();
+            }
+
+            // 3. 디버그 로그 데이터 복사 연동
+            const mainDebugConsole = window.opener.document.getElementById("ai-debug-console-body");
+            const widgetDebugConsole = document.getElementById("ai-debug-console-widget-body");
+            if (mainDebugConsole && widgetDebugConsole) {
+                widgetDebugConsole.innerHTML = mainDebugConsole.innerHTML;
+                // 스크롤 항상 맨 밑으로 이동
+                const debugPanel = document.querySelector(".ai-debug-panel");
+                if (debugPanel) debugPanel.scrollTop = debugPanel.scrollHeight;
+            }
+        };
+
+        // 툴팁 호버 동작 연동
+        window.툴팁이벤트재연동 = function() {
+            const triggers = document.querySelectorAll(".quant-tooltip-trigger");
+            triggers.forEach(trigger => {
+                trigger.onmouseenter = function() {
+                    const tooltip = trigger.querySelector(".quant-tooltip");
+                    if (tooltip) {
+                        tooltip.style.opacity = "1";
+                        tooltip.style.visibility = "visible";
+                        tooltip.style.transform = "translateY(0) scale(1)";
+                    }
+                };
+                trigger.onmouseleave = function() {
+                    const tooltip = trigger.querySelector(".quant-tooltip");
+                    if (tooltip) {
+                        tooltip.style.opacity = "0";
+                        tooltip.style.visibility = "hidden";
+                        tooltip.style.transform = "translateY(10px) scale(0.95)";
+                    }
+                };
+            });
+        };
+
+        window.onload = function() {
+            window.렌더링();
+            // 스위치 및 탭 바인딩
+            bindTabEvents();
+        };
+    </script>
+</body>
+</html>
