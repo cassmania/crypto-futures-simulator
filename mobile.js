@@ -2622,27 +2622,67 @@ function 차트지지저항선드로잉() {
     const cache = window.AI추천캐시;
     if (!cache) return;
 
-    // 지지선
-    const lineSupport = c.캔들시리즈.createPriceLine({
-        price: cache.지지선,
-        color: '#0066ff',
-        lineWidth: 2,
-        lineStyle: 0,
+    // 저항선 1차 (점선), 2차 (실선), 3차 (굵은 실선)
+    const rLine1 = c.캔들시리즈.createPriceLine({
+        price: cache.저항선1 || cache.저항선,
+        color: '#ff6b8b',
+        lineWidth: 1,
+        lineStyle: 1, // Dotted
         axisLabelVisible: true,
-        title: '지지선 (SUPPORT)'
+        title: '1차 저항선 (R1)'
     });
-    c.지지저항선들.push(lineSupport);
+    c.지지저항선들.push(rLine1);
 
-    // 저항선
-    const lineResistance = c.캔들시리즈.createPriceLine({
-        price: cache.저항선,
+    const rLine2 = c.캔들시리즈.createPriceLine({
+        price: cache.저항선2 || cache.저항선,
         color: '#f6465d',
         lineWidth: 2,
-        lineStyle: 0,
+        lineStyle: 0, // Solid
         axisLabelVisible: true,
-        title: '저항선 (RESISTANCE)'
+        title: '2차 저항선 (R2)'
     });
-    c.지지저항선들.push(lineResistance);
+    c.지지저항선들.push(rLine2);
+
+    const rLine3 = c.캔들시리즈.createPriceLine({
+        price: cache.저항선3 || cache.저항선,
+        color: '#b3001e',
+        lineWidth: 3,
+        lineStyle: 0, // Solid
+        axisLabelVisible: true,
+        title: '★3차 강력 저항선 (Strong R3)'
+    });
+    c.지지저항선들.push(rLine3);
+
+    // 지지선 1차 (점선), 2차 (실선), 3차 (굵은 실선)
+    const sLine1 = c.캔들시리즈.createPriceLine({
+        price: cache.지지선1 || cache.지지선,
+        color: '#5cd6ff',
+        lineWidth: 1,
+        lineStyle: 1, // Dotted
+        axisLabelVisible: true,
+        title: '1차 지지선 (S1)'
+    });
+    c.지지저항선들.push(sLine1);
+
+    const sLine2 = c.캔들시리즈.createPriceLine({
+        price: cache.지지선2 || cache.지지선,
+        color: '#0066ff',
+        lineWidth: 2,
+        lineStyle: 0, // Solid
+        axisLabelVisible: true,
+        title: '2차 지지선 (S2)'
+    });
+    c.지지저항선들.push(sLine2);
+
+    const sLine3 = c.캔들시리즈.createPriceLine({
+        price: cache.지지선3 || cache.지지선,
+        color: '#001a80',
+        lineWidth: 3,
+        lineStyle: 0, // Solid
+        axisLabelVisible: true,
+        title: '★3차 강력 지지선 (Strong S3)'
+    });
+    c.지지저항선들.push(sLine3);
 }
 
 // 12. 모바일용 리스트 카드형 렌더링

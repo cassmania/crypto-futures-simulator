@@ -3888,12 +3888,6 @@ function AI추천분석및업데이트(symbol) {
     AI추천캐시.지지선1 = support1;
     AI추천캐시.지지선2 = support2;
     AI추천캐시.지지선3 = support3;
-    AI추천캐시.저항선1 = resistance1;
-    AI추천캐시.저항선2 = resistance2;
-    AI추천캐시.저항선3 = resistance3;
-    AI추천캐시.지지선1 = support1;
-    AI추천캐시.지지선2 = support2;
-    AI추천캐시.지지선3 = support3;
     AI추천캐시.진입가 = 추천진입가; // 호환성 보존용 필드
     AI추천캐시.익절가 = 추천익절가;
     AI추천캐시.손절가 = 추천손절가;
@@ -3919,28 +3913,6 @@ function AI추천분석및업데이트(symbol) {
         supportEl.style.display = "flex";
         supportEl.style.flexWrap = "wrap";
     }
-
-    if (resistanceEl) {
-        resistanceEl.innerHTML = `
-            <span style="color: #ff6b8b; font-size: 11px; font-weight:600;">1차: ${resistance1.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}</span>
-            <span style="color: #f6465d; font-size: 11px; font-weight:600; margin-left: 6px;">2차: ${resistance2.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}</span>
-            <span style="color: #b3001e; font-size: 11px; font-weight:800; margin-left: 6px;">★3차: ${resistance3.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}</span>
-        `;
-        resistanceEl.style.display = "flex";
-        resistanceEl.style.flexWrap = "wrap";
-    }
-    if (supportEl) {
-        supportEl.innerHTML = `
-            <span style="color: #5cd6ff; font-size: 11px; font-weight:600;">1차: ${support1.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}</span>
-            <span style="color: #0066ff; font-size: 11px; font-weight:600; margin-left: 6px;">2차: ${support2.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}</span>
-            <span style="color: #001a80; font-size: 11px; font-weight:800; margin-left: 6px;">★3차: ${support3.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}</span>
-        `;
-        supportEl.style.display = "flex";
-        supportEl.style.flexWrap = "wrap";
-    }
-
-    if (resistanceEl) resistanceEl.innerText = 정밀저항가격.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 }) + " USDT";
-    if (supportEl) supportEl.innerText = 정밀지지가격.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 }) + " USDT";
 
     // ----------------------------------------------------
     // [퀀트 분석 엔진 V3] 정밀 분석 저항/지지의 정확도(정밀도) 및 신뢰도 다각적 분석 연산
@@ -4394,29 +4366,69 @@ window.차트지지저항선드로잉 = function(chartIdx) {
     let 정밀저항가격 = resistance1;
     let 정밀지지가격 = support1;
 
-    // 3. 지지선 & 저항선 드로잉 (ENTRY, TP, SL 3대 추천 가로선은 삭제)
-    // 정밀 분석 저항선 (Fibonacci 23.6% & BB Upper 연립 평균) - 빨간색 초굵은 실선 (가격축 라벨 활성화)
-    const lineResistance = c.캔들시리즈.createPriceLine({
-        price: 정밀저항가격,
-        color: '#f6465d', // 빨간색 (저항선)
-        lineWidth: 3,
-        lineStyle: 0, // Solid (실선)
+    // 3. 지지선 & 저항선 3단계 드로잉
+    // 저항선 1차 (점선), 2차 (실선), 3차 (굵은 실선)
+    const rLine1 = c.캔들시리즈.createPriceLine({
+        price: resistance1,
+        color: '#ff6b8b',
+        lineWidth: 1,
+        lineStyle: 1, // Dotted
         axisLabelVisible: true,
-        title: `■ 정밀 분석 저항선 (RESISTANCE) ■`,
+        title: '1차 저항선 (R1)'
     });
-    c.지지저항선들.push(lineResistance);
+    c.지지저항선들.push(rLine1);
 
-    // 정밀 분석 지지선 (Fibonacci 61.8% & BB Lower 연립 평균) - 파란색 초굵은 실선 (가격축 라벨 활성화)
-    const lineSupport = c.캔들시리즈.createPriceLine({
-        price: 정밀지지가격,
-        color: '#0066ff', // 파란색 (지지선)
-        lineWidth: 3,
-        lineStyle: 0, // Solid (실선)
+    const rLine2 = c.캔들시리즈.createPriceLine({
+        price: resistance2,
+        color: '#f6465d',
+        lineWidth: 2,
+        lineStyle: 0, // Solid
         axisLabelVisible: true,
-        title: `■ 정밀 분석 지지선 (SUPPORT) ■`,
+        title: '2차 저항선 (R2)'
     });
-    c.지지저항선들.push(lineSupport);
-};;
+    c.지지저항선들.push(rLine2);
+
+    const rLine3 = c.캔들시리즈.createPriceLine({
+        price: resistance3,
+        color: '#b3001e',
+        lineWidth: 3,
+        lineStyle: 0, // Solid
+        axisLabelVisible: true,
+        title: '★3차 강력 저항선 (Strong R3)'
+    });
+    c.지지저항선들.push(rLine3);
+
+    // 지지선 1차 (점선), 2차 (실선), 3차 (굵은 실선)
+    const sLine1 = c.캔들시리즈.createPriceLine({
+        price: support1,
+        color: '#5cd6ff',
+        lineWidth: 1,
+        lineStyle: 1, // Dotted
+        axisLabelVisible: true,
+        title: '1차 지지선 (S1)'
+    });
+    c.지지저항선들.push(sLine1);
+
+    const sLine2 = c.캔들시리즈.createPriceLine({
+        price: support2,
+        color: '#0066ff',
+        lineWidth: 2,
+        lineStyle: 0, // Solid
+        axisLabelVisible: true,
+        title: '2차 지지선 (S2)'
+    });
+    c.지지저항선들.push(sLine2);
+
+    const sLine3 = c.캔들시리즈.createPriceLine({
+        price: support3,
+        color: '#001a80',
+        lineWidth: 3,
+        lineStyle: 0, // Solid
+        axisLabelVisible: true,
+        title: '★3차 강력 지지선 (Strong S3)'
+    });
+    c.지지저항선들.push(sLine3);
+};
 
 
 // 8개 차트의 코인 선택기 드롭다운(select) 목록을 상태.코인목록에 맞추어 동적으로 동기화 재생성합니다.
