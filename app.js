@@ -3294,19 +3294,44 @@ function AI추천분석및업데이트(symbol) {
 
     // [데이터 과소 상태 가드] 캔들 개수가 15봉 미만일 때의 기본 타점 초기화 규칙 (한국어 주석 준수)
     if (closes.length < 15) {
-        const 정밀저항가격 = parseFloat((coin.현재가 * 1.025).toFixed(coin.소수점));
-        const 정밀지지가격 = parseFloat((coin.현재가 * 0.975).toFixed(coin.소수점));
+        const resistance1 = parseFloat((coin.현재가 * 1.015).toFixed(coin.소수점));
+        const resistance2 = parseFloat((coin.현재가 * 1.030).toFixed(coin.소수점));
+        const resistance3 = parseFloat((coin.현재가 * 1.050).toFixed(coin.소수점));
+    
+        const support1 = parseFloat((coin.현재가 * 0.985).toFixed(coin.소수점));
+        const support2 = parseFloat((coin.현재가 * 0.970).toFixed(coin.소수점));
+        const support3 = parseFloat((coin.현재가 * 0.950).toFixed(coin.소수점));
+    
         AI추천캐시.방향 = "NEUTRAL";
-        AI추천캐시.저항선 = 정밀저항가격;
-        AI추천캐시.지지선 = 정밀지지가격;
-        AI추천캐시.진입가 = coin.현재가;
-        AI추천캐시.익절가 = 정밀저항가격;
-        AI추천캐시.손절가 = 정밀지지가격;
-
+        AI추천캐시.저항선 = resistance1;
+        AI추천캐시.지지선 = support1;
+        AI추천캐시.저항선1 = resistance1;
+        AI추천캐시.저항선2 = resistance2;
+        AI추천캐시.저항선3 = resistance3;
+        AI추천캐시.지지선1 = support1;
+        AI추천캐시.지지선2 = support2;
+        AI추천캐시.지지선3 = support3;
+    
         const resistanceEl = document.getElementById("rec-resistance");
         const supportEl = document.getElementById("rec-support");
-        if (resistanceEl) resistanceEl.innerText = 정밀저항가격.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 }) + " USDT";
-        if (supportEl) supportEl.innerText = 정밀지지가격.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 }) + " USDT";
+        if (resistanceEl) {
+            resistanceEl.innerHTML = `
+                <span style="color: #ff6b8b; font-size: 11px; font-weight:600;">1차: ${resistance1.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}</span>
+                <span style="color: #f6465d; font-size: 11px; font-weight:600; margin-left: 6px;">2차: ${resistance2.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}</span>
+                <span style="color: #b3001e; font-size: 11px; font-weight:800; margin-left: 6px;">★3차: ${resistance3.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}</span>
+            `;
+            resistanceEl.style.display = "flex";
+            resistanceEl.style.flexWrap = "wrap";
+        }
+        if (supportEl) {
+            supportEl.innerHTML = `
+                <span style="color: #5cd6ff; font-size: 11px; font-weight:600;">1차: ${support1.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}</span>
+                <span style="color: #0066ff; font-size: 11px; font-weight:600; margin-left: 6px;">2차: ${support2.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}</span>
+                <span style="color: #001a80; font-size: 11px; font-weight:800; margin-left: 6px;">★3차: ${support3.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}</span>
+            `;
+            supportEl.style.display = "flex";
+            supportEl.style.flexWrap = "wrap";
+        }
 
         // 신뢰 지표 기본값 바인딩
         const resAccEl = document.getElementById("res-accuracy");
@@ -3366,29 +3391,48 @@ function AI추천분석및업데이트(symbol) {
     const fiboValues = Object.values(fiboLevels);
     
     // 현재가보다 높은 피보나치 레벨 -> 저항선 후보 (Resistance)
-    const 상방fibo들 = fiboValues.filter(val => val > coin.현재가);
-    let fiboResistance = bbUpperSanitized;
-    if (상방fibo들.length > 0) {
-        fiboResistance = Math.min(...상방fibo들); // 가장 인접한 상방 저항 레벨
-    }
+    // 현재가보다 높은 피보나치 레벨 -> 저항선 후보 (Resistance)
+    const 상방fibo들 = fiboValues.filter(val => val > coin.현재가).sort((a, b) => a - b);
 
     // 현재가보다 낮은 피보나치 레벨 -> 지지선 후보 (Support)
-    const 하방fibo들 = fiboValues.filter(val => val < coin.현재가);
-    let fiboSupport = bbLowerSanitized;
-    if (하방fibo들.length > 0) {
-        fiboSupport = Math.max(...하방fibo들); // 가장 인접한 하방 지지 레벨
+    const 하방fibo들 = fiboValues.filter(val => val < coin.현재가).sort((a, b) => b - a);
+
+    // 1차, 2차, 3차 저항선 계산
+    let resistance1 = parseFloat((( (상방fibo들.length > 0 ? 상방fibo들[0] : bbUpperSanitized) + bbUpperSanitized) / 2).toFixed(coin.소수점));
+    if (resistance1 <= coin.현재가) {
+        resistance1 = parseFloat((coin.현재가 * 1.012).toFixed(coin.소수점));
     }
 
-    let 정밀저항가격 = parseFloat(((fiboResistance + bbUpperSanitized) / 2).toFixed(coin.소수점));
-    let 정밀지지가격 = parseFloat(((fiboSupport + bbLowerSanitized) / 2).toFixed(coin.소수점));
+    let r2 = 상방fibo들.length > 1 ? 상방fibo들[1] : (상방fibo들.length > 0 ? 상방fibo들[0] * 1.018 : bbUpperSanitized * 1.02);
+    let resistance2 = parseFloat(((r2 + bbUpperSanitized * 1.01) / 2).toFixed(coin.소수점));
+    if (resistance2 <= resistance1) {
+        resistance2 = parseFloat((resistance1 * 1.015).toFixed(coin.소수점));
+    }
 
-    // 현재가 돌파 및 이탈에 대한 물리적 이탈 안전 가드 (2차 가드)
-    if (정밀지지가격 >= coin.현재가) {
-        정밀지지가격 = parseFloat((coin.현재가 * 0.985).toFixed(coin.소수점));
+    let resistance3 = parseFloat(최고24h.toFixed(coin.소수점));
+    if (resistance3 <= resistance2) {
+        resistance3 = parseFloat((resistance2 * 1.02).toFixed(coin.소수점));
     }
-    if (정밀저항가격 <= coin.현재가) {
-        정밀저항가격 = parseFloat((coin.현재가 * 1.015).toFixed(coin.소수점));
+
+    // 1차, 2차, 3차 지지선 계산
+    let support1 = parseFloat((( (하방fibo들.length > 0 ? 하방fibo들[0] : bbLowerSanitized) + bbLowerSanitized) / 2).toFixed(coin.소수점));
+    if (support1 >= coin.현재가) {
+        support1 = parseFloat((coin.현재가 * 0.988).toFixed(coin.소수점));
     }
+
+    let s2 = 하방fibo들.length > 1 ? 하방fibo들[1] : (하방fibo들.length > 0 ? 하방fibo들[0] * 0.982 : bbLowerSanitized * 0.98);
+    let support2 = parseFloat(((s2 + bbLowerSanitized * 0.99) / 2).toFixed(coin.소수점));
+    if (support2 >= support1) {
+        support2 = parseFloat((support1 * 0.985).toFixed(coin.소수점));
+    }
+
+    let support3 = parseFloat(최저24h.toFixed(coin.소수점));
+    if (support3 >= support2) {
+        support3 = parseFloat((support2 * 0.98).toFixed(coin.소수점));
+    }
+
+    let 정밀저항가격 = resistance1;
+    let 정밀지지가격 = support1;
 
     // [퀀트 분석 엔진 V3] 실시간 추세 돌파 감지 및 지능형 지지저항 리밸런싱 (Breakout & Support/Resistance Roll-over)
     let 저항선돌파상태 = false;
@@ -3838,12 +3882,62 @@ function AI추천분석및업데이트(symbol) {
     AI추천캐시.방향 = 추천방향 === "NEUTRAL" ? "LONG" : 추천방향;
     AI추천캐시.저항선 = 정밀저항가격;
     AI추천캐시.지지선 = 정밀지지가격;
+    AI추천캐시.저항선1 = resistance1;
+    AI추천캐시.저항선2 = resistance2;
+    AI추천캐시.저항선3 = resistance3;
+    AI추천캐시.지지선1 = support1;
+    AI추천캐시.지지선2 = support2;
+    AI추천캐시.지지선3 = support3;
+    AI추천캐시.저항선1 = resistance1;
+    AI추천캐시.저항선2 = resistance2;
+    AI추천캐시.저항선3 = resistance3;
+    AI추천캐시.지지선1 = support1;
+    AI추천캐시.지지선2 = support2;
+    AI추천캐시.지지선3 = support3;
     AI추천캐시.진입가 = 추천진입가; // 호환성 보존용 필드
     AI추천캐시.익절가 = 추천익절가;
     AI추천캐시.손절가 = 추천손절가;
 
     const resistanceEl = document.getElementById("rec-resistance");
     const supportEl = document.getElementById("rec-support");
+
+    if (resistanceEl) {
+        resistanceEl.innerHTML = `
+            <span style="color: #ff6b8b; font-size: 11px; font-weight:600;">1차: ${resistance1.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}</span>
+            <span style="color: #f6465d; font-size: 11px; font-weight:600; margin-left: 6px;">2차: ${resistance2.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}</span>
+            <span style="color: #b3001e; font-size: 11px; font-weight:800; margin-left: 6px;">★3차: ${resistance3.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}</span>
+        `;
+        resistanceEl.style.display = "flex";
+        resistanceEl.style.flexWrap = "wrap";
+    }
+    if (supportEl) {
+        supportEl.innerHTML = `
+            <span style="color: #5cd6ff; font-size: 11px; font-weight:600;">1차: ${support1.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}</span>
+            <span style="color: #0066ff; font-size: 11px; font-weight:600; margin-left: 6px;">2차: ${support2.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}</span>
+            <span style="color: #001a80; font-size: 11px; font-weight:800; margin-left: 6px;">★3차: ${support3.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}</span>
+        `;
+        supportEl.style.display = "flex";
+        supportEl.style.flexWrap = "wrap";
+    }
+
+    if (resistanceEl) {
+        resistanceEl.innerHTML = `
+            <span style="color: #ff6b8b; font-size: 11px; font-weight:600;">1차: ${resistance1.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}</span>
+            <span style="color: #f6465d; font-size: 11px; font-weight:600; margin-left: 6px;">2차: ${resistance2.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}</span>
+            <span style="color: #b3001e; font-size: 11px; font-weight:800; margin-left: 6px;">★3차: ${resistance3.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}</span>
+        `;
+        resistanceEl.style.display = "flex";
+        resistanceEl.style.flexWrap = "wrap";
+    }
+    if (supportEl) {
+        supportEl.innerHTML = `
+            <span style="color: #5cd6ff; font-size: 11px; font-weight:600;">1차: ${support1.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}</span>
+            <span style="color: #0066ff; font-size: 11px; font-weight:600; margin-left: 6px;">2차: ${support2.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}</span>
+            <span style="color: #001a80; font-size: 11px; font-weight:800; margin-left: 6px;">★3차: ${support3.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}</span>
+        `;
+        supportEl.style.display = "flex";
+        supportEl.style.flexWrap = "wrap";
+    }
 
     if (resistanceEl) resistanceEl.innerText = 정밀저항가격.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 }) + " USDT";
     if (supportEl) supportEl.innerText = 정밀지지가격.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 }) + " USDT";
@@ -4257,27 +4351,48 @@ window.차트지지저항선드로잉 = function(chartIdx) {
 
     const fiboValues = Object.values(fiboLevels);
     
-    const 상방fibo들 = fiboValues.filter(val => val > coin.현재가);
-    let fiboResistance = bbUpperSanitized;
-    if (상방fibo들.length > 0) {
-        fiboResistance = Math.min(...상방fibo들);
+    // 현재가보다 높은 피보나치 레벨 -> 저항선 후보 (Resistance)
+    const 상방fibo들 = fiboValues.filter(val => val > coin.현재가).sort((a, b) => a - b);
+
+    // 현재가보다 낮은 피보나치 레벨 -> 지지선 후보 (Support)
+    const 하방fibo들 = fiboValues.filter(val => val < coin.현재가).sort((a, b) => b - a);
+
+    // 1차, 2차, 3차 저항선 계산
+    let resistance1 = parseFloat((( (상방fibo들.length > 0 ? 상방fibo들[0] : bbUpperSanitized) + bbUpperSanitized) / 2).toFixed(coin.소수점));
+    if (resistance1 <= coin.현재가) {
+        resistance1 = parseFloat((coin.현재가 * 1.012).toFixed(coin.소수점));
     }
 
-    const 하방fibo들 = fiboValues.filter(val => val < coin.현재가);
-    let fiboSupport = bbLowerSanitized;
-    if (하방fibo들.length > 0) {
-        fiboSupport = Math.max(...하방fibo들);
+    let r2 = 상방fibo들.length > 1 ? 상방fibo들[1] : (상방fibo들.length > 0 ? 상방fibo들[0] * 1.018 : bbUpperSanitized * 1.02);
+    let resistance2 = parseFloat(((r2 + bbUpperSanitized * 1.01) / 2).toFixed(coin.소수점));
+    if (resistance2 <= resistance1) {
+        resistance2 = parseFloat((resistance1 * 1.015).toFixed(coin.소수점));
     }
 
-    let 정밀저항가격 = parseFloat(((fiboResistance + bbUpperSanitized) / 2).toFixed(coin.소수점));
-    let 정밀지지가격 = parseFloat(((fiboSupport + bbLowerSanitized) / 2).toFixed(coin.소수점));
+    let resistance3 = parseFloat(최고24h.toFixed(coin.소수점));
+    if (resistance3 <= resistance2) {
+        resistance3 = parseFloat((resistance2 * 1.02).toFixed(coin.소수점));
+    }
 
-    if (정밀지지가격 >= coin.현재가) {
-        정밀지지가격 = parseFloat((coin.현재가 * 0.985).toFixed(coin.소수점));
+    // 1차, 2차, 3차 지지선 계산
+    let support1 = parseFloat((( (하방fibo들.length > 0 ? 하방fibo들[0] : bbLowerSanitized) + bbLowerSanitized) / 2).toFixed(coin.소수점));
+    if (support1 >= coin.현재가) {
+        support1 = parseFloat((coin.현재가 * 0.988).toFixed(coin.소수점));
     }
-    if (정밀저항가격 <= coin.현재가) {
-        정밀저항가격 = parseFloat((coin.현재가 * 1.015).toFixed(coin.소수점));
+
+    let s2 = 하방fibo들.length > 1 ? 하방fibo들[1] : (하방fibo들.length > 0 ? 하방fibo들[0] * 0.982 : bbLowerSanitized * 0.98);
+    let support2 = parseFloat(((s2 + bbLowerSanitized * 0.99) / 2).toFixed(coin.소수점));
+    if (support2 >= support1) {
+        support2 = parseFloat((support1 * 0.985).toFixed(coin.소수점));
     }
+
+    let support3 = parseFloat(최저24h.toFixed(coin.소수점));
+    if (support3 >= support2) {
+        support3 = parseFloat((support2 * 0.98).toFixed(coin.소수점));
+    }
+
+    let 정밀저항가격 = resistance1;
+    let 정밀지지가격 = support1;
 
     // 3. 지지선 & 저항선 드로잉 (ENTRY, TP, SL 3대 추천 가로선은 삭제)
     // 정밀 분석 저항선 (Fibonacci 23.6% & BB Upper 연립 평균) - 빨간색 초굵은 실선 (가격축 라벨 활성화)

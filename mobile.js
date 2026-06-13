@@ -2272,24 +2272,70 @@ function AI추천분석및업데이트(symbol) {
     const bbLowerSanitized = Math.max(bbLower, coin.현재가 * 0.85);
 
     const fiboValues = Object.values(fiboLevels);
-    const 상방fibo들 = fiboValues.filter(val => val > coin.현재가);
-    let fiboResistance = bbUpperSanitized;
-    if (상방fibo들.length > 0) fiboResistance = Math.min(...상방fibo들);
+    // 현재가보다 높은 피보나치 레벨 -> 저항선 후보 (Resistance)
+    const 상방fibo들 = fiboValues.filter(val => val > coin.현재가).sort((a, b) => a - b);
 
-    const 하방fibo들 = fiboValues.filter(val => val < coin.현재가);
-    let fiboSupport = bbLowerSanitized;
-    if (하방fibo들.length > 0) fiboSupport = Math.max(...하방fibo들);
+    // 현재가보다 낮은 피보나치 레벨 -> 지지선 후보 (Support)
+    const 하방fibo들 = fiboValues.filter(val => val < coin.현재가).sort((a, b) => b - a);
 
-    let 정밀저항가격 = parseFloat(((fiboResistance + bbUpperSanitized) / 2).toFixed(coin.소수점));
-    let 정밀지지가격 = parseFloat(((fiboSupport + bbLowerSanitized) / 2).toFixed(coin.소수점));
+    // 1차, 2차, 3차 저항선 계산
+    let resistance1 = parseFloat((( (상방fibo들.length > 0 ? 상방fibo들[0] : bbUpperSanitized) + bbUpperSanitized) / 2).toFixed(coin.소수점));
+    if (resistance1 <= coin.현재가) {
+        resistance1 = parseFloat((coin.현재가 * 1.012).toFixed(coin.소수점));
+    }
 
-    if (정밀지지가격 >= coin.현재가) 정밀지지가격 = parseFloat((coin.현재가 * 0.985).toFixed(coin.소수점));
-    if (정밀저항가격 <= coin.현재가) 정밀저항가격 = parseFloat((coin.현재가 * 1.015).toFixed(coin.소수점));
+    let r2 = 상방fibo들.length > 1 ? 상방fibo들[1] : (상방fibo들.length > 0 ? 상방fibo들[0] * 1.018 : bbUpperSanitized * 1.02);
+    let resistance2 = parseFloat(((r2 + bbUpperSanitized * 1.01) / 2).toFixed(coin.소수점));
+    if (resistance2 <= resistance1) {
+        resistance2 = parseFloat((resistance1 * 1.015).toFixed(coin.소수점));
+    }
+
+    let resistance3 = parseFloat(최고24h.toFixed(coin.소수점));
+    if (resistance3 <= resistance2) {
+        resistance3 = parseFloat((resistance2 * 1.02).toFixed(coin.소수점));
+    }
+
+    // 1차, 2차, 3차 지지선 계산
+    let support1 = parseFloat((( (하방fibo들.length > 0 ? 하방fibo들[0] : bbLowerSanitized) + bbLowerSanitized) / 2).toFixed(coin.소수점));
+    if (support1 >= coin.현재가) {
+        support1 = parseFloat((coin.현재가 * 0.988).toFixed(coin.소수점));
+    }
+
+    let s2 = 하방fibo들.length > 1 ? 하방fibo들[1] : (하방fibo들.length > 0 ? 하방fibo들[0] * 0.982 : bbLowerSanitized * 0.98);
+    let support2 = parseFloat(((s2 + bbLowerSanitized * 0.99) / 2).toFixed(coin.소수점));
+    if (support2 >= support1) {
+        support2 = parseFloat((support1 * 0.985).toFixed(coin.소수점));
+    }
+
+    let support3 = parseFloat(최저24h.toFixed(coin.소수점));
+    if (support3 >= support2) {
+        support3 = parseFloat((support2 * 0.98).toFixed(coin.소수점));
+    }
+
+    let 정밀저항가격 = resistance1;
+    let 정밀지지가격 = support1;
 
     const recResistance = document.getElementById("rec-resistance");
     const recSupport = document.getElementById("rec-support");
-    if (recResistance) recResistance.innerText = 정밀저항가격.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 }) + " USDT";
-    if (recSupport) recSupport.innerText = 정밀지지가격.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 }) + " USDT";
+
+    if (recResistance) {
+        recResistance.innerHTML = `
+            <span style="color: #ff6b8b; font-size: 11px; font-weight:600;">1차: ${resistance1.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}</span>
+            <span style="color: #f6465d; font-size: 11px; font-weight:600; margin-left: 6px;">2차: ${resistance2.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}</span>
+            <span style="color: #b3001e; font-size: 11px; font-weight:800; margin-left: 6px;">★3차: ${resistance3.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}</span>
+        `;
+        recResistance.style.display = "flex";
+        recResistance.style.flexWrap = "wrap";
+    }
+    if (recSupport) {
+        recSupport.innerHTML = `
+            <span style="color: #5cd6ff; font-size: 11px; font-weight:600;">1차: ${support1.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}</span>
+            <span style="color: #0066ff; font-size: 11px; font-weight:600; margin-left: 6px;">2차: ${support2.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}</span>
+            <span style="color: #001a80; font-size: 11px; font-weight:800; margin-left: 6px;">★3차: ${support3.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}</span>
+        `;
+        recSupport.style.display = "flex";
+        recSupport.style.flexWrap = "wrap";
+    }
 
     // 퀀트 점수 산정 (50 기준)
     let 점수 = 50;
