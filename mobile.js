@@ -1035,18 +1035,23 @@ function 분석및신호생성(symbol) {
         const c = 상태.단일차트;
         if (symbol === 상태.기본코인 && c.캔들시리즈) {
             let markers = c.캔들시리즈._markers || [];
-            markers.push({
-                time: times[idx],
-                position: 신호방향 === "LONG" ? 'belowBar' : 'aboveBar',
-                color: 신호방향 === "LONG" ? '#f6465d' : '#0066ff',
-                shape: 신호방향 === "LONG" ? 'arrowUp' : 'arrowDown',
-                text: 신호방향 === "LONG" ? 'LONG BUY' : 'SHORT SELL'
-            });
-            try {
-                c.캔들시리즈.setMarkers(markers);
-                c.캔들시리즈._markers = markers;
-            } catch (e) {
-                console.error("마커 설정 실패:", e);
+            
+            // 동일한 시간에 중복된 마커가 이미 들어있지 않은 경우에만 신규 추가
+            const exists = markers.some(m => m.time === times[idx]);
+            if (!exists) {
+                markers.push({
+                    time: times[idx],
+                    position: 신호방향 === "LONG" ? 'belowBar' : 'aboveBar',
+                    color: 신호방향 === "LONG" ? '#f6465d' : '#0066ff',
+                    shape: 신호방향 === "LONG" ? 'arrowUp' : 'arrowDown',
+                    text: 신호방향 === "LONG" ? 'LONG BUY' : 'SHORT SELL'
+                });
+                try {
+                    c.캔들시리즈.setMarkers(markers);
+                    c.캔들시리즈._markers = markers;
+                } catch (e) {
+                    console.error("마커 설정 실패:", e);
+                }
             }
         }
 
