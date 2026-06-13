@@ -4369,7 +4369,7 @@ window.차트지지저항선드로잉 = function(chartIdx) {
         resistance2 = parseFloat((resistance1 * 1.015).toFixed(coin.소수점));
     }
 
-    let resistance3 = parseFloat(최고24h.toFixed(coin.소수점));
+    let resistance3 = parseFloat(최고가.toFixed(coin.소수점));
     if (resistance3 <= resistance2) {
         resistance3 = parseFloat((resistance2 * 1.02).toFixed(coin.소수점));
     }
@@ -4386,7 +4386,7 @@ window.차트지지저항선드로잉 = function(chartIdx) {
         support2 = parseFloat((support1 * 0.985).toFixed(coin.소수점));
     }
 
-    let support3 = parseFloat(최저24h.toFixed(coin.소수점));
+    let support3 = parseFloat(최저가.toFixed(coin.소수점));
     if (support3 >= support2) {
         support3 = parseFloat((support2 * 0.98).toFixed(coin.소수점));
     }
