@@ -2928,6 +2928,10 @@ function 활성포지션테이블렌더링() {
         const coin = 상태.코인목록[pos.심볼];
         const 현재가 = coin ? coin.현재가 : pos.진입가;
         
+        // 코인이 정의되지 않았을 경우 디폴트 안전 소수점 값 백업 설정 (Crash Guard)
+        const 소수점 = coin ? coin.소수점 : 4;
+        const 수량소수점 = coin ? coin.수량소수점 : 2;
+        
         const pnl = pos.미실현손익 || 0;
         const pnlPct = pos.수익률 || 0;
         
@@ -2941,10 +2945,10 @@ function 활성포지션테이블렌더링() {
                 <td style="font-weight:700;">${pos.심볼}</td>
                 <td><span class="badge-position-type ${badgeClass}">${pos.방향}</span></td>
                 <td class="text-yellow" style="font-weight:600;">${pos.레버리지}x</td>
-                <td style="font-family:var(--font-display);">${pos.수량.toFixed(coin.수량소수점)}</td>
-                <td style="font-family:var(--font-display);">${pos.진입가.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}</td>
-                <td id="pos-mark-price-${pos.아이디}" style="font-family:var(--font-display);">${현재가.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}</td>
-                <td class="text-red" style="font-family:var(--font-display); font-weight:600;">${pos.청산가.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}</td>
+                <td style="font-family:var(--font-display);">${pos.수량.toFixed(수량소수점)}</td>
+                <td style="font-family:var(--font-display);">${pos.진입가.toLocaleString(undefined, { minimumFractionDigits: 소수점 })}</td>
+                <td id="pos-mark-price-${pos.아이디}" style="font-family:var(--font-display);">${현재가.toLocaleString(undefined, { minimumFractionDigits: 소수점 })}</td>
+                <td class="text-red" style="font-family:var(--font-display); font-weight:600;">${pos.청산가.toLocaleString(undefined, { minimumFractionDigits: 소수점 })}</td>
                 <td style="font-family:var(--font-display);">${pos.투입마진.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                 <td style="text-align: center;">
                     <label class="config-switch" style="scale: 0.8; display: inline-block; margin: 0 auto; vertical-align: middle;">
@@ -3015,6 +3019,10 @@ function 대기주문테이블렌더링() {
         const coin = 상태.코인목록[ord.심볼];
         const badgeClass = ord.방향 === "LONG" ? "long" : "short";
         
+        // 코인이 정의되지 않았을 경우 디폴트 안전 소수점 값 백업 설정 (Crash Guard)
+        const 소수점 = coin ? coin.소수점 : 4;
+        const 수량소수점 = coin ? coin.수량소수점 : 2;
+        
         let tpslText = "설정 안 함";
         if (ord.익절가 > 0 || ord.손절가 > 0) {
             tpslText = `TP: ${ord.익절가 > 0 ? ord.익절가.toLocaleString() : '-'} | SL: ${ord.손절가 > 0 ? ord.손절가.toLocaleString() : '-'}`;
@@ -3025,8 +3033,8 @@ function 대기주문테이블렌더링() {
                 <td style="font-weight:700;">${ord.심볼}</td>
                 <td><span class="badge-position-type ${badgeClass}">${ord.방향}</span></td>
                 <td class="text-yellow" style="font-weight:600;">${ord.레버리지}x</td>
-                <td class="text-yellow" style="font-family:var(--font-display); font-weight:700;">${ord.타점가격.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}</td>
-                <td style="font-family:var(--font-display);">${ord.수량.toFixed(coin.수량소수점)}</td>
+                <td class="text-yellow" style="font-family:var(--font-display); font-weight:700;">${ord.타점가격.toLocaleString(undefined, { minimumFractionDigits: 소수점 })}</td>
+                <td style="font-family:var(--font-display);">${ord.수량.toFixed(수량소수점)}</td>
                 <td style="font-family:var(--font-display);">${ord.예상마진.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                 <td style="font-size:10px;">${tpslText}</td>
                 <td>${ord.등록시간}</td>
