@@ -2049,20 +2049,22 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 6px 8px;
-    background-color: hsl(220, 18%, 7%);
-    border: 1px solid var(--color-border);
+    padding: 7px 10px;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); /* 애플 메탈 실버 계열 */
+    border: 1px solid #cbd5e1;
     border-radius: var(--radius-sm);
-    font-size: 11px;
+    font-size: 11.5px;
+    color: #0f172a;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
 }
 
 .quant-metric-row span:first-child {
-    color: var(--color-text-muted);
-    font-weight: 500;
+    color: #475569; /* 어두운 슬레이트 그레이 */
+    font-weight: 700;
 }
 
 .quant-metric-row .metric-val {
-    font-weight: 700;
+    font-weight: 850;
     font-family: var(--font-display);
 }
 
@@ -2071,16 +2073,17 @@ body {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    background-color: hsl(220, 18%, 7%);
-    border: 1px solid var(--color-border);
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); /* 애플 메탈 실버 */
+    border: 1px solid #cbd5e1;
     border-radius: var(--radius-sm);
-    padding: 10px;
+    padding: 12px;
     max-height: 250px;
     overflow-y: auto;
+    color: #0f172a;
 }
 
 .project-brief-section {
-    border-bottom: 1px solid var(--color-border);
+    border-bottom: 1px solid #cbd5e1;
     padding-bottom: 8px;
 }
 
@@ -2090,8 +2093,9 @@ body {
 }
 
 .project-brief-section h4 {
-    font-size: 11px;
-    font-weight: 700;
+    font-size: 11.5px;
+    font-weight: 800;
+    color: #1e293b;
     margin-bottom: 4px;
     display: flex;
     align-items: center;
@@ -2100,8 +2104,8 @@ body {
 
 .project-brief-section p {
     font-size: 10.5px;
-    color: var(--color-text-primary);
-    line-height: 1.45;
+    color: #334155;
+    line-height: 1.5;
 }
 
 .project-grid-metrics {
@@ -2112,8 +2116,8 @@ body {
 }
 
 .p-metric-box {
-    background-color: hsl(220, 18%, 9%);
-    border: 1px solid var(--color-border);
+    background-color: rgba(255, 255, 255, 0.75); /* 메탈 배경 위 화이트 박스 */
+    border: 1px solid #cbd5e1;
     border-radius: var(--radius-sm);
     padding: 6px;
     display: flex;
@@ -2122,14 +2126,15 @@ body {
 }
 
 .p-metric-box span:first-child {
-    font-size: 8.5px;
-    color: var(--color-text-muted);
+    font-size: 9px;
+    color: #475569;
+    font-weight: 700;
 }
 
 .p-metric-box span:last-child {
     font-size: 11px;
-    font-weight: 700;
-    color: var(--color-yellow);
+    font-weight: 850;
+    color: #005bc1; /* 메탈 실버 위에서 뚜렷한 메인 포인트 블루 */
     font-family: var(--font-display);
 }
 
