@@ -1733,21 +1733,25 @@ body {
     background-color: rgba(255, 255, 255, 0.7); /* 메탈 배경 위에서 잘 보이도록 반투명 화이트 적용 */
     border: 1px solid #94a3b8;
     border-radius: var(--radius-sm);
-    padding: 8px;
+    padding: 8px 10px;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    justify-content: flex-start;
+    gap: 6px; /* 내부 요소 간 일정 여백 */
+    min-height: 145px; /* 3개 패널 높이를 완전히 동등하게 145px로 일치 */
 }
 
 .rec-label {
     font-size: 10px;
     color: #475569; /* 좀 더 어두운 그레이색으로 변경 */
-    font-weight: 600;
+    font-weight: 800;
+    margin-bottom: 2px;
 }
 
 .rec-value {
-    font-size: 13px;
+    font-size: 11.5px;
     font-weight: 850; /* 굵기 두껍게 적용 */
+    line-height: 1.35;
 }
 
 .indicator-reliability-grid {
@@ -2194,50 +2198,52 @@ body {
    20. AI 자동매매 세부 설정 패널 스타일 (AI Config Panel Styles)
    ==================================================== */
 .ai-config-accordion {
-    background-color: hsl(220, 18%, 10%);
-    border: 1px solid var(--color-border);
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); /* 애플 메탈 실버 테마 */
+    border: 1px solid #cbd5e1;
     border-radius: var(--radius-sm);
     margin-top: 8px;
     margin-bottom: 8px;
     overflow: hidden;
+    color: #0f172a;
 }
 
 .ai-config-header {
     padding: 10px 14px;
-    background-color: hsl(220, 18%, 7%);
+    background-color: rgba(255, 255, 255, 0.4);
     display: flex;
     align-items: center;
     justify-content: space-between;
     cursor: pointer;
     font-size: 12.5px;
-    font-weight: 700;
+    font-weight: 800;
+    color: #334155;
     transition: var(--transition-fast);
     user-select: none;
+    border-bottom: 1px solid #cbd5e1;
 }
 
 .ai-config-header:hover {
-    background-color: var(--color-bg-hover);
-    color: var(--color-yellow);
+    background-color: rgba(255, 255, 255, 0.75);
+    color: #0f172a;
 }
 
 .ai-config-header .accordion-arrow {
     font-size: 11px;
-    color: var(--color-text-muted);
+    color: #475569;
     transition: transform var(--transition-normal) ease;
 }
 
 .ai-config-header.open .accordion-arrow {
     transform: rotate(180deg);
-    color: var(--color-yellow);
+    color: #005bc1;
 }
 
 .ai-config-body {
     padding: 12px 14px;
-    border-top: 1px solid var(--color-border);
     display: flex;
     flex-direction: column;
     gap: 12px;
-    background-color: hsl(220, 18%, 9%);
+    background-color: transparent;
     transition: all 0.3s ease;
 }
 
@@ -2250,7 +2256,8 @@ body {
     flex-direction: column;
     gap: 6px;
     font-size: 11.5px;
-    color: var(--color-text-light);
+    color: #1e293b;
+    font-weight: 700;
 }
 
 .config-row-flex {
@@ -2258,9 +2265,10 @@ body {
     align-items: center;
     justify-content: space-between;
     font-size: 11.5px;
-    color: var(--color-text-light);
+    color: #1e293b;
+    font-weight: 700;
     padding: 4px 0;
-    border-bottom: 1px solid hsla(0, 0%, 100%, 0.03);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .config-label-area {
@@ -2310,26 +2318,27 @@ body {
     gap: 6px;
     cursor: pointer;
     font-size: 11px;
-    color: var(--color-text-muted);
+    color: #475569;
+    font-weight: 600;
 }
 
 .config-radio-label:hover {
-    color: var(--color-text-light);
+    color: #0f172a;
 }
 
 .config-radio-label input[type="radio"] {
-    accent-color: var(--color-yellow);
+    accent-color: #005bc1;
     cursor: pointer;
 }
 
 .config-num-input {
     width: 44px;
-    background-color: hsl(220, 18%, 5%);
-    border: 1px solid var(--color-border);
-    color: var(--color-yellow);
+    background-color: #ffffff;
+    border: 1px solid #cbd5e1;
+    color: #005bc1;
     font-family: var(--font-display);
     font-size: 11px;
-    font-weight: 700;
+    font-weight: 800;
     border-radius: 3px;
     text-align: center;
     padding: 2px;

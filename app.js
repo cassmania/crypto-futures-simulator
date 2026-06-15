@@ -3918,6 +3918,11 @@ function AI추천분석및업데이트(symbol) {
         supportEl.style.flexWrap = "wrap";
     }
 
+    // [타점 바인딩 활성화] 추천 진입가/익절가/손절가 수치를 대시보드 화면에 노출
+    if (recEntryEl) recEntryEl.innerText = 추천진입가.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 });
+    if (recTpEl) recTpEl.innerText = 추천익절가.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 });
+    if (recSlEl) recSlEl.innerText = 추천손절가.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 });
+
     // ----------------------------------------------------
     // [퀀트 분석 엔진 V3] 정밀 분석 저항/지지의 정확도(정밀도) 및 신뢰도 다각적 분석 연산
     // ----------------------------------------------------
