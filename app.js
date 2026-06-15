@@ -333,29 +333,29 @@ function 차트시스템초기화() {
         const container = document.getElementById(`split-chart-canvas-${idx}`);
         if (!container) return;
 
-        // 공통 차트 테마 옵션 정의
+        // 공통 차트 테마 옵션 정의 (METATRADE 라이트 테마 적용)
         const chartOptions = {
             layout: {
-                background: { type: 'solid', color: '#0B0E11' },
-                textColor: '#848E9C',
+                background: { type: 'solid', color: '#ffffff' },
+                textColor: '#707A8A',
                 fontSize: 9,
                 fontFamily: 'Inter'
             },
             grid: {
-                vertLines: { color: '#1F2226' },
-                horzLines: { color: '#1F2226' }
+                vertLines: { color: '#F0F3F6' },
+                horzLines: { color: '#F0F3F6' }
             },
             crosshair: {
                 mode: LightweightCharts.CrosshairMode.Normal,
-                vertLine: { color: '#848E9C', labelBackgroundColor: '#1E2329' },
-                horzLine: { color: '#848E9C', labelBackgroundColor: '#1E2329' }
+                vertLine: { color: '#707A8A', labelBackgroundColor: '#0058bc' },
+                horzLine: { color: '#707A8A', labelBackgroundColor: '#0058bc' }
             },
             rightPriceScale: {
-                borderColor: '#2B3139',
+                borderColor: '#E6ECF2',
                 visible: true
             },
             timeScale: {
-                borderColor: '#2B3139',
+                borderColor: '#E6ECF2',
                 timeVisible: true,
                 secondsVisible: false
             }
@@ -364,19 +364,19 @@ function 차트시스템초기화() {
         // A. 각 분할 차트 생성
         chartData.메인차트 = LightweightCharts.createChart(container, chartOptions);
         
-        // 캔들 시리즈 주입
+        // 캔들 시리즈 주입 (METATRADE 테마: 상승 초록 #0ECB81, 하락 빨강 #F6465D)
         chartData.캔들시리즈 = chartData.메인차트.addCandlestickSeries({
-            upColor: '#f6465d', // 상승(수익) = 빨간색 (한국 기준)
-            downColor: '#0066ff', // 하락(손실) = 파란색 (한국 기준)
-            borderUpColor: '#f6465d',
-            borderDownColor: '#0066ff',
-            wickUpColor: '#f6465d',
-            wickDownColor: '#0066ff'
+            upColor: '#0ECB81',
+            downColor: '#F6465D',
+            borderUpColor: '#0ECB81',
+            borderDownColor: '#F6465D',
+            wickUpColor: '#0ECB81',
+            wickDownColor: '#F6465D'
         });
 
         // 이동평균선(MA) 추가
         chartData.EMA5시리즈 = chartData.메인차트.addLineSeries({ color: '#F0B90B', lineWidth: 1, title: 'MA(7)' });
-        chartData.EMA20시리즈 = chartData.메인차트.addLineSeries({ color: '#03A9F4', lineWidth: 1, title: 'MA(25)' });
+        chartData.EMA20시리즈 = chartData.메인차트.addLineSeries({ color: '#0058bc', lineWidth: 1, title: 'MA(25)' });
         chartData.SMA60시리즈 = chartData.메인차트.addLineSeries({ color: '#E040FB', lineWidth: 1, title: 'MA(99)' });
 
         // 화면 크기 반응형 리스너 개별 부착
