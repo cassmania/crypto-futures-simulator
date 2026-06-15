@@ -3163,16 +3163,8 @@ function 얻는현재시각텍스트() {
 }
 
 function 재생효과음(audioId) {
-    const audio = document.getElementById(audioId);
-    if (audio) {
-        audio.currentTime = 0;
-        audio.play().catch(e => {
-            console.warn(`[Audio Backup] 오디오 재생 실패 (${audioId}), Web Audio API로 백업 사운드(Backup Sound)를 발생시킵니다:`, e.message);
-            백업사운드재생(audioId);
-        });
-    } else {
-        백업사운드재생(audioId);
-    }
+    // 사용자의 요청에 따라 알림음 및 효과음 재생을 완전히 비활성화(음소거)합니다.
+    return;
 }
 
 // [사운드 합성 엔진 V1] 외부 리소스가 차단되어 효과음이 재생되지 않을 때 Web Audio API로 주파수를 합성하는 백업 함수 (한글 주석 준수)
