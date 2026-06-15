@@ -4334,41 +4334,50 @@ window.차트지지저항선드로잉 = function(chartIdx) {
     const 하방fibo들 = fiboValues.filter(val => val < coin.현재가).sort((a, b) => b - a);
 
     // 1차, 2차, 3차 저항선 계산
-    let resistance1 = parseFloat((( (상방fibo들.length > 0 ? 상방fibo들[0] : bbUpperSanitized) + bbUpperSanitized) / 2).toFixed(coin.소수점));
+    let resistance1 = AI추천캐시.저항선1 || parseFloat((( (상방fibo들.length > 0 ? 상방fibo들[0] : bbUpperSanitized) + bbUpperSanitized) / 2).toFixed(coin.소수점));
     if (resistance1 <= coin.현재가) {
         resistance1 = parseFloat((coin.현재가 * 1.012).toFixed(coin.소수점));
     }
 
     let r2 = 상방fibo들.length > 1 ? 상방fibo들[1] : (상방fibo들.length > 0 ? 상방fibo들[0] * 1.018 : bbUpperSanitized * 1.02);
-    let resistance2 = parseFloat(((r2 + bbUpperSanitized * 1.01) / 2).toFixed(coin.소수점));
+    let resistance2 = AI추천캐시.저항선2 || parseFloat(((r2 + bbUpperSanitized * 1.01) / 2).toFixed(coin.소수점));
     if (resistance2 <= resistance1) {
         resistance2 = parseFloat((resistance1 * 1.015).toFixed(coin.소수점));
     }
 
-    let resistance3 = parseFloat(최고가.toFixed(coin.소수점));
+    let resistance3 = AI추천캐시.저항선3 || parseFloat(최고가.toFixed(coin.소수점));
     if (resistance3 <= resistance2) {
         resistance3 = parseFloat((resistance2 * 1.02).toFixed(coin.소수점));
     }
 
     // 1차, 2차, 3차 지지선 계산
-    let support1 = parseFloat((( (하방fibo들.length > 0 ? 하방fibo들[0] : bbLowerSanitized) + bbLowerSanitized) / 2).toFixed(coin.소수점));
+    let support1 = AI추천캐시.지지선1 || parseFloat((( (하방fibo들.length > 0 ? 하방fibo들[0] : bbLowerSanitized) + bbLowerSanitized) / 2).toFixed(coin.소수점));
     if (support1 >= coin.현재가) {
         support1 = parseFloat((coin.현재가 * 0.988).toFixed(coin.소수점));
     }
 
     let s2 = 하방fibo들.length > 1 ? 하방fibo들[1] : (하방fibo들.length > 0 ? 하방fibo들[0] * 0.982 : bbLowerSanitized * 0.98);
-    let support2 = parseFloat(((s2 + bbLowerSanitized * 0.99) / 2).toFixed(coin.소수점));
+    let support2 = AI추천캐시.지지선2 || parseFloat(((s2 + bbLowerSanitized * 0.99) / 2).toFixed(coin.소수점));
     if (support2 >= support1) {
         support2 = parseFloat((support1 * 0.985).toFixed(coin.소수점));
     }
 
-    let support3 = parseFloat(최저가.toFixed(coin.소수점));
+    let support3 = AI추천캐시.지지선3 || parseFloat(최저가.toFixed(coin.소수점));
     if (support3 >= support2) {
         support3 = parseFloat((support2 * 0.98).toFixed(coin.소수점));
     }
 
-    let 정밀저항가격 = resistance1;
-    let 정밀지지가격 = support1;
+    // [돌파/붕괴 실시간 리밸런싱 업그레이드 반영]
+    let 정밀저항가격 = AI추천캐시.저항선 || resistance1;
+    let 정밀지지가격 = AI추천캐시.지지선 || support1;
+
+    // 돌파/붕괴 상태에 따라 실시간 1차선 강제 동기화 보정
+    if (coin.현재가 >= 정밀저항가격) {
+        resistance1 = 정밀저항가격;
+    }
+    if (coin.현재가 <= 정밀지지가격) {
+        support1 = 정밀지지가격;
+    }
 
     // 3. 지지선 & 저항선 3단계 드로잉
     // 저항선 1차 (점선), 2차 (실선), 3차 (굵은 실선)
