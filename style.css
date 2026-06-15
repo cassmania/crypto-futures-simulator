@@ -1741,6 +1741,19 @@ body {
     min-height: 145px; /* 3개 패널 높이를 완전히 동등하게 145px로 일치 */
 }
 
+/* ⚡ 추천 진입가/익절가/손절가 전용 슬림 박스 스타일 (기존 높이의 반으로 단축) */
+.price-rec-box {
+    background-color: rgba(255, 255, 255, 0.7);
+    border: 1px solid #94a3b8;
+    border-radius: var(--radius-sm);
+    padding: 6px 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    min-height: 60px; /* 기존 145px의 약 절반 크기인 60px로 단축 적용 */
+}
+
 .rec-label {
     font-size: 10px;
     color: #475569; /* 좀 더 어두운 그레이색으로 변경 */
