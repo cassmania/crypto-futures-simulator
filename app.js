@@ -2946,10 +2946,10 @@ function 활성포지션테이블렌더링() {
                 <td><span class="badge-position-type ${badgeClass}">${pos.방향}</span></td>
                 <td class="text-yellow" style="font-weight:600;">${pos.레버리지}x</td>
                 <td style="font-family:var(--font-display);">${pos.수량.toFixed(수량소수점)}</td>
-                <td style="font-family:var(--font-display);">${pos.진입가.toLocaleString(undefined, { minimumFractionDigits: 소수점 })}</td>
-                <td id="pos-mark-price-${pos.아이디}" style="font-family:var(--font-display);">${현재가.toLocaleString(undefined, { minimumFractionDigits: 소수점 })}</td>
+                <td style="font-family:var(--font-display); color: #B8860B; font-weight: 900;">${pos.진입가.toLocaleString(undefined, { minimumFractionDigits: 소수점 })}</td>
+                <td id="pos-mark-price-${pos.아이디}" style="font-family:var(--font-display); color: #000000; font-weight: 900;">${현재가.toLocaleString(undefined, { minimumFractionDigits: 소수점 })}</td>
                 <td class="text-red" style="font-family:var(--font-display); font-weight:600;">${pos.청산가.toLocaleString(undefined, { minimumFractionDigits: 소수점 })}</td>
-                <td style="font-family:var(--font-display);">${pos.투입마진.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                <td style="font-family:var(--font-display); color: #005bc1; font-weight: 900;">${pos.투입마진.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                 <td style="text-align: center;">
                     <label class="config-switch" style="scale: 0.8; display: inline-block; margin: 0 auto; vertical-align: middle;">
                         <input type="checkbox" ${autoMarginChecked} onchange="window.포지션자동마진토글(${idx})">
