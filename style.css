@@ -1661,27 +1661,31 @@ body {
 }
 
 .advisor-badge {
-    font-size: 9px;
-    font-weight: 700;
-    padding: 2px 8px;
-    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 900;
+    padding: 3px 9px;
+    border-radius: 12px;
+    border: 1px solid transparent;
 }
 
 .advisor-badge.badge-neutral {
-    background-color: var(--color-border);
-    color: var(--color-text-muted);
+    background-color: #e2e8f0;
+    color: #475569;
+    border-color: #cbd5e1;
 }
 
 .advisor-badge.badge-long {
-    background-color: var(--color-green-bg);
-    color: var(--color-green);
-    box-shadow: 0 0 6px rgba(14, 203, 129, 0.2);
+    background-color: rgba(14, 203, 129, 0.15);
+    color: #03a66d !important;
+    border-color: rgba(14, 203, 129, 0.35);
+    text-shadow: 0 0 6px rgba(14, 203, 129, 0.5); /* 네온 그린 */
 }
 
 .advisor-badge.badge-short {
-    background-color: var(--color-red-bg);
-    color: var(--color-red);
-    box-shadow: 0 0 6px rgba(246, 70, 93, 0.2);
+    background-color: rgba(246, 70, 93, 0.15);
+    color: #ef4444 !important;
+    border-color: rgba(246, 70, 93, 0.35);
+    text-shadow: 0 0 8px rgba(239, 68, 68, 0.7); /* 고광도 네온 레드 */
 }
 
 .analysis-meter-row {
@@ -2779,18 +2783,17 @@ body {
    ========================================================================== */
 
 .quant-bible-card {
-    background: rgba(32, 201, 151, 0.035) !important;
-    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%) !important; /* 애플 메탈 실버 스타일 */
+    border-radius: var(--radius-sm);
     padding: 10px 12px;
     margin-top: 12px;
     margin-bottom: 12px;
     font-size: 11.5px; /* 가독성을 위한 크기 보정 */
     line-height: 1.5;
-    font-weight: 500;
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(32, 201, 151, 0.08);
-    border-left: 3px solid #20c997 !important; /* 왼쪽 세로 보더선 민트색 강조 */
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    font-weight: 600;
+    border: 1px solid #cbd5e1;
+    border-left: 4px solid #475569 !important; /* 왼쪽 세로 보더선 다크 그레이 메탈 강조 */
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
     transition: all var(--transition-fast);
 }
 
@@ -2801,8 +2804,8 @@ body {
 }
 
 .quant-bible-title {
-    font-weight: 700;
-    color: #20c997;
+    font-weight: 800;
+    color: #334155;
     display: flex;
     align-items: center;
     gap: 6px;
