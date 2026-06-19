@@ -3467,6 +3467,9 @@ body {
     border: 1px solid #B0B0B5;
     border-radius: var(--radius-md);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    height: auto !important;
+    min-height: min-content;
+    overflow: visible !important;
 }
 
 .briefing-box {
@@ -3480,6 +3483,9 @@ body {
     border-radius: var(--radius-sm);
     transition: all 0.2s ease;
     color: #1a1b1f; /* 텍스트 시인성 확보를 위해 어두운 계열 지정 */
+    height: auto !important;
+    min-height: min-content;
+    overflow: visible !important;
 }
 
 .briefing-box:hover {
@@ -3564,6 +3570,8 @@ body {
     font-weight: 500;
     line-height: 1.4;
     color: #111111 !important;
+    height: auto !important;
+    overflow: visible !important;
 }
 
 .cme-gap-box .briefing-value {
