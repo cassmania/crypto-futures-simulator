@@ -3643,7 +3643,21 @@ function AI추천분석및업데이트(symbol) {
 
     const adLongShortElements = document.querySelectorAll(".ad-long-short-flow");
     adLongShortElements.forEach(el => {
-        el.innerHTML = `롱 풀 <span class="text-green" style="font-weight:700;">${liqLongRatio}%</span> vs 숏 풀 <span class="text-red" style="font-weight:700;">${liqShortRatio}%</span> <span style="font-size:0.85em; color:var(--color-text-muted); margin-left:6px;">(고래 유입: ${whaleRatio >= 0 ? '+' : ''}${whaleRatio}%)</span>`;
+        const longVolPct = (호가비율 * 100).toFixed(1);
+        const shortVolPct = ((1 - 호가비율) * 100).toFixed(1);
+        el.innerHTML = `
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 11px;">
+                <span><i class="fa-solid fa-scale-balanced" style="color: var(--color-yellow); margin-right: 4px;"></i>실시간 물량 비율</span>
+                <span>롱 <strong class="text-green">${longVolPct}%</strong> vs 숏 <strong class="text-red">${shortVolPct}%</strong></span>
+            </div>
+            <div style="display: flex; justify-content: space-between; border-top: 1px dashed rgba(0,0,0,0.08); padding-top: 4px; font-size: 11px;">
+                <span><i class="fa-solid fa-fire text-red" style="margin-right: 4px;"></i>청산맵 (100x Pool)</span>
+                <span>롱 풀 <strong class="text-green">${liqLongRatio}%</strong> vs 숏 풀 <strong class="text-red">${liqShortRatio}%</strong></span>
+            </div>
+            <div style="font-size: 9.5px; color: var(--color-text-muted); margin-top: 4px; text-align: right;">
+                고래 유입 강도: <span style="font-weight: 700; color: ${whaleRatio >= 0 ? 'var(--color-green)' : 'var(--color-red)'};">${whaleRatio >= 0 ? '+' : ''}${whaleRatio}%</span>
+            </div>
+        `;
     });
 
     // 달러 인덱스 브리핑룸 전향으로 기존 단순 뉴스 렌더링은 비활성화합니다.
