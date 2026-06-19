@@ -6204,22 +6204,28 @@ async function 실시간달러지수갱신() {
     let 변동률 = "0.00%";
     let 수집성공 = false;
 
-    // 1. 야후 파이낸스 API 시도
+    // 1. 야후 파이낸스 API 시도 (CORS 차단 우회를 위해 Allorigins 프록시 경유)
     try {
-        const res = await fetch("https://query2.finance.yahoo.com/v8/finance/chart/DX=F");
+        const targetUrl = encodeURIComponent("https://query2.finance.yahoo.com/v8/finance/chart/DX=F");
+        const res = await fetch(`https://api.allorigins.win/get?url=${targetUrl}`);
         if (res.ok) {
-            const data = await res.json();
-            const meta = data.chart?.result?.[0]?.meta;
-            if (meta) {
-                가격 = meta.regularMarketPrice;
-                const prevClose = meta.chartPreviousClose || meta.previousClose;
-                const changeNum = prevClose ? ((가격 - prevClose) / prevClose * 100) : 0;
-                변동률 = (changeNum >= 0 ? "+" : "") + changeNum.toFixed(2) + "%";
-                수집성공 = true;
+            const wrapper = await res.json();
+            // allorigins 응답 구조는 { contents: "실제응답문자열" } 형태이므로 JSON 파싱을 거쳐야 합니다.
+            if (wrapper && wrapper.contents) {
+                const data = JSON.parse(wrapper.contents);
+                const meta = data.chart?.result?.[0]?.meta;
+                if (meta) {
+                    가격 = meta.regularMarketPrice;
+                    const prevClose = meta.chartPreviousClose || meta.previousClose;
+                    const changeNum = prevClose ? ((가격 - prevClose) / prevClose * 100) : 0;
+                    변동률 = (changeNum >= 0 ? "+" : "") + changeNum.toFixed(2) + "%";
+                    수집성공 = true;
+                    console.log(`[DXY Live] Allorigins 프록시 경유 야후 파이낸스 실시간 수집 성공! Price: ${가격}, Change: ${변동률}`);
+                }
             }
         }
     } catch (e) {
-        console.error("[DXY] 야후 API 수집 에러:", e);
+        console.error("[DXY] 야후 API 프록시 수집 에러:", e);
     }
 
     // 2. 야후 API 실패 시 오픈 환율 API로 바스켓 계산
