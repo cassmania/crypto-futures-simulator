@@ -3646,10 +3646,11 @@ function AI추천분석및업데이트(symbol) {
         el.innerHTML = `롱 풀 <span class="text-green" style="font-weight:700;">${liqLongRatio}%</span> vs 숏 풀 <span class="text-red" style="font-weight:700;">${liqShortRatio}%</span> <span style="font-size:0.85em; color:var(--color-text-muted); margin-left:6px;">(고래 유입: ${whaleRatio >= 0 ? '+' : ''}${whaleRatio}%)</span>`;
     });
 
-    const adNewsElements = document.querySelectorAll(".ad-live-news-content");
-    adNewsElements.forEach(el => {
-        el.innerText = pInfo.호재뉴스;
-    });
+    // 달러 인덱스 브리핑룸 전향으로 기존 단순 뉴스 렌더링은 비활성화합니다.
+    // const adNewsElements = document.querySelectorAll(".ad-live-news-content");
+    // adNewsElements.forEach(el => {
+    //     el.innerText = pInfo.호재뉴스;
+    // });
 
     const 시장상태 = 시장상태판정({
         현재가: coin.현재가,
@@ -6270,5 +6271,15 @@ async function 실시간달러지수갱신() {
     if (moDisplay) {
         moDisplay.innerText = textContent;
         moDisplay.style.color = displayColor;
+    }
+
+    // DXY 방향에 따른 시장 영향 설명문 동적 생성 및 브리핑 (한글 주석 준수)
+    const dxyDescEl = document.getElementById("dxy-description-content");
+    if (dxyDescEl) {
+        if (isUp) {
+            dxyDescEl.innerHTML = `<span style="color: var(--color-red); font-weight:700;"><i class="fa-solid fa-triangle-exclamation"></i> 달러 강세 / DXY 상승 우세</span><br>달러 지수가 상승하면 안전 자산에 대한 선호도가 증가함을 의미합니다. 이로 인해 글로벌 투자 자금이 비트코인 및 주식 등 위험 자산 시장에서 유출되어 코인 시세에 <strong>강한 하락 압력(매도/Short 우세)</strong>으로 작용하게 됩니다.`;
+        } else {
+            dxyDescEl.innerHTML = `<span style="color: var(--color-green); font-weight:700;"><i class="fa-solid fa-circle-check"></i> 달러 약세 / DXY 하락 우세</span><br>달러 지수가 하락하면 글로벌 달러화 가치가 하락함을 의미합니다. 이로 인해 시장 유동성이 늘어나며 비트코인을 비롯한 가상자산 및 위험 자산 시장으로 자금이 강하게 유입되는 <strong>상승 호재(매수/Long 우세)</strong>로 작용합니다.`;
+        }
     }
 }
