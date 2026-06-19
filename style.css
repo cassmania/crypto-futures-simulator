@@ -313,16 +313,17 @@ body {
 }
 
 /* 세로 코인 목록 드롭다운 (Dropdown Menu Panel) */
+/* 세로 코인 목록 드롭다운 (Dropdown Menu Panel) - 메탈 실버 스타일 */
 .coin-dropdown-menu {
     position: absolute;
     top: 46px;
     left: 16px;
     width: 360px;
     max-height: 380px;
-    background-color: hsl(220, 18%, 10%);
-    border: 1px solid var(--color-border);
+    background: linear-gradient(135deg, #f8fafc, #cbd5e1); /* 메탈 실버 그라데이션 */
+    border: 1px solid #94a3b8; /* 실버 메탈 테두리 */
     border-radius: var(--radius-md);
-    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65), 0 0 1px rgba(255, 255, 255, 0.05);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.8);
     z-index: 1000;
     display: flex;
     flex-direction: column;
@@ -332,8 +333,8 @@ body {
 
 .dropdown-header {
     padding: 10px 14px;
-    border-bottom: 1px solid var(--color-border);
-    background-color: hsl(220, 18%, 7%);
+    border-bottom: 1px solid #cbd5e1;
+    background: linear-gradient(180deg, #e2e8f0, #cbd5e1);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -343,13 +344,13 @@ body {
 .dropdown-header span {
     font-size: 11px;
     font-weight: 700;
-    color: var(--color-text-primary);
+    color: #0f172a; /* 시인성 확보를 위한 진한 남색/검정 */
 }
 
 .btn-close-dropdown {
     background: transparent;
     border: none;
-    color: var(--color-text-muted);
+    color: #475569;
     font-size: 14px;
     cursor: pointer;
     transition: var(--transition-fast);
@@ -372,7 +373,7 @@ body {
     grid-template-columns: 1.3fr 1fr 1fr;
     align-items: center;
     padding: 10px 14px;
-    border-bottom: 1px solid hsl(220, 18%, 8%);
+    border-bottom: 1px solid #e2e8f0;
     cursor: pointer;
     transition: var(--transition-fast);
     user-select: none;
@@ -383,11 +384,11 @@ body {
 }
 
 .dropdown-coin-row:hover {
-    background-color: var(--color-bg-hover);
+    background-color: rgba(148, 163, 184, 0.15); /* 부드러운 실버 호버 배경 */
 }
 
 .dropdown-coin-row.active {
-    background-color: hsla(45, 100%, 53%, 0.04);
+    background-color: rgba(0, 91, 193, 0.08); /* 블루 활성화 배경 */
     border-left: 3px solid var(--color-yellow);
     padding-left: 11px; /* 테두리 두께만큼 보정 */
 }
@@ -401,19 +402,19 @@ body {
 .coin-meta-col .symbol-name {
     font-size: 12px;
     font-weight: 700;
-    color: var(--color-text-primary);
+    color: #0f172a; /* 시인성 높은 검정 텍스트 */
 }
 
 .coin-meta-col .symbol-desc {
     font-size: 9px;
-    color: var(--color-text-muted);
+    color: #475569; /* 회색 설명 텍스트 */
 }
 
 .coin-price-col {
     font-size: 12px;
     font-weight: 600;
     font-family: var(--font-display);
-    color: var(--color-text-primary);
+    color: #0f172a;
     text-align: right;
     padding-right: 12px;
 }
@@ -444,12 +445,12 @@ body {
     display: none; /* 크롬, 사파리, 오페라 전용 스크롤바 완전 숨김 */
 }
 
-/* [NEW] 프리미엄 다크 글라스 통합 코인 검색창 스타일링 */
+/* [NEW] 프리미엄 메탈 실버 통합 코인 검색창 스타일링 */
 .dropdown-search-wrapper {
     position: relative;
     padding: 8px 12px;
-    border-bottom: 1px solid var(--color-border);
-    background-color: hsl(220, 18%, 8%);
+    border-bottom: 1px solid #cbd5e1;
+    background-color: #e2e8f0;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -458,17 +459,17 @@ body {
 .dropdown-search-wrapper .search-icon {
     position: absolute;
     left: 22px;
-    color: var(--color-text-muted);
+    color: #64748b;
     font-size: 11px;
     pointer-events: none;
 }
 
 .input-dropdown-search {
     width: 100%;
-    background-color: hsla(220, 18%, 5%, 0.6);
-    border: 1px solid var(--color-border);
+    background-color: #ffffff; /* 가독성을 위한 화이트 배경 */
+    border: 1px solid #cbd5e1;
     border-radius: var(--radius-sm);
-    color: var(--color-text-primary);
+    color: #0f172a;
     padding: 7px 32px 7px 28px;
     font-size: 11px;
     font-weight: 500;
@@ -477,9 +478,9 @@ body {
 
 .input-dropdown-search:focus {
     border-color: var(--color-yellow);
-    background-color: hsla(220, 18%, 3%, 0.9);
+    background-color: #ffffff;
     outline: none;
-    box-shadow: 0 0 8px rgba(243, 186, 47, 0.15);
+    box-shadow: 0 0 8px rgba(0, 91, 193, 0.2);
 }
 
 .btn-clear-search {
