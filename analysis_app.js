@@ -665,7 +665,7 @@ window.차트클릭포커스액션 = function(chartIdx, event) {
         호가창렌더링실제(coin);
         화면업데이트();
         AI추천분석및업데이트(symbol);
-        활성차트강조테두(chartIdx);
+        활성차트강조테두리(chartIdx);
         window.차트지지저항선드로잉(chartIdx);
     }
 };
