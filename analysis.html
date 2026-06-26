@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Binance 16-Split Multi-Chart Analysis Pro</title>
+    <!-- 구글 폰트 Outfit & Inter 연동 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- 폰트어썸 아이콘 연동 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 트레이딩뷰 차트 라이브러리 CDN 연동 -->
+    <script src="https://unpkg.com/lightweight-charts@3.8.0/dist/lightweight-charts.standalone.production.js"></script>
+    <link rel="icon" href="data:,">
+    <!-- 자체 스타일시트 연동 -->
+    <link rel="stylesheet" href="analysis_style.css">
+</head>
+<body>
+    <div class="analysis-container">
+        <!-- 상단 미니 컨트롤 & 헤더 바 -->
+        <header class="analysis-header">
+            <div class="header-left">
+                <i class="fa-solid fa-chart-multiline header-icon text-yellow"></i>
+                <h1>BINANCE <span>16-CHART</span> ANALYSIS</h1>
+            </div>
+            
+            <div class="header-center">
+                <!-- 실시간 달러 인덱스 (DXY) 연동 영역 -->
+                <div class="dxy-mini-bar">
+                    <span class="dxy-label"><i class="fa-solid fa-gauge-high"></i> 실시간 달러 인덱스 (DXY):</span>
+                    <span id="dxy-value" class="dxy-val text-yellow">104.50 (0.00%)</span>
+                </div>
+            </div>
+
+            <div class="header-right">
+                <!-- 전체 리셋 및 전체 차트 동시 설정 기능 제공 -->
+                <div class="bulk-actions">
+                    <label for="bulk-timeframe" class="bulk-label">전체 시간 변경:</label>
+                    <select id="bulk-timeframe" onchange="window.전체시간일괄변경(this.value)" class="bulk-select" aria-label="전체 차트 시간 일괄 변경">
+                        <option value="">선택</option>
+                        <option value="1m">1분봉 (1m)</option>
+                        <option value="15m">15분봉 (15m)</option>
+                        <option value="1h">1시간봉 (1h)</option>
+                        <option value="4h">4시간봉 (4h)</option>
+                        <option value="1d">일봉 (1d)</option>
+                        <option value="1w">주봉 (1w)</option>
+                    </select>
+                </div>
+                <button id="btn-reset-charts" class="btn-action" title="차트 설정 초기화"><i class="fa-solid fa-rotate-right"></i> 초기화</button>
+            </div>
+        </header>
+
+        <!-- 16분할 차트 그리드 영역 (4x4 Layout) -->
+        <main class="charts-grid-16">
+            <!-- 16개의 차트 슬롯이 JS에 의해 렌더링되거나 정적으로 정의됩니다 -->
+            <!-- 가독성과 DOM 컨트롤 직관성을 위해 HTML에 16개 슬롯 정의 -->
+            <script>
+                // 16개 차트 슬롯 동적 템플릿 생성
+                const baseCoins = [
+                    "BTCUSDT", "ETHUSDT", "SOLUSDT", "HYPEUSDT", 
+                    "XRPUSDT", "ADAUSDT", "DOGEUSDT", "LINKUSDT",
+                    "BNBUSDT", "DOTUSDT", "AVAXUSDT", "TRXUSDT",
+                    "LTCUSDT", "BCHUSDT", "APTUSDT", "SUIUSDT"
+                ];
+                const baseTfs = [
+                    "1m", "1h", "4h", "1d",
+                    "15m", "1h", "4h", "1d",
+                    "1m", "1h", "4h", "1d",
+                    "15m", "1h", "4h", "1d"
+                ];
+
+                for (let i = 0; i < 16; i++) {
+                    document.write(`
+                        <div class="split-chart-wrapper" id="chart-wrapper-${i}" onclick="window.차트클릭포커스액션(${i}, event)">
+                            <div class="split-chart-header">
+                                <div class="split-chart-title-area">
+                                    <span class="chart-num">${i + 1}</span>
+                                    <select class="chart-symbol-select" id="chart-symbol-select-${i}" onchange="window.차트코인변경액션(${i}, this.value)" aria-label="차트 ${i+1} 코인 선택">
+                                        <option value="BTCUSDT">BTC</option>
+                                        <option value="ETHUSDT">ETH</option>
+                                        <option value="SOLUSDT">SOL</option>
+                                        <option value="HYPEUSDT">HYPE</option>
+                                        <option value="XRPUSDT">XRP</option>
+                                        <option value="ADAUSDT">ADA</option>
+                                        <option value="DOGEUSDT">DOGE</option>
+                                        <option value="LINKUSDT">LINK</option>
+                                        <option value="BNBUSDT">BNB</option>
+                                        <option value="DOTUSDT">DOT</option>
+                                        <option value="AVAXUSDT">AVAX</option>
+                                        <option value="TRXUSDT">TRX</option>
+                                        <option value="LTCUSDT">LTC</option>
+                                        <option value="BCHUSDT">BCH</option>
+                                        <option value="APTUSDT">APT</option>
+                                        <option value="SUIUSDT">SUI</option>
+                                    </select>
+                                    <span class="chart-tf-badge" id="chart-tf-badge-${i}">${baseTfs[i]}</span>
+                                </div>
+                                <div class="timeframe-selector" data-chart-idx="${i}">
+                                    <button class="btn-tf" id="btn-tf-${i}-1m" onclick="window.시간단위변경액션(${i}, '1m')">1m</button>
+                                    <button class="btn-tf" id="btn-tf-${i}-15m" onclick="window.시간단위변경액션(${i}, '15m')">15m</button>
+                                    <button class="btn-tf" id="btn-tf-${i}-1h" onclick="window.시간단위변경액션(${i}, '1h')">1h</button>
+                                    <button class="btn-tf" id="btn-tf-${i}-4h" onclick="window.시간단위변경액션(${i}, '4h')">4h</button>
+                                    <button class="btn-tf" id="btn-tf-${i}-1d" onclick="window.시간단위변경액션(${i}, '1d')">1d</button>
+                                    <button class="btn-tf" id="btn-tf-${i}-1w" onclick="window.시간단위변경액션(${i}, '1w')">1w</button>
+                                    <button class="btn-chart-maximize" onclick="event.stopPropagation(); window.차트최대화토글(${i})" title="차트 최대화/복원">
+                                        <i class="fa-solid fa-expand" id="maximize-icon-${i}"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="split-chart-canvas-${i}" class="split-chart-canvas"></div>
+                        </div>
+                    `);
+                }
+            </script>
+        </main>
+    </div>
+
+    <!-- 오디오 알림 리소스 (에러 방지용으로 남김) -->
+    <audio id="sound-trigger" src="https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav" preload="auto"></audio>
+
+    <script src="analysis_app.js"></script>
+</body>
+</html>
