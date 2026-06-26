@@ -125,6 +125,48 @@ document.addEventListener("DOMContentLoaded", async () => {
         };
     });
 
+    // 로컬 스토리지로부터 추가 코인 및 즐겨찾기 복원
+    try {
+        const 저장된목록 = localStorage.getItem("선물시뮬레이터_추가코인");
+        if (저장된목록) {
+            const 코인들 = JSON.parse(저장된목록);
+            코인들.forEach(symbol => {
+                if (!상태.코인목록[symbol]) {
+                    상태.코인목록[symbol] = {
+                        심볼: symbol,
+                        이름: `${symbol.replace("USDT", "")}/USDT Perpetual`,
+                        현재가: 10.00,
+                        어제종가: 9.80,
+                        최고24h: 10.20,
+                        최저24h: 9.70,
+                        캔들데이터: [],
+                        호가매도: [],
+                        호가매수: [],
+                        소수점: symbol.startsWith("BTC") ? 2 : 3,
+                        수량소수점: symbol.startsWith("BTC") ? 3 : 2
+                    };
+                    
+                    if (symbol.startsWith("DOGE") || symbol.startsWith("SHIB")) {
+                        상태.코인목록[symbol].소수점 = 5;
+                        상태.코인목록[symbol].수량소수점 = 0;
+                    }
+                }
+            });
+        }
+
+        const 저장된현재코인 = localStorage.getItem("선물시뮬레이터_현재코인");
+        if (저장된현재코인 && 상태.코인목록[저장된현재코인]) {
+            상태.기본코인 = 저장된현재코인;
+        }
+
+        const 저장된즐겨찾기 = localStorage.getItem("선물시뮬레이터_즐겨찾기");
+        if (저장된즐겨찾기) {
+            상태.즐겨찾기목록 = JSON.parse(저장된즐겨찾기);
+        }
+    } catch (e) {
+        console.error("로컬 스토리지 데이터 복원 에러:", e);
+    }
+
     // 로컬 스토리지로부터 코인/시간 복원
     복원차트설정();
 
@@ -149,6 +191,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // 화면 첫 업데이트
     화면업데이트();
+    window.차트선택기목록동적갱신();
     코인탭렌더링();
 
     // 포커스 강조 테두리
@@ -276,6 +319,161 @@ function 이벤트리스너바인딩() {
                 }, 1000);
             }
         });
+    }
+
+    // 가로형 즐겨찾기 탭 영역 마우스 휠 및 드래그 스크롤 제스처 인터랙션 바인딩
+    const tabsWrapper = document.querySelector(".coin-tabs-wrapper");
+    if (tabsWrapper) {
+        tabsWrapper.addEventListener("wheel", (e) => {
+            e.preventDefault();
+            tabsWrapper.scrollLeft += e.deltaY * 1.2;
+        }, { passive: false });
+
+        let isDown = false;
+        let startX;
+        let scrollLeftVal;
+
+        tabsWrapper.addEventListener("mousedown", (e) => {
+            isDown = true;
+            tabsWrapper.classList.add("grabbing");
+            startX = e.pageX - tabsWrapper.offsetLeft;
+            scrollLeftVal = tabsWrapper.scrollLeft;
+        });
+
+        tabsWrapper.addEventListener("mouseleave", () => {
+            isDown = false;
+            tabsWrapper.classList.remove("grabbing");
+        });
+
+        tabsWrapper.addEventListener("mouseup", () => {
+            isDown = false;
+            tabsWrapper.classList.remove("grabbing");
+        });
+
+        tabsWrapper.addEventListener("mousemove", (e) => {
+            if (!isDown) return;
+            e.preventDefault();
+            const x = e.pageX - tabsWrapper.offsetLeft;
+            const walk = (x - startX) * 1.5;
+            tabsWrapper.scrollLeft = scrollLeftVal - walk;
+        });
+    }
+
+    // 카테고리 필터 버튼 (전체 vs 즐겨찾기) 및 세로 드롭다운 노출 연동
+    const btnFilterAll = document.getElementById("filter-all-coins");
+    const btnFilterFav = document.getElementById("filter-fav-coins");
+    const dropdownMenu = document.getElementById("coin-dropdown-menu");
+    const dropdownTitleText = document.getElementById("dropdown-title-text");
+
+    if (btnFilterAll && btnFilterFav && dropdownMenu) {
+        const 드롭다운닫기 = () => {
+            dropdownMenu.classList.add("hidden");
+            btnFilterAll.classList.remove("active");
+            btnFilterFav.classList.remove("active");
+            if (상태.현재필터 === "all") btnFilterAll.classList.add("active");
+            else btnFilterFav.classList.add("active");
+
+            const searchInput = document.getElementById("coin-search-input");
+            if (searchInput) searchInput.value = "";
+        };
+
+        btnFilterAll.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const isOpen = !dropdownMenu.classList.contains("hidden");
+            
+            if (isOpen && 상태.현재필터 === "all") {
+                드롭다운닫기();
+            } else {
+                상태.현재필터 = "all";
+                if (dropdownTitleText) dropdownTitleText.innerHTML = `<i class="fa-solid fa-globe text-yellow" style="margin-right:6px;"></i>전체 코인 목록`;
+                btnFilterAll.classList.add("active");
+                btnFilterFav.classList.remove("active");
+                dropdownMenu.classList.remove("hidden");
+                
+                const searchInput = document.getElementById("coin-search-input");
+                if (searchInput) {
+                    searchInput.value = "";
+                    setTimeout(() => searchInput.focus(), 50);
+                }
+                코인탭렌더링();
+            }
+        });
+
+        btnFilterFav.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const isOpen = !dropdownMenu.classList.contains("hidden");
+            
+            if (isOpen && 상태.현재필터 === "fav") {
+                드롭다운닫기();
+            } else {
+                상태.현재필터 = "fav";
+                if (dropdownTitleText) dropdownTitleText.innerHTML = `<i class="fa-solid fa-star text-yellow" style="margin-right:6px;"></i>즐겨찾기 코인 목록`;
+                btnFilterFav.classList.add("active");
+                btnFilterAll.classList.remove("active");
+                dropdownMenu.classList.remove("hidden");
+                
+                const searchInput = document.getElementById("coin-search-input");
+                if (searchInput) {
+                    searchInput.value = "";
+                    setTimeout(() => searchInput.focus(), 50);
+                }
+                코인탭렌더링();
+            }
+        });
+
+        const btnCloseDropdown = document.getElementById("btn-close-dropdown");
+        if (btnCloseDropdown) {
+            btnCloseDropdown.addEventListener("click", (e) => {
+                e.stopPropagation();
+                드롭다운닫기();
+            });
+        }
+
+        document.addEventListener("click", (e) => {
+            if (!dropdownMenu.contains(e.target) && e.target !== btnFilterAll && e.target !== btnFilterFav) {
+                드롭다운닫기();
+            }
+        });
+
+        const searchInput = document.getElementById("coin-search-input");
+        const clearBtn = document.getElementById("btn-clear-search");
+
+        if (searchInput) {
+            searchInput.addEventListener("input", () => {
+                드롭다운목록렌더링();
+            });
+
+            searchInput.addEventListener("click", (e) => {
+                e.stopPropagation();
+            });
+
+            searchInput.addEventListener("keydown", (e) => {
+                if (e.key === "Enter") {
+                    e.preventDefault();
+                    const val = searchInput.value.trim().toUpperCase();
+                    if (val.length >= 2) {
+                        const 깔끔심볼 = val.endsWith("USDT") ? val : val + "USDT";
+                        if (상태.코인목록[깔끔심볼]) {
+                            드롭다운코인선택(깔끔심볼);
+                        } else {
+                            window.검색코인강제등록액션(깔끔심볼);
+                        }
+                    }
+                }
+            });
+        }
+
+        if (clearBtn) {
+            clearBtn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                if (searchInput) {
+                    searchInput.value = "";
+                    clearBtn.classList.add("hidden");
+                    드롭다운목록렌더링();
+                    searchInput.focus();
+                }
+            });
+        }
     }
 }
 
@@ -1417,22 +1615,384 @@ function 호가창렌더링실제(coin) {
 
 // 코인 탭 렌더링
 function 코인탭렌더링() {
-    const tabs = document.getElementById("coin-tabs");
-    if (!tabs) return;
+    const tabsEl = document.getElementById("coin-tabs");
+    if (!tabsEl) return;
 
     let html = "";
-    Object.keys(상태.코인목록).slice(0, 8).forEach(symbol => {
+    
+    // 사용자가 즐겨찾기(⭐) 해둔 코인 목록을 가로 탭의 기본 소스로 매핑
+    let 표시할코인들 = [...상태.즐겨찾기목록];
+    
+    // 현재 포커스 중인 코인이 즐겨찾기 목록에 없다면 맨 오른쪽에 임시 탭으로 추가 유지
+    if (상태.기본코인 && !표시할코인들.includes(상태.기본코인)) {
+        표시할코인들.push(상태.기본코인);
+    }
+
+    // 즐겨찾기가 아예 없는 최초 상태인 경우 유저 가이드 목적으로 메이저 자산을 노출
+    if (표시할코인들.length === 0) {
+        표시할코인들 = ["BTCUSDT", "ETHUSDT"];
+    }
+
+    // 혹시 모를 중복 탭 생성을 원천적으로 차단
+    표시할코인들 = [...new Set(표시할코인들)];
+
+    표시할코인들.forEach(symbol => {
         const coin = 상태.코인목록[symbol];
-        const isActive = symbol === 상태.기본코인;
+        if (!coin) return;
+        
+        const isActive = symbol === 상태.기본코인 ? "active" : "";
+        const 즐겨찾기여부 = 상태.즐겨찾기목록.includes(symbol);
+        const starClass = 즐겨찾기여부 ? "fa-solid fa-star text-yellow" : "fa-regular fa-star";
+        
+        // 24시간 변동률 기반 실시간 컬러 피드백 반영
+        const 변동률 = ((coin.현재가 - coin.어제종가) / coin.어제종가 * 100).toFixed(2);
+        const 변동률클래스 = 변동률 >= 0 ? "text-green" : "text-red";
+        
         html += `
-            <button class="coin-tab ${isActive ? 'active' : ''}" onclick="차트코인변경액션(상태.차트객체.활성인덱스, '${symbol}')">
-                <span>${symbol.replace("USDT", "")}</span>
-                <span class="tab-price">${coin.현재가.toFixed(coin.소수점)}</span>
+            <button class="coin-tab ${isActive}" data-symbol="${symbol}" onclick="코인탭전환('${symbol}')">
+                <i class="${starClass} btn-fav-star" onclick="즐겨찾기토글('${symbol}', event)" style="font-size:11px; margin-right:4px;" title="즐겨찾기 토글"></i>
+                ${symbol.replace("USDT", "")}
+                <span class="tab-price ${변동률클래스}" id="tab-price-${symbol}">
+                    ${coin.현재가.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}
+                </span>
             </button>
         `;
     });
-    tabs.innerHTML = html;
+    tabsEl.innerHTML = html;
+
+    // 활성화된 기본코인 탭이 가장자리에 있거나 가려진 상태일 시 부드럽게 화면 중앙으로 자동 정렬 스크롤
+    setTimeout(() => {
+        const activeTab = tabsEl.querySelector(".coin-tab.active");
+        if (activeTab) {
+            activeTab.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+        }
+    }, 40);
+
+    // 세로 드롭다운 목록도 최신 검색어 필터를 적용하여 실시간 동기화 리렌더링
+    드롭다운목록렌더링();
 }
+
+function 드롭다운목록렌더링() {
+    const listEl = document.getElementById("dropdown-coin-list");
+    if (!listEl) return;
+
+    // 검색어 필드 및 초기화 버튼 연계
+    const searchInput = document.getElementById("coin-search-input");
+    const clearBtn = document.getElementById("btn-clear-search");
+    const 검색어 = searchInput ? searchInput.value.trim().toUpperCase() : "";
+
+    // 검색어 유무에 따른 리셋(x) 버튼 보임 상태 조절
+    if (clearBtn) {
+        if (검색어) {
+            clearBtn.classList.remove("hidden");
+        } else {
+            clearBtn.classList.add("hidden");
+        }
+    }
+
+    // 카테고리 필터와 실시간 검색 문자열 기반 2중 필터링
+    let 표시할코인들 = Object.keys(상태.코인목록).filter(symbol => {
+        // 즐겨찾기 필터 활성화 상태인데 즐겨찾기에 없는 경우 스킵
+        if (상태.현재필터 === "fav" && !상태.즐겨찾기목록.includes(symbol)) {
+            return false;
+        }
+        // 검색어가 입력되었는데 심볼에 검색 단어가 없는 경우 스킵
+        if (검색어 && !symbol.includes(검색어)) {
+            return false;
+        }
+        return true;
+    });
+
+    // 1. 검색 결과가 아예 없는 경우의 지능형 핫스왑 바이낸스 등록 인터페이스
+    if (표시할코인들.length === 0) {
+        if (검색어 && 검색어.length >= 2) {
+            const 깔끔심볼 = 코인심볼완성(검색어);
+            const 검색어HTML = 텍스트HTML이스케이프(검색어);
+            const 깔끔심볼HTML = 텍스트HTML이스케이프(깔끔심볼);
+
+            if (!코인심볼유효성검사(깔끔심볼)) {
+                listEl.innerHTML = `
+                    <div class="empty-dropdown-message" style="text-align:center; padding:30px 10px; color:var(--color-text-muted); font-size:12px; line-height:1.5;">
+                        <i class="fa-solid fa-triangle-exclamation text-yellow" style="font-size:18px; margin-bottom:8px; display:block;"></i>
+                        '${검색어HTML}' 검색어는 사용할 수 없습니다.<br>
+                        영문/숫자 코인명만 입력해 주세요. 예: BTC, SOL, XRP
+                    </div>
+                `;
+            } else {
+                listEl.innerHTML = `
+                    <div class="empty-search-action-box" style="text-align:center; padding:20px 10px;">
+                        <div style="color:var(--color-text-muted); font-size:12px; line-height:1.5; margin-bottom:10px;">
+                            <i class="fa-solid fa-triangle-exclamation text-yellow" style="font-size:18px; margin-bottom:8px; display:block;"></i>
+                            '${검색어HTML}' 검색 결과가 없습니다.<br>
+                            바이낸스 선물 실시간 마켓에서 조회할까요?
+                        </div>
+                        <button class="btn-add-searched-coin" onclick="window.검색코인강제등록액션('${깔끔심볼HTML}')" style="background-color: var(--color-yellow); color: var(--color-bg-dark); border: none; padding: 6px 12px; border-radius: 4px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+                            <i class="fa-solid fa-plus-circle"></i> ${깔끔심볼HTML} 등록 및 즉시 진입
+                        </button>
+                    </div>
+                `;
+            }
+        } else {
+            listEl.innerHTML = `
+                <div class="empty-dropdown-message" style="text-align:center; padding:30px 10px; color:var(--color-text-muted); font-size:12px; line-height:1.5;">
+                    <i class="fa-solid fa-circle-info text-yellow" style="font-size:16px; margin-bottom:8px; display:block;"></i>
+                    일치하는 코인이 없습니다.<br>
+                    다른 검색어를 입력하거나 즐겨찾기를 추가해 보세요.
+                </div>
+            `;
+        }
+        return;
+    }
+
+    let html = "";
+    표시할코인들.forEach(symbol => {
+        const coin = 상태.코인목록[symbol];
+        if (!coin) return;
+        
+        const isActive = symbol === 상태.기본코인 ? "active" : "";
+        const 즐겨찾기여부 = 상태.즐겨찾기목록.includes(symbol);
+        const starClass = 즐겨찾기여부 ? "fa-solid fa-star text-yellow" : "fa-regular fa-star";
+        
+        // 24시간 변동률 구하기
+        const 변동률 = ((coin.현재가 - coin.어제종가) / coin.어제종가 * 100).toFixed(2);
+        const 변동률클래스 = 변동률 >= 0 ? "text-green" : "text-red";
+        const 변동률기호 = 변동률 >= 0 ? "+" : "";
+
+        html += `
+            <div class="dropdown-coin-row ${isActive}" onclick="드롭다운코인선택('${symbol}')" style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.03);">
+                <div class="coin-meta-col" style="display: flex; align-items: center; gap: 6px;">
+                    <i class="${starClass} btn-fav-star" onclick="즐겨찾기토글('${symbol}', event)" style="font-size:11px; cursor: pointer;"></i>
+                    <span class="symbol-name" style="font-weight: 600; color: #ffffff;">${symbol.replace("USDT", "")}</span>
+                    <span class="symbol-desc" style="font-size: 10px; color: rgba(255,255,255,0.4);">/USDT</span>
+                </div>
+                <div class="coin-price-col" style="color: #ffffff; font-family: monospace;">
+                    ${coin.현재가.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}
+                </div>
+                <div class="coin-change-col ${변동률클래스}" style="font-weight: 600; min-width: 60px; text-align: right;">
+                    ${변동률기호}${변동률}%
+                </div>
+            </div>
+        `;
+    });
+    listEl.innerHTML = html;
+}
+
+window.드롭다운코인선택 = function(symbol) {
+    window.코인탭전환(symbol);
+    
+    // 드롭다운 닫기
+    const dropdownMenu = document.getElementById("coin-dropdown-menu");
+    const btnFilterAll = document.getElementById("filter-all-coins");
+    const btnFilterFav = document.getElementById("filter-fav-coins");
+    
+    if (dropdownMenu && btnFilterAll && btnFilterFav) {
+        dropdownMenu.classList.add("hidden");
+        btnFilterAll.classList.remove("active");
+        btnFilterFav.classList.remove("active");
+        if (상태.현재필터 === "all") btnFilterAll.classList.add("active");
+        else btnFilterFav.classList.add("active");
+    }
+};
+
+window.즐겨찾기토글 = function(symbol, event) {
+    if (event) event.stopPropagation(); // 탭 전환 클릭 이벤트 버블링 차단
+
+    const idx = 상태.즐겨찾기목록.indexOf(symbol);
+    if (idx > -1) {
+        상태.즐겨찾기목록.splice(idx, 1);
+        console.log(`[Favorites] ${symbol} 즐겨찾기 해제 완료.`);
+    } else {
+        상태.즐겨찾기목록.push(symbol);
+        console.log(`[Favorites] ${symbol} 즐겨찾기 등록 완료.`);
+    }
+
+    // 로컬 스토리지에 즉시 동기화 보존
+    try {
+        localStorage.setItem("선물시뮬레이터_즐겨찾기", JSON.stringify(상태.즐겨찾기목록));
+    } catch (e) {
+        console.error("즐겨찾기 저장 중 에러:", e);
+    }
+
+    // 탭 UI 리프레시 갱신
+    코인탭렌더링();
+};
+
+window.코인탭전환 = async function(symbol) {
+    if (!상태.코인목록[symbol]) return;
+    try {
+        localStorage.setItem("선물시뮬레이터_현재코인", symbol);
+    } catch (e) {
+        console.error("현재 코인 저장 실패:", e);
+    }
+    // 차트코인변경액션을 활성 인덱스 차트에 대해 수행합니다.
+    await window.차트코인변경액션(상태.차트객체.활성인덱스, symbol);
+};
+
+function 코인심볼완성(rawSymbol) {
+    const symbol = String(rawSymbol || "").trim().toUpperCase();
+    if (!symbol) return "";
+    return symbol.endsWith("USDT") ? symbol : `${symbol}USDT`;
+}
+
+function 텍스트HTML이스케이프(value) {
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
+
+function 코인심볼유효성검사(symbol) {
+    return /^[A-Z0-9]{2,20}USDT$/.test(symbol);
+}
+
+// 16개 차트의 코인 선택기 드롭다운(select) 목록을 상태.코인목록에 맞추어 동적으로 동기화 재생성합니다.
+window.차트선택기목록동적갱신 = function() {
+    const symbols = Object.keys(상태.코인목록);
+    
+    for (let i = 0; i < 16; i++) {
+        const select = document.getElementById(`chart-symbol-select-${i}`);
+        if (!select) continue;
+
+        // 현재 설정값 백업
+        const activeVal = select.value || 상태.차트객체.분할차트들[i].코인심볼;
+        
+        let html = "";
+        symbols.forEach(symbol => {
+            const shortName = symbol.replace("USDT", "");
+            html += `<option value="${symbol}">${shortName}</option>`;
+        });
+        select.innerHTML = html;
+
+        // 기존 값으로 안전 복원 (목록에 존재할 경우)
+        if (symbols.includes(activeVal)) {
+            select.value = activeVal;
+        } else {
+            select.value = 상태.차트객체.분할차트들[i].코인심볼;
+        }
+    }
+};
+
+window.검색코인강제등록액션 = async function(symbol) {
+    if (!symbol) return;
+    symbol = 코인심볼완성(symbol);
+
+    if (!코인심볼유효성검사(symbol)) {
+        alert("코인 심볼은 영문/숫자 + USDT 형식만 사용할 수 있습니다. 예: BTCUSDT, SOLUSDT");
+        return;
+    }
+    
+    if (상태.코인목록[symbol]) {
+        alert("이미 목록에 등록되어 있는 코인입니다.");
+        return;
+    }
+
+    // 드롭다운 로딩 중 피드백 표시
+    const listEl = document.getElementById("dropdown-coin-list");
+    if (listEl) {
+        listEl.innerHTML = `
+            <div style="text-align:center; padding:40px 10px; color:var(--color-yellow);">
+                <i class="fa-solid fa-spinner fa-spin" style="font-size:24px; margin-bottom:12px;"></i><br>
+                바이낸스 실시간 시세 연동 채널 개설 중...
+            </div>
+        `;
+    }
+
+    상태.코인목록[symbol] = {
+        심볼: symbol,
+        이름: `${symbol.replace("USDT", "")}/USDT Perpetual`,
+        현재가: 10.00,
+        어제종가: 9.80,
+        최고24h: 10.20,
+        최저24h: 9.70,
+        캔들데이터: [],
+        호가매도: [],
+        호가매수: [],
+        소수점: symbol.startsWith("BTC") ? 2 : 3,
+        수량소수점: symbol.startsWith("BTC") ? 3 : 2
+    };
+
+    // 알트코인에 따른 소수점 규격 최적화 보정
+    if (symbol.startsWith("DOGE") || symbol.startsWith("SHIB")) {
+        상태.코인목록[symbol].소수점 = 5;
+        상태.코인목록[symbol].수량소수점 = 0;
+    } else if (symbol.startsWith("BTC") || symbol.startsWith("ETH")) {
+        상태.코인목록[symbol].소수점 = 2;
+        상태.코인목록[symbol].수량소수점 = 3;
+    } else {
+        상태.코인목록[symbol].소수점 = 3;
+        상태.코인목록[symbol].수량소수점 = 2;
+    }
+
+    // 바이낸스 선물 API를 통한 E2E 존재 여부 및 실시간 초기 시세 검증
+    try {
+        const checkRes = await fetch(`https://fapi.binance.com/fapi/v1/ticker/price?symbol=${symbol}`);
+        let checkData;
+        if (!checkRes.ok) {
+            const checkSpotRes = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`);
+            if (!checkSpotRes.ok) {
+                alert(`[오류] 바이낸스에 존재하지 않거나 지원하지 않는 코인 심볼입니다 (${symbol}).`);
+                delete 상태.코인목록[symbol];
+                드롭다운목록렌더링();
+                return;
+            }
+            checkData = await checkSpotRes.json();
+        } else {
+            checkData = await checkRes.json();
+        }
+        const realPrice = parseFloat(checkData.price);
+        if (isNaN(realPrice) || realPrice <= 0) {
+            throw new Error("유효하지 않은 시세 데이터 수신");
+        }
+        
+        // 실시간 현재가 및 어제종가 기초값 정밀 맵핑
+        상태.코인목록[symbol].현재가 = realPrice;
+        상태.코인목록[symbol].어제종가 = realPrice * 0.98;
+        상태.코인목록[symbol].최고24h = realPrice * 1.02;
+        상태.코인목록[symbol].최저24h = realPrice * 0.97;
+        
+        // 소수점 자동 최적 보정
+        const { 소수점, 수량소수점 } = 자동소수점결정(realPrice);
+        상태.코인목록[symbol].소수점 = 소수점;
+        상태.코인목록[symbol].수량소수점 = 수량소수점;
+    } catch (err) {
+        console.error("코인 검증 에러:", err);
+        alert(`[API 에러] 바이낸스 시세를 확인할 수 없어 코인을 추가할 수 없습니다.`);
+        delete 상태.코인목록[symbol];
+        드롭다운목록렌더링();
+        return;
+    }
+
+    // localStorage 영구 저장
+    try {
+        localStorage.setItem("선물시뮬레이터_추가코인", JSON.stringify(Object.keys(상태.코인목록)));
+        localStorage.setItem("선물시뮬레이터_현재코인", symbol);
+    } catch (e) {
+        console.error("localStorage 저장 실패:", e);
+    }
+
+    // 검색창 초기화
+    const searchInput = document.getElementById("coin-search-input");
+    if (searchInput) searchInput.value = "";
+    
+    // UI 리프레시 및 강제 탭 포커스 이동
+    코인탭렌더링();
+    window.차트선택기목록동적갱신();
+    await window.코인탭전환(symbol);
+    
+    // 드롭다운 닫기
+    const dropdownMenu = document.getElementById("coin-dropdown-menu");
+    const btnFilterAll = document.getElementById("filter-all-coins");
+    const btnFilterFav = document.getElementById("filter-fav-coins");
+    if (dropdownMenu && btnFilterAll && btnFilterFav) {
+        dropdownMenu.classList.add("hidden");
+        btnFilterAll.classList.remove("active");
+        btnFilterFav.classList.remove("active");
+        if (상태.현재필터 === "all") btnFilterAll.classList.add("active");
+        else btnFilterFav.classList.add("active");
+    }
+};
 
 // 화면 업데이트
 function 화면업데이트() {
