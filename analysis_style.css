@@ -1,319 +1,86 @@
 /* ====================================================
-   BINANCE 16-CHART ANALYSIS PRO - DESIGN STYLES (analysis_style.css)
+   BINANCE 16-CHART ANALYSIS PRO - STYLE OVERRIDES
+   기존 style.css를 상속받고, 16분할 차트 레이아웃 및 자동매매 관련 
+   스타일 재정의를 담당합니다.
    ==================================================== */
 
-:root {
-    --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    --font-display: 'Inter', sans-serif;
+@import url("style.css");
 
-    /* 메탈릭 실버 테마 토큰 */
-    --color-bg-deep: #e2e8f0;
-    --color-bg-panel: rgba(255, 255, 255, 0.75);
-    --color-bg-card: rgba(248, 250, 252, 0.95);
-    --color-bg-hover: #cbd5e1;
-    
-    --color-text-primary: #0f172a;
-    --color-text-muted: #475569;
-    
-    --color-yellow: #005bc1; /* 메인 포인트 블루 */
-    --color-yellow-hover: #0070eb;
-    
-    --color-green: #0ECB81;
-    --color-green-bg: rgba(14, 203, 129, 0.1);
-    
-    --color-red: #F6465D;
-    --color-red-bg: rgba(246, 70, 93, 0.1);
-    
-    --color-border: #94a3b8;
-    
-    --radius-sm: 4px;
-    --radius-md: 8px;
-    
-    --transition-fast: 0.15s ease;
-}
-
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-body {
-    background-color: var(--color-bg-deep);
-    background-image: 
-        radial-gradient(circle at 10% 20%, rgba(203, 213, 225, 0.4) 0%, transparent 50%),
-        radial-gradient(circle at 90% 80%, rgba(203, 213, 225, 0.4) 0%, transparent 50%);
-    color: var(--color-text-primary);
-    font-family: var(--font-primary);
-    overflow: hidden;
-    height: 100vh;
-}
-
-/* 유틸리티 */
-.text-green { color: var(--color-green) !important; }
-.text-red { color: var(--color-red) !important; }
-.text-yellow { color: var(--color-yellow) !important; }
-
-/* 레이아웃 컨테이너 */
-.analysis-container {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    width: 100%;
-}
-
-/* 상단 헤더 */
-.analysis-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 16px;
-    height: 50px;
-    background-color: var(--color-bg-panel);
-    border-bottom: 1px solid var(--color-border);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-    z-index: 10;
-}
-
-.header-left {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.header-icon {
-    font-size: 18px;
-    color: var(--color-yellow);
-}
-
-.header-left h1 {
-    font-family: var(--font-display);
-    font-weight: 800;
-    font-size: 16px;
-    letter-spacing: 0.5px;
-}
-
-.header-left h1 span {
-    color: var(--color-yellow);
-    font-weight: 300;
-}
-
-.header-center {
-    display: flex;
-    align-items: center;
-}
-
-.dxy-mini-bar {
-    background-color: rgba(255, 255, 255, 0.9);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
-    padding: 4px 12px;
-    font-size: 11px;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.dxy-label {
-    color: var(--color-text-muted);
-}
-
-.dxy-val {
-    font-weight: 700;
-}
-
-.header-right {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-}
-
-.bulk-actions {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.bulk-label {
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--color-text-muted);
-}
-
-.bulk-select {
-    background-color: #ffffff;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
-    color: var(--color-text-primary);
-    padding: 3px 8px;
-    font-size: 11px;
-    font-weight: 600;
-    outline: none;
-    cursor: pointer;
-}
-
-.btn-action {
-    background-color: #ffffff;
-    border: 1px solid var(--color-border);
-    color: var(--color-text-muted);
-    padding: 4px 10px;
-    font-size: 11px;
-    font-weight: 600;
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    transition: var(--transition-fast);
-}
-
-.btn-action:hover {
-    color: var(--color-yellow);
-    border-color: var(--color-yellow);
-    background-color: var(--color-bg-hover);
-}
-
-/* 16분할 차트 그리드 */
-.charts-grid-16 {
+/* 16분할 차트 그리드 레이아웃 스타일 */
+.charts-container-16split {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     grid-template-rows: repeat(4, 1fr);
     gap: 4px;
+    height: 680px; /* 16분할 분석용 최적화 높이 */
     padding: 4px;
-    flex: 1;
-    height: calc(100vh - 50px);
     background-color: var(--color-bg-deep);
 }
 
-/* 개별 차트 카드 */
-.split-chart-wrapper {
-    background-color: var(--color-bg-panel);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    height: 100%;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.split-chart-wrapper.active-chart {
-    border-color: var(--color-yellow) !important;
-    box-shadow: 0 0 8px rgba(0, 91, 193, 0.25) !important;
-}
-
-/* 최대화 모드 */
+/* 16개 그리드상에서 단독 전체화면 극대화(Maximize) 스타일 재정의 */
 .split-chart-wrapper.maximized {
-    grid-column: span 4 !important;
-    grid-row: span 4 !important;
+    grid-column: span 4 !important; /* 컬럼 4칸 전체 독점 */
+    grid-row: span 4 !important;    /* 로우 4칸 전체 독점 */
     height: 100% !important;
     z-index: 100 !important;
     border-color: var(--color-yellow) !important;
-    box-shadow: 0 0 16px rgba(0, 91, 193, 0.4) !important;
+    box-shadow: 0 0 20px rgba(0, 91, 193, 0.45) !important;
 }
 
+/* 차트 내부 콤팩트화 */
 .split-chart-header {
-    height: 28px;
-    padding: 0 8px;
-    background-color: #0f172a; /* 헤더 영역을 확실히 어두운 톤으로 강조하여 16분할 속 시인성 최대화 */
-    border-bottom: 1px solid var(--color-border);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    user-select: none;
-}
-
-.split-chart-title-area {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.chart-num {
-    font-size: 10px;
-    font-weight: 800;
-    color: #ffffff;
-    background-color: var(--color-yellow);
-    width: 14px;
-    height: 14px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
+    height: 28px !important;
+    padding: 0 8px !important;
 }
 
 .chart-symbol-select {
-    background-color: #1e293b;
-    color: #ffd700 !important; /* 황금색으로 가시성 극대화 */
-    border: 1px solid #475569;
-    border-radius: 3px;
-    font-size: 11px;
-    font-weight: 800;
-    padding: 1px 4px;
-    cursor: pointer;
-    outline: none;
+    font-size: 11px !important;
+    padding: 1px 4px !important;
 }
 
 .chart-tf-badge {
-    background-color: #334155;
-    color: #ffffff;
-    font-size: 9px;
-    font-weight: 700;
-    padding: 1px 4px;
-    border-radius: 2px;
-    text-transform: uppercase;
-}
-
-.timeframe-selector {
-    display: flex;
-    gap: 1px;
-    align-items: center;
+    font-size: 10px !important;
 }
 
 .btn-tf {
-    background: transparent;
-    border: none;
-    color: #94a3b8;
-    padding: 2px 4px;
-    font-size: 9px;
-    font-weight: 600;
-    border-radius: 2px;
-    cursor: pointer;
-    transition: var(--transition-fast);
-}
-
-.btn-tf:hover {
-    color: #ffffff;
-    background-color: #334155;
-}
-
-.btn-tf.active {
-    background-color: var(--color-yellow);
-    color: #ffffff;
-}
-
-.btn-chart-maximize {
-    background: transparent;
-    border: none;
-    color: #94a3b8;
-    font-size: 9px;
-    padding: 2px;
-    cursor: pointer;
-    margin-left: 2px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    transition: var(--transition-fast);
-}
-
-.btn-chart-maximize:hover {
-    color: #ffffff;
+    font-size: 8.5px !important;
+    padding: 1px 3px !important;
 }
 
 .split-chart-canvas {
-    flex: 1;
-    width: 100%;
-    height: 100%;
+    min-height: 80px !important;
+}
+
+/* 자동매매 관련 불필요해진 UI 여백 조절 */
+.order-form-container {
+    gap: 12px !important;
+}
+
+/* 퀀트 다각적 분석 바이블 카드 스타일 보정 */
+.quant-bible-card {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(240, 240, 240, 0.8) 100%);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    padding: 10px;
+    margin-top: 12px;
+    font-size: 11.5px;
+    line-height: 1.45;
+}
+
+.quant-bible-title {
+    font-weight: 800;
+    color: var(--color-yellow);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.quant-compass-spin {
+    animation: spin 8s infinite linear;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }
