@@ -478,7 +478,27 @@ async function 실시간시세REST폴러() {
             AI추천분석및업데이트(상태.기본코인);
             분석및신호생성(상태.기본코인);
         }
+
+        // 실시간 연결 성공 상태 뱃지 동기화
+        const statusDot = document.getElementById("binance-status-dot");
+        const statusText = document.getElementById("binance-status-text");
+        if (statusDot && statusText) {
+            statusDot.style.backgroundColor = "#0ecb81"; // 초록색 연결 성공등
+            statusDot.className = "status-dot pulse-green";
+            statusText.innerText = "바이낸스 실시간 연결 성공";
+            statusText.className = "status-text text-green";
+        }
     } catch (e) {
+        // CORS 차단 또는 네트워크 에러 시 상단 경고
+        const statusDot = document.getElementById("binance-status-dot");
+        const statusText = document.getElementById("binance-status-text");
+        if (statusDot && statusText) {
+            statusDot.style.backgroundColor = "#ff9800"; // 오렌지색 경고등
+            statusDot.className = "status-dot animate-pulse";
+            statusText.innerText = "CORS 차단 - 가상 시뮬레이션 시세 작동 중";
+            statusText.className = "status-text text-yellow";
+        }
+
         // 네트워크 장애 시 임의 변동
         상태.차트객체.분할차트들.forEach((chartData, chartIdx) => {
             const coin = 상태.코인목록[chartData.코인심볼];
