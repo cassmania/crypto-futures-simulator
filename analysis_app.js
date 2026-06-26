@@ -1312,9 +1312,8 @@ function 분석및신호생성(symbol) {
     if (신호방향) {
         const timeStr = new Date().toLocaleTimeString();
         
-        // [신호 감지]는 골드색(#ffd700), 숫자는 빨간색(#ff4d4d)으로 렌더링
-        const parsed 근거 = 근거.join(" + ");
-        const formattedMsg = `<span style="color: #ffd700; font-weight: bold;">[신호 감지]</span> ${symbol} <strong class="${신호방향 === 'LONG' ? 'text-green' : 'text-red'}">**${신호방향}**</strong> 타점 발생! (${parsed} | RSI: <span style="color: #ff4d4d; font-weight: bold;">${rsiVal.toFixed(1)}</span>%)`;
+        const parsed근거 = 근거.join(" + ");
+        const formattedMsg = `<span style="color: #ffd700; font-weight: bold;">[신호 감지]</span> ${symbol} <strong class="${신호방향 === 'LONG' ? 'text-green' : 'text-red'}">**${신호방향}**</strong> 타점 발생! (${parsed근거} | RSI: <span style="color: #ff4d4d; font-weight: bold;">${rsiVal.toFixed(1)}</span>%)`;
         
         const feed = document.getElementById("signal-feed-list");
         if (feed) {
