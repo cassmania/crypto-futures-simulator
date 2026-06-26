@@ -1095,39 +1095,40 @@ function AI추천분석및업데이트(symbol) {
     });
 
     // 퀀트 지표 바인딩
+    // 숫자는 빨강(#ff4d4d), 글자 및 단위는 형광 연두(#39FF14) 스타일을 인라인으로 동적으로 입힙니다.
     const elCCI = document.getElementById("metric-cci");
-    if (elCCI) elCCI.innerText = `${cciVal.toFixed(1)} CCI`;
+    if (elCCI) elCCI.innerHTML = `<span style="color: #ff4d4d; font-weight:700;">${cciVal.toFixed(1)}</span> <span style="color: #39FF14; font-weight:600;">CCI</span>`;
     const elBB = document.getElementById("metric-bb");
-    if (elBB) elBB.innerText = `Basis: ${bbBasis.toFixed(coin.소수점)} (U: ${bbUpper.toFixed(coin.소수점)} / L: ${bbLower.toFixed(coin.소수점)})`;
+    if (elBB) elBB.innerHTML = `<span style="color: #39FF14;">Basis:</span> <span style="color: #ff4d4d;">${bbBasis.toFixed(coin.소수점)}</span> <span style="color: #39FF14;">(U:</span> <span style="color: #ff4d4d;">${bbUpper.toFixed(coin.소수점)}</span> <span style="color: #39FF14;">/ L:</span> <span style="color: #ff4d4d;">${bbLower.toFixed(coin.소수점)}</span><span style="color: #39FF14;">)</span>`;
     const elMACD = document.getElementById("metric-macd");
-    if (elMACD) elMACD.innerText = `MACD: ${현재MACD.toFixed(3)} | Signal: ${현재MACD시그널.toFixed(3)} | Hist: ${현재MACD히스토그램.toFixed(3)}`;
+    if (elMACD) elMACD.innerHTML = `<span style="color: #39FF14;">MACD:</span> <span style="color: #ff4d4d;">${현재MACD.toFixed(3)}</span> <span style="color: #39FF14;">| Signal:</span> <span style="color: #ff4d4d;">${현재MACD시그널.toFixed(3)}</span> <span style="color: #39FF14;">| Hist:</span> <span style="color: #ff4d4d;">${현재MACD히스토그램.toFixed(3)}</span>`;
     const elStoch = document.getElementById("metric-stoch");
-    if (elStoch) elStoch.innerText = `K: ${stochK.toFixed(1)}% | D: ${stochD.toFixed(1)}%`;
+    if (elStoch) elStoch.innerHTML = `<span style="color: #39FF14;">K:</span> <span style="color: #ff4d4d;">${stochK.toFixed(1)}%</span> <span style="color: #39FF14;">| D:</span> <span style="color: #ff4d4d;">${stochD.toFixed(1)}%</span>`;
     const elVWAP = document.getElementById("metric-vwap");
-    if (elVWAP) elVWAP.innerText = `${vwapVal.toFixed(coin.소수점)} USDT`;
+    if (elVWAP) elVWAP.innerHTML = `<span style="color: #ff4d4d; font-weight:700;">${vwapVal.toFixed(coin.소수점)}</span> <span style="color: #39FF14; font-weight:600;">USDT</span>`;
     const elFibo = document.getElementById("metric-fibo");
-    if (elFibo) elFibo.innerText = `50.0% 지지: ${fiboLevels["50.0%"].toFixed(coin.소수점)} USDT`;
+    if (elFibo) elFibo.innerHTML = `<span style="color: #ff4d4d; font-weight:700;">50.0%</span> <span style="color: #39FF14;">지지:</span> <span style="color: #ff4d4d; font-weight:700;">${fiboLevels["50.0%"].toFixed(coin.소수점)}</span> <span style="color: #39FF14;">USDT</span>`;
     const elRSISuper = document.getElementById("metric-rsi-supertrend");
-    if (elRSISuper) elRSISuper.innerText = `RSI: ${rsiVal.toFixed(1)}% | Trend: ${coin.현재가 > ema20 ? '상승' : '하락'}`;
+    if (elRSISuper) elRSISuper.innerHTML = `<span style="color: #39FF14;">RSI:</span> <span style="color: #ff4d4d;">${rsiVal.toFixed(1)}%</span> <span style="color: #39FF14;">| Trend:</span> <span style="color: ${coin.현재가 > ema20 ? '#39FF14' : '#ff4d4d'}; font-weight:700;">${coin.현재가 > ema20 ? '상승' : '하락'}</span>`;
 
     // 온체인 바인딩
     const elMVRV = document.getElementById("metric-mvrv-sopr");
-    if (elMVRV) elMVRV.innerText = `MVRV: ${(1.2 + (coin.currentlyPrice || coin.현재가 / sma200 - 1) * 2).toFixed(2)}`;
+    if (elMVRV) elMVRV.innerHTML = `<span style="color: #39FF14;">MVRV:</span> <span style="color: #ff4d4d;">${(1.2 + (coin.currentlyPrice || coin.현재가 / sma200 - 1) * 2).toFixed(2)}</span>`;
     const elWhale = document.getElementById("metric-whale-flow");
-    if (elWhale) elWhale.innerText = `${whaleRatio}%`;
+    if (elWhale) elWhale.innerHTML = `<span style="color: #ff4d4d; font-weight:700;">${whaleRatio}%</span>`;
     const elOI = document.getElementById("metric-oi");
-    if (elOI) elOI.innerText = `${oiChange.toFixed(2)}%`;
+    if (elOI) elOI.innerHTML = `<span style="color: #ff4d4d; font-weight:700;">${oiChange.toFixed(2)}%</span>`;
     const elFunding = document.getElementById("metric-funding-rate");
-    if (elFunding) elFunding.innerText = `${펀딩비.toFixed(4)}%`;
+    if (elFunding) elFunding.innerHTML = `<span style="color: #ff4d4d; font-weight:700;">${펀딩비.toFixed(4)}%</span>`;
     const elLiq = document.getElementById("metric-liq-map");
-    if (elLiq) elLiq.innerText = `롱 풀 ${liqLongRatio}% vs 숏 풀 ${liqShortRatio}%`;
+    if (elLiq) elLiq.innerHTML = `<span style="color: #39FF14;">롱 풀</span> <span style="color: #ff4d4d; font-weight:700;">${liqLongRatio}%</span> <span style="color: #39FF14;">vs 숏 풀</span> <span style="color: #ff4d4d; font-weight:700;">${liqShortRatio}%</span>`;
     const elVPVR = document.getElementById("metric-vpvr");
-    if (elVPVR) elVPVR.innerText = `POC POC: ${vpvrPOC.toFixed(coin.소수점)} USDT`;
+    if (elVPVR) elVPVR.innerHTML = `<span style="color: #39FF14;">POC POC:</span> <span style="color: #ff4d4d;">${vpvrPOC.toFixed(coin.소수점)}</span> <span style="color: #39FF14;">USDT</span>`;
 
     // CME 갭 연산 연동
     const elCME = document.getElementById("metric-cme-gap");
     if (elCME) {
-        elCME.innerText = symbol === "BTCUSDT" ? "채워짐 (Gap Filled)" : "N/A (CME 미상장)";
+        elCME.innerHTML = symbol === "BTCUSDT" ? `<span style="color: #39FF14;">채워짐 (Gap Filled)</span>` : `<span style="color: #ff4d4d;">N/A (CME 미상장)</span>`;
     }
     const adCme = document.getElementById("ad-cme-gap-status");
     if (adCme) {
@@ -1290,15 +1291,18 @@ function 분석및신호생성(symbol) {
 
     if (신호방향) {
         const timeStr = new Date().toLocaleTimeString();
-        const msg = `[신호 감지] ${symbol} **${신호방향}** 타점 발생! (${근거.join(" + ")} | RSI: ${rsiVal.toFixed(1)}%)`;
+        
+        // [신호 감지]는 골드색(#ffd700), 숫자는 빨간색(#ff4d4d)으로 렌더링
+        const parsed 근거 = 근거.join(" + ");
+        const formattedMsg = `<span style="color: #ffd700; font-weight: bold;">[신호 감지]</span> ${symbol} <strong class="${신호방향 === 'LONG' ? 'text-green' : 'text-red'}">**${신호방향}**</strong> 타점 발생! (${parsed} | RSI: <span style="color: #ff4d4d; font-weight: bold;">${rsiVal.toFixed(1)}</span>%)`;
         
         const feed = document.getElementById("signal-feed-list");
         if (feed) {
             const div = document.createElement("div");
             div.className = `signal-item ${신호방향.toLowerCase()}`;
             div.innerHTML = `
-                <span class="signal-time">${timeStr}</span>
-                <span class="signal-msg">${msg}</span>
+                <span class="signal-time" style="color: var(--color-text-muted);">${timeStr}</span>
+                <span class="signal-msg" style="color: var(--color-text-base);">${formattedMsg}</span>
             `;
             feed.insertBefore(div, feed.firstChild);
             if (feed.childNodes.length > 30) {
