@@ -1759,13 +1759,13 @@ function 드롭다운목록렌더링() {
         const 변동률기호 = 변동률 >= 0 ? "+" : "";
 
         html += `
-            <div class="dropdown-coin-row ${isActive}" onclick="드롭다운코인선택('${symbol}')" style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.03);">
+            <div class="dropdown-coin-row ${isActive}" onclick="드롭다운코인선택('${symbol}')" style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid rgba(0,0,0,0.05);">
                 <div class="coin-meta-col" style="display: flex; align-items: center; gap: 6px;">
-                    <i class="${starClass} btn-fav-star" onclick="즐겨찾기토글('${symbol}', event)" style="font-size:11px; cursor: pointer;"></i>
-                    <span class="symbol-name" style="font-weight: 600; color: #ffffff;">${symbol.replace("USDT", "")}</span>
-                    <span class="symbol-desc" style="font-size: 10px; color: rgba(255,255,255,0.4);">/USDT</span>
+                    <i class="${starClass} btn-fav-star" onclick="즐겨찾기토글('${symbol}', event)" style="font-size:11px; cursor: pointer; color: #475569;"></i>
+                    <span class="symbol-name" style="font-weight: 600; color: #0f172a;">${symbol.replace("USDT", "")}</span>
+                    <span class="symbol-desc" style="font-size: 10px; color: rgba(15, 23, 42, 0.5);">/USDT</span>
                 </div>
-                <div class="coin-price-col" style="color: #ffffff; font-family: monospace;">
+                <div class="coin-price-col" style="color: #0f172a; font-family: monospace;">
                     ${coin.현재가.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}
                 </div>
                 <div class="coin-change-col ${변동률클래스}" style="font-weight: 600; min-width: 60px; text-align: right;">
