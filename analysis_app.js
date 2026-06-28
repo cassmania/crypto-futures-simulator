@@ -83,20 +83,23 @@ function 자동소수점결정(가격) {
     let 소수점 = 2;
     let 수량소수점 = 2;
     
-    if (가격 < 0.01) {
-        소수점 = 6;
+    if (가격 < 0.001) {
+        소수점 = 8;
+        수량소수점 = 0;
+    } else if (가격 < 0.01) {
+        소수점 = 7;
         수량소수점 = 0;
     } else if (가격 < 0.1) {
-        소수점 = 5;
+        소수점 = 7; // 0.08 일 때 0.0800000(7자리) 표시
         수량소수점 = 0;
     } else if (가격 < 1) {
-        소수점 = 4;
+        소수점 = 6;
         수량소수점 = 1;
     } else if (가격 < 10) {
-        소수점 = 3;
+        소수점 = 4;
         수량소수점 = 2;
     } else if (가격 < 100) {
-        소수점 = 2;
+        소수점 = 3;
         수량소수점 = 2;
     } else {
         소수점 = 2;
@@ -142,14 +145,9 @@ document.addEventListener("DOMContentLoaded", async () => {
                         캔들데이터: [],
                         호가매도: [],
                         호가매수: [],
-                        소수점: symbol.startsWith("BTC") ? 2 : 3,
-                        수량소수점: symbol.startsWith("BTC") ? 3 : 2
+                        소수점: 자동소수점결정(10.00).소수점,
+                        수량소수점: 자동소수점결정(10.00).수량소수점
                     };
-                    
-                    if (symbol.startsWith("DOGE") || symbol.startsWith("SHIB")) {
-                        상태.코인목록[symbol].소수점 = 5;
-                        상태.코인목록[symbol].수량소수점 = 0;
-                    }
                 }
             });
         }
@@ -1909,21 +1907,9 @@ window.검색코인강제등록액션 = async function(symbol) {
         캔들데이터: [],
         호가매도: [],
         호가매수: [],
-        소수점: symbol.startsWith("BTC") ? 2 : 3,
-        수량소수점: symbol.startsWith("BTC") ? 3 : 2
+        소수점: 자동소수점결정(10.00).소수점,
+        수량소수점: 자동소수점결정(10.00).수량소수점
     };
-
-    // 알트코인에 따른 소수점 규격 최적화 보정
-    if (symbol.startsWith("DOGE") || symbol.startsWith("SHIB")) {
-        상태.코인목록[symbol].소수점 = 5;
-        상태.코인목록[symbol].수량소수점 = 0;
-    } else if (symbol.startsWith("BTC") || symbol.startsWith("ETH")) {
-        상태.코인목록[symbol].소수점 = 2;
-        상태.코인목록[symbol].수량소수점 = 3;
-    } else {
-        상태.코인목록[symbol].소수점 = 3;
-        상태.코인목록[symbol].수량소수점 = 2;
-    }
 
     // 바이낸스 선물 API를 통한 E2E 존재 여부 및 실시간 초기 시세 검증
     try {
