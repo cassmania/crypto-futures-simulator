@@ -340,11 +340,12 @@
                         </span>
                     </div>
 
-                    <!-- 초정밀 심층 분석 3대 탭바 -->
+                    <!-- 초정밀 심층 분석 4대 탭바 -->
                     <div class="quant-tabs-bar">
                         <button class="quant-tab-btn active" data-quant-tab="quant-indicators" type="button"><i class="fa-solid fa-chart-simple"></i> 퀀트 지표</button>
                         <button class="quant-tab-btn" data-quant-tab="quant-onchain" type="button"><i class="fa-solid fa-link"></i> 온체인/선물</button>
                         <button class="quant-tab-btn" data-quant-tab="quant-project" type="button"><i class="fa-solid fa-circle-info"></i> 프로젝트</button>
+                        <button class="quant-tab-btn" data-quant-tab="quant-gemini" type="button" style="background: linear-gradient(135deg, rgba(138, 75, 243, 0.15) 0%, rgba(75, 138, 243, 0.15) 100%); border: 1px solid rgba(138, 75, 243, 0.35); font-weight: 700; color: #fff;"><i class="fa-solid fa-brain text-yellow"></i> Gemini AI</button>
                     </div>
 
                     <div class="quant-tab-contents">
@@ -444,6 +445,46 @@
                                 <div class="project-brief-section" style="margin-top: 10px; border-bottom: none; padding-bottom: 0;">
                                     <h4 class="text-neutral"><i class="fa-solid fa-arrows-left-right"></i> 주요 매물 지지 / 저항선</h4>
                                     <p id="project-levels">지지선: -- USDT | 저항선: -- USDT</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 4. Gemini AI 분석 패널 -->
+                        <div id="quant-gemini" class="quant-tab-panel">
+                            <div class="gemini-panel-container" style="padding: 10px; display: flex; flex-direction: column; gap: 10px;">
+                                <!-- API 키 설정 영역 -->
+                                <div class="gemini-key-section" style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 8px 12px;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                        <span style="font-size: 11px; font-weight: 700; color: var(--color-yellow);"><i class="fa-solid fa-key"></i> Gemini API 설정</span>
+                                        <span id="gemini-key-status" class="status-badge" style="font-size: 9px; padding: 2px 6px; border-radius: 4px; background-color: #475569; color: #ffffff;">미설정</span>
+                                    </div>
+                                    <div style="display: flex; gap: 6px;">
+                                        <input type="password" id="input-gemini-key" placeholder="Gemini API Key 입력" class="modal-num-input" style="flex: 1; text-align: left; padding: 4px 8px; font-size: 11px; border: 1px solid var(--color-border); background-color: var(--color-bg-dark); color: #ffffff;" aria-label="Gemini API 키 입력">
+                                        <button class="btn-confirm-activation" onclick="window.Gemini키저장()" style="padding: 4px 10px; font-size: 11px; cursor: pointer; background: var(--color-yellow); border: none; border-radius: 4px; color: var(--color-bg-dark); font-weight: 600;"><i class="fa-solid fa-save"></i> 저장</button>
+                                    </div>
+                                </div>
+
+                                <!-- AI 프롬프트 분석 퀵 템플릿 영역 -->
+                                <div class="gemini-templates-section" style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+                                    <button class="btn-ai-template" onclick="window.Gemini퀵분석('technical')" style="background: rgba(138, 75, 243, 0.15); border: 1px solid rgba(138, 75, 243, 0.35); color: #ffffff; padding: 8px; font-size: 11px; border-radius: 4px; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 4px; font-weight: 600;">
+                                        <i class="fa-solid fa-chart-line text-yellow"></i> 실시간 기술적 분석
+                                    </button>
+                                    <button class="btn-ai-template" onclick="window.Gemini퀵분석('strategy')" style="background: rgba(75, 138, 243, 0.15); border: 1px solid rgba(75, 138, 243, 0.35); color: #ffffff; padding: 8px; font-size: 11px; border-radius: 4px; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 4px; font-weight: 600;">
+                                        <i class="fa-solid fa-bullseye text-green"></i> 진입 타점 및 전략
+                                    </button>
+                                </div>
+
+                                <!-- 자유 질문 입력 영역 -->
+                                <div class="gemini-input-section" style="display: flex; gap: 6px;">
+                                    <input type="text" id="input-gemini-prompt" placeholder="AI에게 물어볼 추가 정보를 입력하세요..." class="modal-num-input" style="flex: 1; text-align: left; padding: 6px 8px; font-size: 11px; border: 1px solid var(--color-border); background-color: var(--color-bg-dark); color: #ffffff;" onkeydown="if(event.key==='Enter') window.Gemini자유분석()">
+                                    <button class="btn-confirm-activation" onclick="window.Gemini자유분석()" style="padding: 6px 12px; font-size: 11px; background: var(--color-yellow); color: var(--color-bg-dark); border: none; border-radius: 4px; font-weight: 600; cursor: pointer;"><i class="fa-solid fa-paper-plane"></i> 전송</button>
+                                </div>
+
+                                <!-- 분석 결과창 -->
+                                <div class="gemini-response-section" style="background: rgba(0, 0, 0, 0.25); border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 12px; min-height: 120px; max-height: 250px; overflow-y: auto;">
+                                    <div id="gemini-response-output" style="font-size: 11px; line-height: 1.6; color: rgba(255,255,255,0.85); white-space: pre-wrap; word-break: break-all; font-family: sans-serif;">
+                                        Gemini API Key를 입력하고 위의 퀵 분석 템플릿 버튼을 누르거나, 자유 질문을 입력하여 AI에게 현재 코인의 정밀 리포트 분석을 요청하세요.
+                                    </div>
                                 </div>
                             </div>
                         </div>

@@ -30,6 +30,7 @@ const 상태 = {
     거래이력: [],              
     주문아이디카운터: 1,       
     포지션아이디카운터: 1,     
+    geminiApiKey: "",
 
     // 16개 분할 차트 객체 배열 (16-Split Multi-Symbol/Timeframe Charts)
     차트객체: {
@@ -161,6 +162,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (저장된즐겨찾기) {
             상태.즐겨찾기목록 = JSON.parse(저장된즐겨찾기);
         }
+
+        const 저장된제미나이키 = localStorage.getItem("선물시뮬레이터_제미나이키");
+        if (저장된제미나이키) {
+            상태.geminiApiKey = 저장된제미나이키;
+        }
     } catch (e) {
         console.error("로컬 스토리지 데이터 복원 에러:", e);
     }
@@ -191,6 +197,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     화면업데이트();
     window.차트선택기목록동적갱신();
     코인탭렌더링();
+    window.Gemini키상태갱신();
 
     // 포커스 강조 테두리
     활성차트강조테두리(상태.차트객체.활성인덱스);
@@ -2180,4 +2187,198 @@ window.카카오알림테스트발송 = function() {
 
 window.카카오알림발송 = function(data) {
     console.log("[Kakao Alert Send]:", data);
+};
+
+// ----------------- Gemini AI 연동 모듈 -----------------
+window.Gemini키상태갱신 = function() {
+    const statusEl = document.getElementById("gemini-key-status");
+    const inputEl = document.getElementById("input-gemini-key");
+    if (!statusEl) return;
+
+    if (상태.geminiApiKey) {
+        statusEl.innerText = "설정 완료";
+        statusEl.style.backgroundColor = "#0ecb81"; // 초록색
+        if (inputEl) inputEl.value = 상태.geminiApiKey;
+    } else {
+        statusEl.innerText = "미설정";
+        statusEl.style.backgroundColor = "#475569"; // 회색
+        if (inputEl) inputEl.value = "";
+    }
+};
+
+window.Gemini키저장 = function() {
+    const inputEl = document.getElementById("input-gemini-key");
+    if (!inputEl) return;
+    const key = inputEl.value.trim();
+    if (!key) {
+        alert("유효한 Gemini API Key를 입력하세요!");
+        return;
+    }
+    상태.geminiApiKey = key;
+    try {
+        localStorage.setItem("선물시뮬레이터_제미나이키", key);
+        alert("Gemini API Key가 성공적으로 저장되었습니다.");
+        window.Gemini키상태갱신();
+    } catch (e) {
+        console.error("제미나이 키 저장 에러:", e);
+    }
+};
+
+// 실시간 차트 지표 데이터를 프롬프트용 텍스트로 요약하는 함수
+function 현재시장데이터요약(symbol) {
+    const coin = 상태.코인목록[symbol];
+    if (!coin) return "해당 코인의 실시간 시세 데이터가 존재하지 않습니다.";
+
+    const closes = coin.캔들데이터?.map(c => c.close) || [];
+    const idx = closes.length - 1;
+    const rsiVal = document.getElementById("metric-rsi-supertrend")?.innerText || "데이터 없음";
+    const cciVal = document.getElementById("metric-cci")?.innerText || "데이터 없음";
+    const bbVal = document.getElementById("metric-bb")?.innerText || "데이터 없음";
+    const macdVal = document.getElementById("metric-macd")?.innerText || "데이터 없음";
+    const vwapVal = document.getElementById("metric-vwap")?.innerText || "데이터 없음";
+    const dxyVal = document.getElementById("dxy-value-display-header")?.innerText || "데이터 없음";
+
+    return `
+=== 실시간 시장 정보 ===
+코인 심볼: ${symbol} (${coin.이름})
+현재 가격: ${coin.현재가.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })} USDT
+어제 대비 변동률: ${((coin.현재가 - coin.어제종가) / coin.어제종가 * 100).toFixed(2)}%
+24시간 최고가: ${coin.최고24h.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })} USDT
+24시간 최저가: ${coin.최저24h.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })} USDT
+
+=== 기술 지표 및 매크로 정보 ===
+실시간 달러 인덱스 (DXY): ${dxyVal}
+RSI / SuperTrend: ${rsiVal}
+CCI 모멘텀: ${cciVal}
+볼린저 밴드 (BB): ${bbVal}
+MACD: ${macdVal}
+VWAP: ${vwapVal}
+`;
+}
+
+// 공통 Gemini API 호출 함수
+async function GeminiAPI호출(prompt) {
+    const outputEl = document.getElementById("gemini-response-output");
+    if (!outputEl) return;
+
+    if (!상태.geminiApiKey) {
+        alert("Gemini API Key를 먼저 입력하고 저장해주세요!");
+        return;
+    }
+
+    outputEl.innerHTML = `
+        <div style="display:flex; align-items:center; justify-content:center; padding:20px 0; gap:8px;">
+            <i class="fa-solid fa-spinner fa-spin" style="font-size:18px; color:var(--color-yellow);"></i>
+            <span>Gemini AI가 정밀 분석 리포트를 구성하는 중...</span>
+        </div>
+    `;
+
+    try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${상태.geminiApiKey}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                contents: [{
+                    parts: [{
+                        text: prompt
+                    }]
+                }]
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error?.message || "네트워크 오류 발생");
+        }
+
+        const data = await response.json();
+        const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        
+        if (responseText) {
+            // 마크다운 형식의 결과물을 간단하게 줄바꿈 및 강조로 정제하여 출력
+            outputEl.innerHTML = responseText
+                .replace(/\*\*(.*?)\*\*/g, '<strong style="color:var(--color-yellow);">$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/### (.*?)\n/g, '<h4 style="margin: 8px 0 4px 0; color: #39FF14;">$1</h4>')
+                .replace(/## (.*?)\n/g, '<h3 style="margin: 12px 0 6px 0; color: var(--color-yellow);">$1</h3>')
+                .replace(/# (.*?)\n/g, '<h2 style="margin: 14px 0 8px 0; color: #ffb700;">$1</h2>')
+                .replace(/\n/g, '<br>');
+        } else {
+            outputEl.innerText = "Gemini AI로부터 응답이 전달되었으나 결과 텍스트가 비어 있습니다.";
+        }
+    } catch (e) {
+        console.error("Gemini API 호출 에러:", e);
+        outputEl.innerHTML = `<span style="color:var(--color-red);">분석 중 에러 발생: ${e.message}</span><br>API Key 유효성을 확인하시거나 일시적인 네트워크 장애일 수 있습니다.`;
+    }
+}
+
+window.Gemini퀵분석 = async function(type) {
+    const symbol = 상태.기본코인;
+    const marketSummary = 현재시장데이터요약(symbol);
+    
+    let prompt = "";
+    if (type === "technical") {
+        prompt = `
+너는 바이낸스 전문 암호화폐 퀀트 분석 트레이더이다. 
+아래 전달된 실시간 가격 및 기술적 보정 지표 정보들을 분석하여 현재 시점의 기술적 정밀 분석 리포트를 한국어로 쉽고 간결하게 작성해라. 
+단, 주석이나 서술 내용은 반드시 한국어로만 할 것이며 중요한 핵심 용어는 영어를 병기해라.
+답변할 때 너무 길게 하지 말고 각 항목당 1-2문장으로 요약해서 번호표(### 또는 **을 사용)를 매겨 명확하게 구성해라.
+
+전송 데이터:
+${marketSummary}
+
+분석할 내용:
+1. 달러지수(DXY)와의 역상관관계에 기반한 거시 관점 영향
+2. RSI, CCI, MACD 등 오실레이터 추세와 모멘텀의 과열/과매도 수렴 상태 평가
+3. 현재 가격이 볼린저 밴드와 VWAP 대비 상하단 돌파 또는 평균회귀 중 어느 위치에 있는지 판별
+4. 최종 숏(SHORT) / 롱(LONG) 또는 관망(NEUTRAL) 추세 분석 결론
+`;
+    } else if (type === "strategy") {
+        prompt = `
+너는 가상자산 위험 관리 스페셜리스트이자 리스크 매니저이다.
+전달된 코인의 실시간 시세를 분석하여, 현재 시장 상황에 가장 이상적인 타점 및 리스크 가이드라인을 한국어로 쉽고 간결하게 조언해라.
+답변 시 기술 용어는 영어를 병기하고 한글로 친절히 풀어 쓰며, 중요한 포인트는 번호나 볼드체로 하이라이트해라.
+
+전송 데이터:
+${marketSummary}
+
+조언할 내용:
+1. 추천 신규 진입점(Entry Price) 범위 및 손절선(Stop Loss), 익절선(Take Profit) 가이드라인 제안
+2. 추천 레버리지 배수 가이드와 그 이유 (현재의 변동성 고려)
+3. 진입 시 주의해야 할 유동성 리스크 및 합성 Warning 지표 해석
+`;
+    }
+
+    await GeminiAPI호출(prompt);
+};
+
+window.Gemini자유분석 = async function() {
+    const promptInput = document.getElementById("input-gemini-prompt");
+    if (!promptInput) return;
+    const customPrompt = promptInput.value.trim();
+    if (!customPrompt) {
+        alert("질문을 입력해주세요!");
+        return;
+    }
+
+    const symbol = 상태.기본코인;
+    const marketSummary = 현재시장데이터요약(symbol);
+
+    const prompt = `
+너는 암호화폐 전용 분석 AI 어시스턴트이다. 
+아래 전달된 실시간 코인 가격 지표를 참고하여 사용자가 물어본 질문에 대해 트레이더의 시각에서 친절하게 답변해라.
+단, 설명은 반드시 한국어로 쉽게 풀어서 기술하되, 기술 용어는 영어(ex: 오실레이터(Oscillator))를 병기해라.
+
+실시간 시세 참고 자료:
+${marketSummary}
+
+사용자 질문:
+"${customPrompt}"
+`;
+
+    // 입력창 클리어
+    promptInput.value = "";
+    await GeminiAPI호출(prompt);
 };
