@@ -542,7 +542,7 @@ async function 분할차트캔들데이터로드(chartIdx) {
 
     const symbol = chartData.코인심볼;
     const interval = chartData.시간단위;
-    const coin = 상태.코인목록[symbol];
+    const coin = 코인객체조회(symbol);
     if (!coin) return;
 
     try {
@@ -579,7 +579,8 @@ async function 분할차트캔들데이터로드(chartIdx) {
 function CORS폴백데이터생성(chartIdx) {
     const chartData = 상태.차트객체.분할차트들[chartIdx];
     const symbol = chartData.코인심볼;
-    const coin = 상태.코인목록[symbol];
+    const coin = 코인객체조회(symbol);
+    if (!coin) return;
     let price = coin.현재가 || (코인정의[symbol]?.시작가 || 100);
     
     const formatted = [];
