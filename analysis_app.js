@@ -109,6 +109,13 @@ function 자동소수점결정(가격) {
     return { 소수점, 수량소수점 };
 }
 
+// 맵 조회 시 심볼 형태의 유연한 처리를 위한 헬퍼 함수
+function 코인객체조회(symbol) {
+    if (!symbol) return null;
+    const cleanSymbol = symbol.trim().toUpperCase();
+    return 상태.코인목록[cleanSymbol] || 상태.코인목록[cleanSymbol + "USDT"] || 상태.코인목록[cleanSymbol.replace("USDT", "")];
+}
+
 // 2. 초기화 프로세스 (Initialization Process)
 async function 초기화실행() {
     // 1단계: 코인 데이터 목록 메모리 이식
@@ -594,6 +601,10 @@ function CORS폴백데이터생성(chartIdx) {
     coin.최고24h = Math.max(...formatted.map(c => c.high));
     coin.최저24h = Math.min(...formatted.map(c => c.low));
     coin.캔들데이터 = [...formatted];
+
+    const { 소수점, 수량소수점 } = 자동소수점결정(coin.현재가);
+    coin.소수점 = 소수점;
+    coin.수량소수점 = 수량소수점;
 }
 
 // 지표 연산 및 차트 리드로우
@@ -1191,7 +1202,7 @@ function 시장상태판정(d) {
 
 // 퀀트 지표 실시간 연산 및 UI 갱신 센터
 function AI추천분석및업데이트(symbol) {
-    const coin = 상태.코인목록[symbol];
+    const coin = 코인객체조회(symbol);
     if (!coin || !coin.캔들데이터 || coin.캔들데이터.length < 30) return;
 
     // A. 지표 계산 기초 자료 수집
@@ -1510,7 +1521,7 @@ function AI추천분석및업데이트(symbol) {
 
 // 실시간 매매 신호 감지 피드
 function 분석및신호생성(symbol) {
-    const coin = 상태.코인목록[symbol];
+    const coin = 코인객체조회(symbol);
     if (!coin || !coin.캔들데이터 || coin.캔들데이터.length < 30) return;
 
     const closes = coin.캔들데이터.map(c => c.close);
