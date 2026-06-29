@@ -676,7 +676,7 @@ async function 실시간시세REST폴러() {
             
             // 바이낸스 API에 없는 종목(SAMSUNG 등)은 가상 시뮬레이션으로 가격 변동 처리
             if (!newPrice) {
-                const coin = 상태.코인목록[symbol];
+                const coin = 코인객체조회(symbol);
                 if (coin) {
                     const walk = (Math.random() - 0.5) * (coin.현재가 * 0.0006);
                     coin.현재가 += walk;
@@ -686,7 +686,7 @@ async function 실시간시세REST폴러() {
 
             if (!newPrice) return;
 
-            const coin = 상태.코인목록[symbol];
+            const coin = 코인객체조회(symbol);
             coin.현재가 = newPrice;
 
             if (chartData.캔들데이터.length > 0) {
@@ -731,7 +731,7 @@ async function 실시간시세REST폴러() {
 
         // 네트워크 장애 시 임의 변동
         상태.차트객체.분할차트들.forEach((chartData, chartIdx) => {
-            const coin = 상태.코인목록[chartData.코인심볼];
+            const coin = 코인객체조회(chartData.코인심볼);
             if (!coin) return;
             const walk = (Math.random() - 0.5) * (coin.현재가 * 0.0006);
             coin.현재가 += walk;
