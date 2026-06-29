@@ -459,7 +459,7 @@
                                         <span id="gemini-key-status" class="status-badge" style="font-size: 9px; padding: 2px 6px; border-radius: 4px; background-color: #475569; color: #ffffff;">미설정</span>
                                     </div>
                                     <div style="display: flex; gap: 6px;">
-                                        <input type="password" id="input-gemini-key" placeholder="Gemini API Key 입력" class="modal-num-input" style="flex: 1; text-align: left; padding: 4px 8px; font-size: 11px; border: 1px solid var(--color-border); background-color: var(--color-bg-dark); color: #ffffff;" aria-label="Gemini API 키 입력">
+                                        <input type="password" id="input-gemini-key" placeholder="Gemini API Key 입력" class="modal-num-input" style="flex: 1; text-align: left; padding: 4px 8px; font-size: 11px; border: 1px solid var(--color-border); background-color: #ffffff; color: #0f172a;" aria-label="Gemini API 키 입력">
                                         <button class="btn-confirm-activation" onclick="window.Gemini키저장()" style="padding: 4px 10px; font-size: 11px; cursor: pointer; background: var(--color-yellow); border: none; border-radius: 4px; color: var(--color-bg-dark); font-weight: 600;"><i class="fa-solid fa-save"></i> 저장</button>
                                     </div>
                                 </div>
@@ -476,7 +476,7 @@
 
                                 <!-- 자유 질문 입력 영역 -->
                                 <div class="gemini-input-section" style="display: flex; gap: 6px;">
-                                    <input type="text" id="input-gemini-prompt" placeholder="AI에게 물어볼 추가 정보를 입력하세요..." class="modal-num-input" style="flex: 1; text-align: left; padding: 6px 8px; font-size: 11px; border: 1px solid var(--color-border); background-color: var(--color-bg-dark); color: #ffffff;" onkeydown="if(event.key==='Enter') window.Gemini자유분석()">
+                                    <input type="text" id="input-gemini-prompt" placeholder="AI에게 물어볼 추가 정보를 입력하세요..." class="modal-num-input" style="flex: 1; text-align: left; padding: 6px 8px; font-size: 11px; border: 1px solid var(--color-border); background-color: #ffffff; color: #0f172a;" onkeydown="if(event.key==='Enter') window.Gemini자유분석()">
                                     <button class="btn-confirm-activation" onclick="window.Gemini자유분석()" style="padding: 6px 12px; font-size: 11px; background: var(--color-yellow); color: var(--color-bg-dark); border: none; border-radius: 4px; font-weight: 600; cursor: pointer;"><i class="fa-solid fa-paper-plane"></i> 전송</button>
                                 </div>
 
