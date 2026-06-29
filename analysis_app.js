@@ -850,7 +850,7 @@ window.시간단위변경액션 = async function(chartIdx, tf) {
 // 코인 심볼 변경 액션
 window.차트코인변경액션 = async function(chartIdx, symbol) {
     const chartData = 상태.차트객체.분할차트들[chartIdx];
-    if (!chartData || !상태.코인목록[symbol]) return;
+    if (!chartData || !코인객체조회(symbol)) return;
 
     chartData.코인심볼 = symbol;
     
@@ -889,7 +889,7 @@ window.차트클릭포커스액션 = function(chartIdx, event) {
     상태.차트객체.활성인덱스 = chartIdx;
     상태.기본코인 = symbol;
 
-    const coin = 상태.코인목록[symbol];
+    const coin = 코인객체조회(symbol);
     if (coin) {
         document.getElementById("current-coin-title").innerText = coin.이름;
         코인탭렌더링();
@@ -1851,7 +1851,7 @@ window.즐겨찾기토글 = function(symbol, event) {
 };
 
 window.코인탭전환 = async function(symbol) {
-    if (!상태.코인목록[symbol]) return;
+    if (!코인객체조회(symbol)) return;
     try {
         localStorage.setItem("선물시뮬레이터_현재코인", symbol);
     } catch (e) {
@@ -2028,7 +2028,7 @@ window.검색코인강제등록액션 = async function(symbol) {
 
 // 화면 업데이트
 function 화면업데이트() {
-    const coin = 상태.코인목록[상태.기본코인];
+    const coin = 코인객체조회(상태.기본코인);
     if (coin) {
         document.getElementById("current-coin-title").innerText = coin.이름;
         document.getElementById("current-price").innerText = coin.현재가.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 }) + " USDT";
