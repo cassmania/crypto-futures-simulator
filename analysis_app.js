@@ -110,7 +110,7 @@ function 자동소수점결정(가격) {
 }
 
 // 2. 초기화 프로세스 (Initialization Process)
-document.addEventListener("DOMContentLoaded", async () => {
+async function 초기화실행() {
     // 1단계: 코인 데이터 목록 메모리 이식
     Object.keys(코인정의).forEach(symbol => {
         const { 소수점, 수량소수점 } = 자동소수점결정(코인정의[symbol].시작가);
@@ -201,8 +201,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // 포커스 강조 테두리
     활성차트강조테두리(상태.차트객체.활성인덱스);
-    window.차트지지저항선드로잉(상태.차트객체.활성인덱스);
-});
+}
+
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", 초기화실행);
+} else {
+    초기화실행();
+}
 
 // 차트 시스템 구현
 function 차트시스템초기화() {
@@ -656,7 +661,18 @@ async function 실시간시세REST폴러() {
 
         상태.차트객체.분할차트들.forEach((chartData, chartIdx) => {
             const symbol = chartData.코인심볼;
-            const newPrice = priceMap[symbol];
+            let newPrice = priceMap[symbol];
+            
+            // 바이낸스 API에 없는 종목(SAMSUNG 등)은 가상 시뮬레이션으로 가격 변동 처리
+            if (!newPrice) {
+                const coin = 상태.코인목록[symbol];
+                if (coin) {
+                    const walk = (Math.random() - 0.5) * (coin.현재가 * 0.0006);
+                    coin.현재가 += walk;
+                    newPrice = coin.현재가;
+                }
+            }
+
             if (!newPrice) return;
 
             const coin = 상태.코인목록[symbol];
@@ -1922,19 +1938,30 @@ window.검색코인강제등록액션 = async function(symbol) {
     try {
         const checkRes = await fetch(`https://fapi.binance.com/fapi/v1/ticker/price?symbol=${symbol}`);
         let checkData;
+        let realPrice = 100.0;
+        
         if (!checkRes.ok) {
             const checkSpotRes = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`);
             if (!checkSpotRes.ok) {
-                alert(`[오류] 바이낸스에 존재하지 않거나 지원하지 않는 코인 심볼입니다 (${symbol}).`);
-                delete 상태.코인목록[symbol];
-                드롭다운목록렌더링();
-                return;
+                // 바이낸스에 아예 없는 경우 (SAMSUNG 등) -> 가상 시뮬레이션 모드 등록 의사 타진
+                const 강제등록 = confirm(`[안내] 바이낸스에 존재하지 않는 심볼입니다 (${symbol}). 가상 시뮬레이션 전용 종목으로 강제 등록하시겠습니까?`);
+                if (!강제등록) {
+                    delete 상태.코인목록[symbol];
+                    드롭다운목록렌더링();
+                    return;
+                }
+                // 삼성(SAMSUNG)일 경우 대략 55,000 USDT 근처 가격으로 융통성 있게 가상 세팅
+                realPrice = symbol.includes("SAMSUNG") ? 55000.0 : 100.0;
+                checkData = { price: realPrice.toString() };
+            } else {
+                checkData = await checkSpotRes.json();
+                realPrice = parseFloat(checkData.price);
             }
-            checkData = await checkSpotRes.json();
         } else {
             checkData = await checkRes.json();
+            realPrice = parseFloat(checkData.price);
         }
-        const realPrice = parseFloat(checkData.price);
+        
         if (isNaN(realPrice) || realPrice <= 0) {
             throw new Error("유효하지 않은 시세 데이터 수신");
         }
