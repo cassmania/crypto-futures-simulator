@@ -15,7 +15,7 @@
     <link rel="icon" href="data:,">
 
     <!-- 자체 스타일시트 연동 -->
-    <link rel="stylesheet" href="analysis_style.css?v=1.1.2">
+    <link rel="stylesheet" href="analysis_style.css?v=1.1.3">
 
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-C60CWQZ62S"></script>
@@ -126,11 +126,11 @@
                         ];
                         for (let i = 0; i < 16; i++) {
                             document.write(`
-                                <div class="split-chart-wrapper" id="chart-wrapper-${i}" onclick="차트클릭포커스액션(${i}, event)">
+                                <div class="split-chart-wrapper" id="chart-wrapper-${i}" onclick="window.차트클릭포커스액션(${i}, event)">
                                     <div class="split-chart-header">
                                         <div class="split-chart-title-area">
                                             <i class="fa-solid fa-chart-line text-yellow" style="margin-right:4px;"></i>
-                                            <select class="chart-symbol-select" id="chart-symbol-select-${i}" onchange="차트코인변경액션(${i}, this.value)" aria-label="차트 ${i+1} 코인 선택">
+                                            <select class="chart-symbol-select" id="chart-symbol-select-${i}" onchange="window.차트코인변경액션(${i}, this.value)" aria-label="차트 ${i+1} 코인 선택">
                                                 <option value="BTCUSDT">BTC</option>
                                                 <option value="ETHUSDT">ETH</option>
                                                 <option value="SOLUSDT">SOL</option>
@@ -151,13 +151,13 @@
                                             <span class="chart-tf-badge" id="chart-tf-badge-${i}">${defaultTfs[i]}</span>
                                         </div>
                                         <div class="timeframe-selector" data-chart-idx="${i}">
-                                            <button class="btn-tf" id="btn-tf-${i}-1m" onclick="시간단위변경액션(${i}, '1m')">1m</button>
-                                            <button class="btn-tf" id="btn-tf-${i}-15m" onclick="시간단위변경액션(${i}, '15m')">15m</button>
-                                            <button class="btn-tf" id="btn-tf-${i}-1h" onclick="시간단위변경액션(${i}, '1h')">1h</button>
-                                            <button class="btn-tf" id="btn-tf-${i}-4h" onclick="시간단위변경액션(${i}, '4h')">4h</button>
-                                            <button class="btn-tf" id="btn-tf-${i}-1d" onclick="시간단위변경액션(${i}, '1d')">1d</button>
-                                            <button class="btn-tf" id="btn-tf-${i}-1w" onclick="시간단위변경액션(${i}, '1w')">1w</button>
-                                            <button class="btn-chart-maximize" onclick="event.stopPropagation(); 차트최대화토글(${i})" title="차트 최대화/복원">
+                                            <button class="btn-tf" id="btn-tf-${i}-1m" onclick="window.시간단위변경액션(${i}, '1m')">1m</button>
+                                            <button class="btn-tf" id="btn-tf-${i}-15m" onclick="window.시간단위변경액션(${i}, '15m')">15m</button>
+                                            <button class="btn-tf" id="btn-tf-${i}-1h" onclick="window.시간단위변경액션(${i}, '1h')">1h</button>
+                                            <button class="btn-tf" id="btn-tf-${i}-4h" onclick="window.시간단위변경액션(${i}, '4h')">4h</button>
+                                            <button class="btn-tf" id="btn-tf-${i}-1d" onclick="window.시간단위변경액션(${i}, '1d')">1d</button>
+                                            <button class="btn-tf" id="btn-tf-${i}-1w" onclick="window.시간단위변경액션(${i}, '1w')">1w</button>
+                                            <button class="btn-chart-maximize" onclick="event.stopPropagation(); window.차트최대화토글(${i})" title="차트 최대화/복원">
                                                 <i class="fa-solid fa-expand" id="maximize-icon-${i}"></i>
                                             </button>
                                         </div>
@@ -584,6 +584,6 @@
     <audio id="sound-liquid" src="https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav" preload="none"></audio>
 
     <script src="https://t1.kakaocdn.net/kakao_js_sdk/1.43.1/kakao.min.js"></script>
-    <script src="analysis_app.js?v=1.1.2" charset="utf-8"></script>
+    <script src="analysis_app.js?v=1.1.3" charset="utf-8"></script>
 </body>
 </html>
