@@ -1,0 +1,541 @@
+/* -------------------------------------------------------------
+ * Premium FreeCell CSS Tokens & Layouts
+ * 작성 규칙에 따른 한글 주석 적용
+ * ------------------------------------------------------------- */
+
+/* 1. 디자인 시스템 CSS 변수 (CSS Variables) 정의 */
+:root {
+    /* 에메랄드 그린 클래식 테이블 테마 토큰 */
+    --bg-emerald-grad: linear-gradient(135deg, #091f15 0%, #153c2b 50%, #0d2c1f 100%);
+    --panel-emerald: rgba(25, 66, 49, 0.45);
+    --border-emerald: rgba(46, 117, 88, 0.35);
+    --slot-emerald: rgba(14, 38, 27, 0.6);
+    --shadow-emerald: rgba(5, 15, 10, 0.5);
+
+    /* 다크 퓨처리즘 테마 토큰 */
+    --bg-dark-grad: linear-gradient(135deg, #0a0d14 0%, #121824 50%, #080a0f 100%);
+    --panel-dark: rgba(30, 41, 59, 0.45);
+    --border-dark: rgba(51, 65, 85, 0.35);
+    --slot-dark: rgba(15, 23, 42, 0.6);
+    --shadow-dark: rgba(2, 6, 23, 0.5);
+
+    /* 공통 리소스 및 글꼴 토큰 */
+    --font-primary: 'Outfit', 'Noto Sans KR', sans-serif;
+    --color-white: #ffffff;
+    --color-text-muted: #94a3b8;
+    --color-card-black: #1e293b;
+    --color-card-red: #e11d48;
+    --color-suit-blue: #3b82f6; /* 클로버의 현대적 액센트 */
+    --color-suit-orange: #f59e0b; /* 다이아몬드 현대적 액센트 */
+
+    /* 애니메이션 속도 */
+    --transition-smooth: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    --transition-fast: all 0.15s ease-out;
+}
+
+/* 2. 전역 스타일 초기화 (Reset & Base) */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+body {
+    font-family: var(--font-primary);
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    position: relative;
+    color: var(--color-white);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* 테마 분기 바인딩 */
+body.theme-emerald {
+    background: var(--bg-emerald-grad);
+    --theme-panel: var(--panel-emerald);
+    --theme-border: var(--border-emerald);
+    --theme-slot: var(--slot-emerald);
+    --theme-shadow: var(--shadow-emerald);
+}
+
+body.theme-dark {
+    background: var(--bg-dark-grad);
+    --theme-panel: var(--panel-dark);
+    --theme-border: var(--border-dark);
+    --theme-slot: var(--slot-dark);
+    --theme-shadow: var(--shadow-dark);
+}
+
+/* 승리 캔버스 레이아웃 */
+#victory-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1000;
+}
+
+/* 3. 메인 레이아웃 컨테이너 */
+.game-container {
+    width: 100%;
+    max-width: 1100px;
+    height: 100%;
+    max-height: 850px;
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    gap: 16px;
+}
+
+/* 4. 헤더 컨트롤바 (Glassmorphism Control Bar) */
+.game-header {
+    background: var(--theme-panel);
+    border: 1px solid var(--theme-border);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: 16px;
+    padding: 12px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 8px 32px var(--theme-shadow);
+    z-index: 10;
+}
+
+.logo-area {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.logo-icon {
+    font-size: 24px;
+    filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.4));
+}
+
+.logo-area h1 {
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+}
+
+.logo-area h1 span {
+    color: #38bdf8;
+    margin-left: 2px;
+}
+
+/* 통계 데이터 표시 영역 */
+.stats-panel {
+    display: flex;
+    gap: 16px;
+}
+
+.stat-box {
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 8px 16px;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 90px;
+}
+
+.stat-label {
+    font-size: 10px;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+}
+
+.stat-value {
+    font-size: 16px;
+    font-weight: 600;
+    font-family: 'Outfit', sans-serif;
+}
+
+/* 헤더 버튼 제어 영역 */
+.control-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+button {
+    font-family: var(--font-primary);
+    cursor: pointer;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: var(--transition-fast);
+}
+
+.btn-control {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--color-white);
+    padding: 8px 14px;
+    font-size: 13px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.btn-control:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.16);
+    transform: translateY(-1px);
+}
+
+.btn-control:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.btn-primary {
+    background: #0ea5e9;
+    color: var(--color-white);
+    padding: 8px 16px;
+    font-size: 13px;
+    box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+}
+
+.btn-primary:hover {
+    background: #0284c7;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(14, 165, 233, 0.45);
+}
+
+.btn-icon {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--color-white);
+    width: 36px;
+    height: 36px;
+    justify-content: center;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.btn-icon:hover {
+    background: rgba(255, 255, 255, 0.16);
+}
+
+.btn-cheat {
+    background: rgba(139, 92, 246, 0.2);
+    color: #a78bfa;
+    padding: 8px 12px;
+    font-size: 12px;
+    border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+.btn-cheat:hover {
+    background: rgba(139, 92, 246, 0.35);
+    color: var(--color-white);
+}
+
+/* 5. 상단 셀 구역 (Freecells & Foundations) */
+.top-cells-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+}
+
+.freecells-wrapper, .foundations-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.freecells-wrapper h3, .foundations-wrapper h3 {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    letter-spacing: 1px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+}
+
+.cell-desc {
+    font-size: 10px;
+    font-weight: 400;
+    opacity: 0.8;
+}
+
+.cells-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+
+/* 빈 카드 슬롯 공통 디자인 */
+.cell {
+    aspect-ratio: 2.5 / 3.5;
+    background: var(--theme-slot);
+    border: 2px dashed rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    position: relative;
+    box-shadow: inset 0 4px 10px rgba(0, 0, 0, 0.4);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: var(--transition-smooth);
+}
+
+.cell.drag-over {
+    border-color: #0ea5e9;
+    box-shadow: inset 0 0 15px rgba(14, 165, 233, 0.4), 0 0 10px rgba(14, 165, 233, 0.2);
+}
+
+/* 워터마크 아이콘 */
+.cell-watermark {
+    font-size: 28px;
+    opacity: 0.05;
+    position: absolute;
+}
+
+/* 6. 하단 탭블로 카드 열 구역 */
+.tableau-container {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 12px;
+    min-height: 450px;
+}
+
+.tableau-column {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    height: 100%;
+}
+
+/* 열 기본 빈 슬롯 */
+.column-base-slot {
+    width: 100%;
+    aspect-ratio: 2.5 / 3.5;
+    background: rgba(0, 0, 0, 0.15);
+    border: 2px solid rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    position: absolute;
+    top: 0;
+    z-index: 1;
+    pointer-events: none;
+}
+
+/* 7. 카드 컴포넌트 디자인 */
+.card {
+    width: 100%;
+    aspect-ratio: 2.5 / 3.5;
+    background: #f8fafc;
+    border-radius: 8px;
+    padding: 8px 10px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25), 0 1px 3px rgba(0, 0, 0, 0.15);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: absolute;
+    cursor: grab;
+    transition: box-shadow var(--transition-fast), transform var(--transition-fast);
+    z-index: 10;
+}
+
+.card:active {
+    cursor: grabbing;
+}
+
+/* 카드 내 기호/글씨 색상 매칭 */
+.card.black {
+    color: var(--color-card-black);
+}
+
+.card.red {
+    color: var(--color-card-red);
+}
+
+/* 카드 내부 텍스트 및 수트 배치 */
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    line-height: 1;
+}
+
+.card-value {
+    font-size: 18px;
+    font-weight: 800;
+    font-family: 'Outfit', sans-serif;
+}
+
+.card-suit-mini {
+    font-size: 12px;
+}
+
+.card-center {
+    font-size: 32px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex: 1;
+}
+
+.card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transform: rotate(180deg);
+    line-height: 1;
+}
+
+/* 드래그 상태의 카드 디자인 */
+.card.is-dragging {
+    opacity: 0.65;
+    transform: scale(1.05) rotate(2deg);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.5);
+    z-index: 1000 !important;
+}
+
+/* 드래그 가능 수용체 카드 표시 */
+.card.drag-target {
+    box-shadow: 0 0 0 3px #0ea5e9;
+}
+
+/* 8. 팝업 가이드 모달 */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+    transition: var(--transition-smooth);
+}
+
+.modal-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.modal-content {
+    background: #0f172a;
+    border: 1px solid #334155;
+    width: 90%;
+    max-width: 550px;
+    border-radius: 16px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.modal-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid #1e293b;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h2 {
+    font-size: 18px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-close {
+    background: transparent;
+    color: var(--color-text-muted);
+    font-size: 24px;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+}
+
+.btn-close:hover {
+    color: var(--color-white);
+}
+
+.modal-body {
+    padding: 24px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.modal-body ul {
+    list-style-type: none;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.modal-body li {
+    font-size: 14px;
+    line-height: 1.6;
+    color: #e2e8f0;
+    position: relative;
+    padding-left: 20px;
+}
+
+.modal-body li::before {
+    content: "•";
+    color: #38bdf8;
+    font-size: 20px;
+    position: absolute;
+    left: 0;
+    top: -2px;
+}
+
+.modal-footer {
+    padding: 16px 24px;
+    border-top: 1px solid #1e293b;
+    display: flex;
+    justify-content: flex-end;
+}
+
+/* 9. 클래식 특수 효과 및 보정 */
+.text-yellow {
+    color: #fbbf24;
+}
+.text-green {
+    color: #10b981;
+}
+.text-red {
+    color: #ef4444;
+}
+
+/* 스택 적재 편의용 탑 오프셋 유틸리티 */
+.card-stack-offset-0 { top: 0px; }
+.card-stack-offset-1 { top: 30px; }
+.card-stack-offset-2 { top: 60px; }
+.card-stack-offset-3 { top: 90px; }
+.card-stack-offset-4 { top: 120px; }
+.card-stack-offset-5 { top: 150px; }
+.card-stack-offset-6 { top: 180px; }
+.card-stack-offset-7 { top: 210px; }
+.card-stack-offset-8 { top: 240px; }
+.card-stack-offset-9 { top: 270px; }
+.card-stack-offset-10 { top: 300px; }
+.card-stack-offset-11 { top: 330px; }
+.card-stack-offset-12 { top: 360px; }
+.card-stack-offset-13 { top: 390px; }
+.card-stack-offset-14 { top: 420px; }
+.card-stack-offset-15 { top: 450px; }
+.card-stack-offset-16 { top: 480px; }
+.card-stack-offset-17 { top: 510px; }
+.card-stack-offset-18 { top: 540px; }
+.card-stack-offset-19 { top: 570px; }
+.card-stack-offset-20 { top: 600px; }

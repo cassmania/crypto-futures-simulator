@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Premium FreeCell Pro - 프리미엄 프리셀</title>
+    <!-- 구글 폰트 및 폰트어썸 아이콘 연동 -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Noto+Sans+KR:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="freecell_style.css">
+</head>
+<body class="theme-emerald">
+    <!-- 게임 승리 시 카드 폭포 렌더링용 캔버스 -->
+    <canvas id="victory-canvas"></canvas>
+
+    <div class="game-container">
+        <!-- 1. 제어 헤더 패널 (Glassmorphism Control Bar) -->
+        <header class="game-header">
+            <div class="logo-area">
+                <i class="fa-solid fa-crown text-yellow logo-icon"></i>
+                <h1>FREECELL<span>PRO</span></h1>
+            </div>
+            
+            <div class="stats-panel">
+                <div class="stat-box">
+                    <span class="stat-label"><i class="fa-solid fa-clock"></i> 시간</span>
+                    <span id="stat-time" class="stat-value">00:00</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label"><i class="fa-solid fa-shoe-prints"></i> 이동</span>
+                    <span id="stat-moves" class="stat-value">0</span>
+                </div>
+            </div>
+
+            <div class="control-actions">
+                <button id="btn-undo" class="btn-control" title="이전 단계로 실행 취소" disabled>
+                    <i class="fa-solid fa-rotate-left"></i> 실행취소
+                </button>
+                <button id="btn-restart" class="btn-control" title="현재 게임 처음부터 재시작">
+                    <i class="fa-solid fa-arrow-rotate-right"></i> 다시시작
+                </button>
+                <button id="btn-new-game" class="btn-primary" title="새로운 게임 무작위 생성">
+                    <i class="fa-solid fa-plus"></i> 새 게임
+                </button>
+                <button id="btn-theme" class="btn-icon" title="테마 변경 (에메랄드 / 다크)">
+                    <i class="fa-solid fa-moon"></i>
+                </button>
+                <button id="btn-rules" class="btn-icon" title="게임 규칙 보기">
+                    <i class="fa-solid fa-circle-question"></i>
+                </button>
+                <!-- 치트 테스트 버튼 (승리 폭포 효과 빠르게 감상) -->
+                <button id="btn-cheat" class="btn-cheat" title="개발자 테스트용 빠른 클리어 치트">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> 치트
+                </button>
+            </div>
+        </header>
+
+        <!-- 2. 상단 셀 영역 (Top Cells Block: Freecells & Foundations) -->
+        <section class="top-cells-container">
+            <!-- 임시 보관소 (Free Cells) - 4개 -->
+            <div class="freecells-wrapper">
+                <h3>FREE CELLS <span class="cell-desc">임시 보관소</span></h3>
+                <div class="cells-grid">
+                    <div class="cell freecell" data-cell-type="freecell" data-idx="0"></div>
+                    <div class="cell freecell" data-cell-type="freecell" data-idx="1"></div>
+                    <div class="cell freecell" data-cell-type="freecell" data-idx="2"></div>
+                    <div class="cell freecell" data-cell-type="freecell" data-idx="3"></div>
+                </div>
+            </div>
+
+            <!-- 홈셀 / 재단 (Foundations) - 4개 -->
+            <div class="foundations-wrapper">
+                <h3>FOUNDATIONS <span class="cell-desc">기초 홈셀 (A → K)</span></h3>
+                <div class="cells-grid">
+                    <div class="cell foundation" data-cell-type="foundation" data-suit="spades" data-idx="0">
+                        <i class="fa-solid fa-spade cell-watermark"></i>
+                    </div>
+                    <div class="cell foundation" data-cell-type="foundation" data-suit="hearts" data-idx="1">
+                        <i class="fa-solid fa-heart cell-watermark"></i>
+                    </div>
+                    <div class="cell foundation" data-cell-type="foundation" data-suit="diamonds" data-idx="2">
+                        <i class="fa-solid fa-diamond cell-watermark"></i>
+                    </div>
+                    <div class="cell foundation" data-cell-type="foundation" data-suit="clubs" data-idx="3">
+                        <i class="fa-solid fa-club cell-watermark"></i>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. 하단 카드 열 영역 (Tableau Columns Block - 8 Columns) -->
+        <main class="tableau-container">
+            <div class="tableau-column" data-col-idx="0"><div class="column-base-slot"></div></div>
+            <div class="tableau-column" data-col-idx="1"><div class="column-base-slot"></div></div>
+            <div class="tableau-column" data-col-idx="2"><div class="column-base-slot"></div></div>
+            <div class="tableau-column" data-col-idx="3"><div class="column-base-slot"></div></div>
+            <div class="tableau-column" data-col-idx="4"><div class="column-base-slot"></div></div>
+            <div class="tableau-column" data-col-idx="5"><div class="column-base-slot"></div></div>
+            <div class="tableau-column" data-col-idx="6"><div class="column-base-slot"></div></div>
+            <div class="tableau-column" data-col-idx="7"><div class="column-base-slot"></div></div>
+        </main>
+    </div>
+
+    <!-- 4. 규칙 가이드 팝업 모달 -->
+    <div id="rules-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <header class="modal-header">
+                <h2><i class="fa-solid fa-circle-info text-yellow"></i> 프리셀 규칙 및 플레이 가이드</h2>
+                <button id="btn-close-modal" class="btn-close">&times;</button>
+            </header>
+            <div class="modal-body">
+                <ul>
+                    <li><strong>기본 목표</strong>: 8개 열에 배치된 모든 카드를 우측 상단의 <strong>Foundations(홈셀)</strong>으로 문양별로 에이스(A)부터 킹(K)까지 순서대로 쌓아 올립니다.</li>
+                    <li><strong>임시 보관소 (Free Cells)</strong>: 좌측 상단의 슬롯 4개에는 자유롭게 카드를 한 장씩 보관하여 대피시킬 수 있습니다.</li>
+                    <li><strong>열 간 이동 규칙</strong>: 카드를 열 사이로 옮길 때는 반드시 <strong>교대 색상(빨강/검정)</strong>이어야 하며, <strong>숫자가 정확히 1 작은 카드</strong> 위에만 쌓을 수 있습니다. (예: 검은색 스페이드 8은 빨간색 다이아몬드 9 밑에 놓을 수 있습니다.)</li>
+                    <li><strong>카드 더미(묶음) 한꺼번에 이동</strong>: 이미 규칙대로 정렬된 카드 더미는 사용 가능한 빈 프리셀과 빈 열의 개수에 비례하는 최대 이동 장수 내에서 편리하게 한 번에 드래그하여 옮길 수 있습니다.</li>
+                    <li><strong>조작 편의 기능</strong>: 카드를 <strong>더블 클릭</strong>하거나 우클릭하면 홈셀에 들어갈 수 있는 카드일 때 자동으로 가장 적합한 위치로 즉시 비행하여 안착됩니다.</li>
+                </ul>
+            </div>
+            <footer class="modal-footer">
+                <button id="btn-confirm-rules" class="btn-primary">이해했습니다</button>
+            </footer>
+        </div>
+    </div>
+
+    <!-- 프리셀 비즈니스 스크립트 연동 -->
+    <script src="freecell_app.js"></script>
+</body>
+</html>
