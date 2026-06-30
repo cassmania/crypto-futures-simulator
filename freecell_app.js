@@ -408,6 +408,53 @@ function 홈셀매핑인덱스(suit) {
     return suits.indexOf(suit);
 }
 
+// 카드의 최적 이동 목적지를 자동으로 찾아서 기동시키는 기능
+function 자동목적지이동(srcCard, srcZone, srcZoneIdx, srcCardIdx) {
+    // 1. Foundations (홈셀)로 이동 시도
+    for (let i = 0; i < 4; i++) {
+        if (이동적합성검증(srcCard, "foundation", i)) {
+            카드이동실행(srcZone, srcZoneIdx, srcCardIdx, "foundation", i);
+            return true;
+        }
+    }
+
+    // 2. Tableau (탭블로 열)로 이동 시도
+    for (let i = 0; i < 8; i++) {
+        // 본인 열로 이동 방지
+        if (srcZone === "tableau" && srcZoneIdx === i) continue;
+
+        const targetStack = 상태.열[i];
+        
+        // 빈 열에 대해서는, 굳이 1장짜리 카드나 이미 열의 유일한 카드를 빈 열로 옮기는 무의미한 셔플은 배제
+        if (targetStack.length === 0) {
+            // 소스 카드가 이미 소스 열의 유일한 카드(인덱스 0)라면 패스
+            if (srcZone === "tableau" && srcCardIdx === 0) continue;
+        }
+
+        let canMovePile = true;
+        if (srcZone === "tableau" && srcCardIdx < 상태.열[srcZoneIdx].length - 1) {
+            const moveCount = 상태.열[srcZoneIdx].length - srcCardIdx;
+            const limit = 최대이동장수계산(targetStack.length === 0);
+            if (moveCount > limit) canMovePile = false;
+        }
+
+        if (canMovePile && 이동적합성검증(srcCard, "tableau", i)) {
+            카드이동실행(srcZone, srcZoneIdx, srcCardIdx, "tableau", i);
+            return true;
+        }
+    }
+
+    // 3. Free Cells (임시 보관소)로 이동 시도
+    for (let i = 0; i < 4; i++) {
+        if (이동적합성검증(srcCard, "freecell", i)) {
+            카드이동실행(srcZone, srcZoneIdx, srcCardIdx, "freecell", i);
+            return true;
+        }
+    }
+
+    return false;
+}
+
 // 11. 승리 판정 및 카드 폭포 애니메이션
 function 승리여부체크() {
     const totalFoundations = 상태.홈셀.reduce((sum, stack) => sum + stack.length, 0);
@@ -788,6 +835,16 @@ function 이벤트바인딩() {
                 const cardIdx = parseInt(cardEl.dataset.cardIdx);
 
                 if (이동가능여부판정(zone, zoneIdx, cardIdx)) {
+                    let srcCard;
+                    if (zone === "freecell") srcCard = 상태.임시보관소[zoneIdx];
+                    else if (zone === "tableau") srcCard = 상태.열[zoneIdx][cardIdx];
+
+                    // 좌클릭 시 즉시 최적 목적지 자동 이동 시도
+                    if (srcCard && 자동목적지이동(srcCard, zone, zoneIdx, cardIdx)) {
+                        return; // 이동 성공하면 포커스 잡지 않고 즉각 완료
+                    }
+
+                    // 이동 실패 시 수동 드래그/스왑을 위해 포커스 선택 상태 유지
                     상태.선택된카드정보 = { id: cardEl.id, zone, zoneIdx, cardIdx };
                     UI렌더링();
                 }
@@ -829,6 +886,29 @@ function 이벤트바인딩() {
                     return;
                 }
             }
+        }
+    });
+
+    // 우클릭 자동 이동 처리
+    container.addEventListener("contextmenu", e => {
+        e.preventDefault(); // 기본 컨텍스트 메뉴 무력화
+        if (!상태.게임활성화) return;
+
+        const cardEl = e.target.closest(".card");
+        if (!cardEl) return;
+
+        const zone = cardEl.dataset.zone;
+        const zoneIdx = parseInt(cardEl.dataset.zoneIdx);
+        const cardIdx = parseInt(cardEl.dataset.cardIdx);
+
+        if (!이동가능여부판정(zone, zoneIdx, cardIdx)) return;
+
+        let srcCard;
+        if (zone === "freecell") srcCard = 상태.임시보관소[zoneIdx];
+        else if (zone === "tableau") srcCard = 상태.열[zoneIdx][cardIdx];
+
+        if (srcCard) {
+            자동목적지이동(srcCard, zone, zoneIdx, cardIdx);
         }
     });
 
