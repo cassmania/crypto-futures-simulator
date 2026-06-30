@@ -680,103 +680,115 @@ function 이벤트바인딩() {
 
     // B. 클릭-클릭 하이브리드 조작 및 더블 클릭 자동 안착 바인딩
     container.addEventListener("click", e => {
-        if (!상태.game활성화 && !상태.게임활성화) return;
+        if (!상태.게임활성화) return;
 
         const cardEl = e.target.closest(".card");
         const cell = e.target.closest(".cell");
         const col = e.target.closest(".tableau-column");
 
-        // 1. 카드 클릭 처리
-        if (cardEl) {
-            const zone = cardEl.dataset.zone;
-            const zoneIdx = parseInt(cardEl.dataset.zoneIdx);
-            const cardIdx = parseInt(cardEl.dataset.cardIdx);
-
-            // 선택된 카드가 이미 있는 상태에서 클릭-클릭 스왑 시도
-            if (상태.선택된카드정보) {
-                const src = 상태.선택된카드정보;
-                
-                // 본인 카드 클릭 시 취소
-                if (src.id === cardEl.id) {
-                    상태.선택된카드정보 = null;
-                    UI렌더링();
-                    return;
-                }
-
-                // 타깃 카드 정보
-                let srcCard;
-                if (src.zone === "freecell") srcCard = 상태.임시보관소[src.zoneIdx];
-                else if (src.zone === "tableau") srcCard = 상태.열[src.zoneIdx][src.cardIdx];
-
-                if (srcCard && zone === "tableau" && cardIdx === 상태.열[zoneIdx].length - 1) {
-                    // 여러 장 이동 제약 체크
-                    let canMovePile = true;
-                    if (src.zone === "tableau" && src.cardIdx < 상태.열[src.zoneIdx].length - 1) {
-                        const moveCount = 상태.열[src.zoneIdx].length - src.cardIdx;
-                        const limit = 최대이동장수계산(false);
-                        if (moveCount > limit) canMovePile = false;
-                    }
-
-                    if (canMovePile && 이동적합성검증(srcCard, "tableau", zoneIdx)) {
-                        카드이동실행(src.zone, src.zoneIdx, src.cardIdx, "tableau", zoneIdx);
-                        return;
-                    }
-                }
-                
-                // 선택 해제 후 재선택
-                if (이동가능여부판정(zone, zoneIdx, cardIdx)) {
-                    상태.선택된카드정보 = { id: cardEl.id, zone, zoneIdx, cardIdx };
-                } else {
-                    상태.선택된카드정보 = null;
-                }
-                UI렌더링();
-            } else {
-                // 신규 선택
-                if (이동가능여부판정(zone, zoneIdx, cardIdx)) {
-                    상태.선택된카드정보 = { id: cardEl.id, zone, zoneIdx, cardIdx };
-                    UI렌더링();
-                }
-            }
-        }
-        // 2. 빈 셀 클릭 처리
-        else if (cell && 상태.선택된카드정보) {
-            const destZone = cell.dataset.cellType;
-            const destZoneIdx = parseInt(cell.dataset.idx);
+        // A. 이미 선택된 카드가 있는 경우 이동 처리 프로세스
+        if (상태.선택된카드정보) {
             const src = 상태.선택된카드정보;
-
             let srcCard;
             if (src.zone === "freecell") srcCard = 상태.임시보관소[src.zoneIdx];
             else if (src.zone === "tableau") srcCard = 상태.열[src.zoneIdx][src.cardIdx];
 
-            if (srcCard && 이동적합성검증(srcCard, destZone, destZoneIdx)) {
-                카드이동실행(src.zone, src.zoneIdx, src.cardIdx, destZone, destZoneIdx);
-            } else {
+            if (!srcCard) {
                 상태.선택된카드정보 = null;
                 UI렌더링();
+                return;
             }
-        }
-        // 3. 빈 탭블로 열 클릭 처리
-        else if (col && 상태.선택된카드정보) {
-            const destZoneIdx = parseInt(col.dataset.colIdx);
-            const targetStack = 상태.열[destZoneIdx];
 
-            if (targetStack.length === 0) {
-                const src = 상태.선택된카드정보;
-                let srcCard;
-                if (src.zone === "freecell") srcCard = 상태.임시보관소[src.zoneIdx];
-                else if (src.zone === "tableau") srcCard = 상태.열[src.zoneIdx][src.cardIdx];
+            // 본인 선택 카드 클릭 시 해제
+            if (cardEl && cardEl.id === src.id) {
+                상태.선택된카드정보 = null;
+                UI렌더링();
+                return;
+            }
 
-                let canMovePile = true;
-                if (src.zone === "tableau" && src.cardIdx < 상태.열[src.zoneIdx].length - 1) {
-                    const moveCount = 상태.열[src.zoneIdx].length - src.cardIdx;
-                    const limit = 최대이동장수계산(true);
-                    if (moveCount > limit) canMovePile = false;
+            // A-1. 카드 엘리먼트 위로 클릭 드롭한 경우
+            if (cardEl) {
+                const destZone = cardEl.dataset.zone;
+                const destZoneIdx = parseInt(cardEl.dataset.zoneIdx);
+                const destCardIdx = parseInt(cardEl.dataset.cardIdx);
+
+                if (destZone === "tableau") {
+                    const targetStack = 상태.열[destZoneIdx];
+                    // 열의 최상단 카드인 경우에만 그 위로 스택 이동 가능
+                    if (destCardIdx === targetStack.length - 1) {
+                        let canMovePile = true;
+                        if (src.zone === "tableau" && src.cardIdx < 상태.열[src.zoneIdx].length - 1) {
+                            const moveCount = 상태.열[src.zoneIdx].length - src.cardIdx;
+                            const limit = 최대이동장수계산(false);
+                            if (moveCount > limit) canMovePile = false;
+                        }
+
+                        if (canMovePile && 이동적합성검증(srcCard, "tableau", destZoneIdx)) {
+                            카드이동실행(src.zone, src.zoneIdx, src.cardIdx, "tableau", destZoneIdx);
+                            return;
+                        }
+                    }
+                } else if (destZone === "foundation") {
+                    // 홈셀 내의 카드 위 클릭 시 적재 적합 여부 확인 후 적재
+                    if (이동적합성검증(srcCard, "foundation", destZoneIdx)) {
+                        카드이동실행(src.zone, src.zoneIdx, src.cardIdx, "foundation", destZoneIdx);
+                        return;
+                    }
                 }
 
-                if (srcCard && canMovePile && 이동적합성검증(srcCard, "tableau", destZoneIdx)) {
-                    카드이동실행(src.zone, src.zoneIdx, src.cardIdx, "tableau", destZoneIdx);
+                // 이동이 불가능한 경우, 대상 카드가 직접 이동 가능한 대상이라면 재선택(포커스 스왑)
+                if (이동가능여부판정(destZone, destZoneIdx, destCardIdx)) {
+                    상태.선택된카드정보 = { id: cardEl.id, zone: destZone, zoneIdx: destZoneIdx, cardIdx: destCardIdx };
                 } else {
                     상태.선택된카드정보 = null;
+                }
+                UI렌더링();
+                return;
+            }
+
+            // A-2. 빈 슬롯(프리셀 또는 홈셀)을 클릭한 경우
+            if (cell) {
+                const destZone = cell.dataset.cellType;
+                const destZoneIdx = parseInt(cell.dataset.idx);
+
+                if (이동적합성검증(srcCard, destZone, destZoneIdx)) {
+                    카드이동실행(src.zone, src.zoneIdx, src.cardIdx, destZone, destZoneIdx);
+                    return;
+                }
+            }
+
+            // A-3. 빈 탭블로 열(column)을 클릭한 경우
+            if (col) {
+                const destZoneIdx = parseInt(col.dataset.colIdx);
+                const targetStack = 상태.열[destZoneIdx];
+                if (targetStack.length === 0) {
+                    let canMovePile = true;
+                    if (src.zone === "tableau" && src.cardIdx < 상태.열[src.zoneIdx].length - 1) {
+                        const moveCount = 상태.열[src.zoneIdx].length - src.cardIdx;
+                        const limit = 최대이동장수계산(true);
+                        if (moveCount > limit) canMovePile = false;
+                    }
+
+                    if (canMovePile && 이동적합성검증(srcCard, "tableau", destZoneIdx)) {
+                        카드이동실행(src.zone, src.zoneIdx, src.cardIdx, "tableau", destZoneIdx);
+                        return;
+                    }
+                }
+            }
+
+            // 매칭되는 이동 경로가 없는 경우 선택 해제
+            상태.선택된카드정보 = null;
+            UI렌더링();
+        }
+        // B. 선택된 카드가 없었던 상태에서의 최초 선택 프로세스
+        else {
+            if (cardEl) {
+                const zone = cardEl.dataset.zone;
+                const zoneIdx = parseInt(cardEl.dataset.zoneIdx);
+                const cardIdx = parseInt(cardEl.dataset.cardIdx);
+
+                if (이동가능여부판정(zone, zoneIdx, cardIdx)) {
+                    상태.선택된카드정보 = { id: cardEl.id, zone, zoneIdx, cardIdx };
                     UI렌더링();
                 }
             }
