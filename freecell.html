@@ -7,7 +7,7 @@
     <!-- 구글 폰트 및 폰트어썸 아이콘 연동 -->
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Noto+Sans+KR:wght@300;400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="freecell_style.css">
+    <link rel="stylesheet" href="freecell_style.css?v=1.1.4">
 </head>
 <body class="theme-emerald">
     <!-- 게임 승리 시 카드 폭포 렌더링용 캔버스 -->
@@ -73,16 +73,16 @@
                 <h3>FOUNDATIONS <span class="cell-desc">기초 홈셀 (A → K)</span></h3>
                 <div class="cells-grid">
                     <div class="cell foundation" data-cell-type="foundation" data-suit="spades" data-idx="0">
-                        <i class="fa-solid fa-spade cell-watermark"></i>
+                        <span class="cell-watermark">♠</span>
                     </div>
                     <div class="cell foundation" data-cell-type="foundation" data-suit="hearts" data-idx="1">
-                        <i class="fa-solid fa-heart cell-watermark"></i>
+                        <span class="cell-watermark">♥</span>
                     </div>
                     <div class="cell foundation" data-cell-type="foundation" data-suit="diamonds" data-idx="2">
-                        <i class="fa-solid fa-diamond cell-watermark"></i>
+                        <span class="cell-watermark">♦</span>
                     </div>
                     <div class="cell foundation" data-cell-type="foundation" data-suit="clubs" data-idx="3">
-                        <i class="fa-solid fa-club cell-watermark"></i>
+                        <span class="cell-watermark">♣</span>
                     </div>
                 </div>
             </div>
@@ -124,6 +124,6 @@
     </div>
 
     <!-- 프리셀 비즈니스 스크립트 연동 -->
-    <script src="freecell_app.js"></script>
+    <script src="freecell_app.js?v=1.1.4"></script>
 </body>
 </html>

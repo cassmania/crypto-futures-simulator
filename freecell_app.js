@@ -20,10 +20,10 @@ const 상태 = {
 
 // 카드 문양 아이콘 매핑
 const 문양아이콘 = {
-    spades: '<i class="fa-solid fa-spade"></i>',
-    hearts: '<i class="fa-solid fa-heart"></i>',
-    diamonds: '<i class="fa-solid fa-diamond"></i>',
-    clubs: '<i class="fa-solid fa-club"></i>'
+    spades: '♠',
+    hearts: '♥',
+    diamonds: '♦',
+    clubs: '♣'
 };
 
 // 2. 초기 기동 리스너

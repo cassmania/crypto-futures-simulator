@@ -295,9 +295,16 @@ button {
 
 /* 워터마크 아이콘 */
 .cell-watermark {
-    font-size: 28px;
-    opacity: 0.05;
+    font-size: 40px;
+    font-weight: bold;
+    opacity: 0.08;
     position: absolute;
+    color: var(--color-white);
+}
+
+.cell[data-suit="hearts"] .cell-watermark,
+.cell[data-suit="diamonds"] .cell-watermark {
+    color: var(--color-card-red);
 }
 
 /* 6. 하단 탭블로 카드 열 구역 */
