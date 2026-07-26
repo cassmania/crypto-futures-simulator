@@ -786,6 +786,7 @@
                                 <button class="quant-tab-btn active" data-quant-tab="quant-indicators" type="button"><i class="fa-solid fa-chart-simple"></i> 퀀트 지표</button>
                                 <button class="quant-tab-btn" data-quant-tab="quant-onchain" type="button"><i class="fa-solid fa-link"></i> 온체인/선물</button>
                                 <button class="quant-tab-btn" data-quant-tab="quant-project" type="button"><i class="fa-solid fa-circle-info"></i> 프로젝트</button>
+                                <button class="quant-tab-btn" data-quant-tab="quant-wave" type="button"><i class="fa-solid fa-wave-square"></i> 엘리엇 파동</button>
                             </div>
 
                             <div class="quant-tab-contents">
@@ -885,6 +886,68 @@
                                         <div class="project-brief-section" style="margin-top: 10px; border-bottom: none; padding-bottom: 0;">
                                             <h4 class="text-neutral"><i class="fa-solid fa-arrows-left-right"></i> 주요 매물 지지 / 저항선</h4>
                                             <p id="project-levels">지지선: -- USDT | 저항선: -- USDT</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 엘리엇 파동 + 피보나치 정밀 분석 패널 -->
+                                <div id="quant-wave" class="quant-tab-panel">
+                                    <div class="project-brief-container">
+                                        <div class="project-brief-section">
+                                            <h4 class="text-yellow"><i class="fa-solid fa-wave-square"></i> 현재 파동 상태 (Current Status)</h4>
+                                            <p id="wave-stage">파동 데이터를 분석하는 중입니다...</p>
+                                        </div>
+                                        <div class="project-grid-metrics">
+                                            <div class="p-metric-box">
+                                                <span>파동 신뢰도</span>
+                                                <span id="wave-confidence">--</span>
+                                            </div>
+                                            <div class="p-metric-box">
+                                                <span>추세 방향</span>
+                                                <span id="wave-direction">--</span>
+                                            </div>
+                                            <div class="p-metric-box">
+                                                <span>엘리엇 절대법칙</span>
+                                                <span id="wave-rules">--</span>
+                                            </div>
+                                            <div class="p-metric-box">
+                                                <span>EWO 오실레이터</span>
+                                                <span id="wave-ewo">--</span>
+                                            </div>
+                                        </div>
+
+                                        <div class="project-brief-section" style="margin-top: 10px;">
+                                            <h4 class="text-green"><i class="fa-solid fa-diagram-project"></i> 메인 시나리오 파동 노드</h4>
+                                            <div id="wave-nodes">파동 노드 계산 중...</div>
+                                        </div>
+
+                                        <div class="project-brief-section" style="margin-top: 10px;">
+                                            <h4 class="text-yellow"><i class="fa-solid fa-ruler-combined"></i> 피보나치 목표가</h4>
+                                            <div id="wave-fib">--</div>
+                                        </div>
+
+                                        <div class="project-brief-section" style="margin-top: 10px;">
+                                            <h4 class="text-neutral"><i class="fa-solid fa-triangle-exclamation"></i> 무효화 기준 (Invalidation)</h4>
+                                            <p id="wave-invalidation">--</p>
+                                        </div>
+
+                                        <div class="project-brief-section" style="margin-top: 10px; border-bottom: none; padding-bottom: 0;">
+                                            <h4 class="text-green"><i class="fa-solid fa-bullseye"></i> 실전 매매 가이드</h4>
+                                            <div class="quant-metric-row">
+                                                <span>방향 / 진입</span>
+                                                <span id="wave-entry" class="metric-val">--</span>
+                                            </div>
+                                            <div class="quant-metric-row">
+                                                <span>1차 / 2차 익절 (TP)</span>
+                                                <span id="wave-tp" class="metric-val">--</span>
+                                            </div>
+                                            <div class="quant-metric-row">
+                                                <span>손절 (SL)</span>
+                                                <span id="wave-sl" class="metric-val">--</span>
+                                            </div>
+                                            <p style="margin-top:8px; font-size:11px; opacity:0.65;">
+                                                참고용 기술적 분석이며 투자 권유가 아닙니다.
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
@@ -1179,6 +1242,7 @@
     <script src="https://t1.kakaocdn.net/kakao_js_sdk/1.43.1/kakao.min.js"></script>
 
     <!-- 메인 트레이딩 엔진 로직 JavaScript 연동 -->
-    <script src="app.js?v=4"></script>
+    <script src="wave_analyzer.js?v=1.2.0" charset="utf-8"></script>
+    <script src="app.js?v=5"></script>
 </body>
 </html>

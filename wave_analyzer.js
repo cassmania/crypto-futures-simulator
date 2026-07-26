@@ -13,7 +13,13 @@ class ElliottWaveEngine {
         // (고정 1.5%로 두면 1분봉처럼 전체 변동이 0.3%인 구간에서 피봇이 전멸함)
         this.minSwingCeil = 0.03;
         // 전체 고저 range 대비 스윙 인정 비율
-        this.swingRangeRatio = 0.12;
+        // 전체 range 대비 스윙 임계 비율.
+        // 0.12는 저변동 구간(1분봉 range ~1.3%)에서 임계가 0.16%까지 올라가
+        // 잔스윙이 거의 전부 잘려 피봇이 2개로 붕괴했다.
+        // 실측(BTCUSDT 150봉) 피봇 수 - 1m/15m/1h/4h/1d:
+        //   0.12 -> 2 / 7 / 19 / 20 / 32   (1분봉 카운팅 불가)
+        //   0.06 -> 18 / 23 / 25 / 26 / 34 (전 구간 균일)
+        this.swingRangeRatio = 0.06;
     }
 
     /**
@@ -293,17 +299,7 @@ class ElliottWaveEngine {
             else if (isLow) raw.push({ index: i, time: cur.time, price: cur.low, type: 'LOW' });
         }
 
-        // 노이즈 제거로 중간 피봇이 빠지면 남은 이웃끼리 같은 타입으로 붙는다.
-        // 따라서 [교대 정리 -> 노이즈 제거]를 한 번만 하면 안 되고 변화가 없을 때까지 반복해야 한다.
-        const threshold = this.swingThreshold(candles);
-        let cur = this.enforceAlternation(raw);
-        for (let guard = 0; guard < 20; guard++) {
-            const filtered = this.dropNoiseSwings(cur, threshold);
-            const next = this.enforceAlternation(filtered);
-            if (next.length === cur.length) return next;
-            cur = next;
-        }
-        return cur;
+        return this.dropNoiseSwings(this.enforceAlternation(raw), this.swingThreshold(candles));
     }
 
     /** 고/저 교대 강제. 같은 타입이 연속되면 더 극단적인 쪽만 남긴다. */
@@ -321,13 +317,53 @@ class ElliottWaveEngine {
         return out;
     }
 
-    /** 직전 피봇 대비 변동률이 임계 미달인 잔스윙 제거 */
+    /**
+     * 임계 미달 잔스윙 제거 (ZigZag 방식).
+     *
+     * 순차 스캔으로 "직전 생존 피봇" 과 비교하면 안 된다. 피봇 하나가 지워질 때마다
+     * 비교 기준이 밀려 다음 피봇까지 연쇄로 지워지고, 임계가 조금만 올라도
+     * 피봇 수가 절벽처럼 무너진다 (실측: threshold 0.001 -> 13개, 0.0016 -> 2개).
+     *
+     * 대신 가장 작은 스윙부터 하나씩 제거하고 매번 이웃을 재평가한다.
+     * 제거로 생긴 같은 타입 이웃은 더 극단적인 쪽만 남겨 교대를 유지한다.
+     */
     dropNoiseSwings(pivots, threshold) {
-        const out = [];
-        for (const p of pivots) {
-            const prev = out[out.length - 1];
-            if (prev && Math.abs(p.price - prev.price) / prev.price < threshold) continue;
-            out.push(p);
+        if (threshold <= 0) return pivots.slice();
+        const out = pivots.slice();
+
+        for (let guard = 0; guard < 500 && out.length > 2; guard++) {
+            // 가장 작은 인접 스윙 찾기
+            let minIdx = -1;
+            let minMove = Infinity;
+            for (let i = 1; i < out.length; i++) {
+                const move = Math.abs(out[i].price - out[i - 1].price) / out[i - 1].price;
+                if (move < minMove) {
+                    minMove = move;
+                    minIdx = i;
+                }
+            }
+            if (minIdx === -1 || minMove >= threshold) break;
+
+            // 스윙 양 끝 중 덜 극단적인 쪽을 제거. 양 끝(첫/마지막)은 보존 우선.
+            const a = out[minIdx - 1];
+            const b = out[minIdx];
+            let removeAt;
+            if (minIdx - 1 === 0) removeAt = minIdx;
+            else if (minIdx === out.length - 1) removeAt = minIdx - 1;
+            else removeAt = (a.type === 'HIGH')
+                ? (a.price >= b.price ? minIdx : minIdx - 1)
+                : (a.price <= b.price ? minIdx : minIdx - 1);
+
+            out.splice(removeAt, 1);
+
+            // 제거로 같은 타입이 인접하면 극단값만 남긴다
+            const j = Math.max(1, removeAt);
+            if (j < out.length && out[j].type === out[j - 1].type) {
+                const keepLater = out[j].type === 'HIGH'
+                    ? out[j].price > out[j - 1].price
+                    : out[j].price < out[j - 1].price;
+                out.splice(keepLater ? j - 1 : j, 1);
+            }
         }
         return out;
     }

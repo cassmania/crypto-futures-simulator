@@ -145,4 +145,62 @@ for (let i = 1; i < realPivots.length; i++) {
     assert.notStrictEqual(realPivots[i].type, realPivots[i - 1].type, '실데이터 유사 케이스도 교대 유지');
 }
 
-console.log('wave_analyzer 자체 검증 통과 (13개 항목)');
+// --- 14. 임계가 올라도 피봇이 절벽처럼 붕괴하면 안 됨 ---
+// 회귀 방지: 순차 필터가 "직전 생존 피봇" 기준이라 연쇄 삭제를 일으켰음.
+// 실측 재현 - threshold 0.001에서 13개였다가 0.0016에서 2개로 무너짐.
+const many = buildCandles([100, 103, 100.5, 104, 101, 105, 102, 106, 103, 107, 104, 108], 8);
+const engineRaw = new ElliottWaveEngine();
+const altOnly = engineRaw.enforceAlternation(
+    (function () {
+        const w = engineRaw.fractalWidth, r = [];
+        for (let i = w; i < many.length - w; i++) {
+            const cu = many[i]; let h = true, l = true;
+            for (let k = 1; k <= w; k++) {
+                if (cu.high <= many[i - k].high || cu.high < many[i + k].high) h = false;
+                if (cu.low >= many[i - k].low || cu.low > many[i + k].low) l = false;
+            }
+            if (h) r.push({ index: i, time: cu.time, price: cu.high, type: 'HIGH' });
+            else if (l) r.push({ index: i, time: cu.time, price: cu.low, type: 'LOW' });
+        }
+        return r;
+    })()
+);
+let prevCount = engineRaw.dropNoiseSwings(altOnly, 0).length;
+for (const th of [0.002, 0.005, 0.01, 0.02]) {
+    const n = engineRaw.dropNoiseSwings(altOnly, th).length;
+    assert.ok(n <= prevCount, `임계 증가 시 피봇 수는 단조 감소해야 함 (th=${th}: ${prevCount} -> ${n})`);
+    // 교대 불변식은 어떤 임계에서도 유지
+    const kept = engineRaw.dropNoiseSwings(altOnly, th);
+    for (let i = 1; i < kept.length; i++) {
+        assert.notStrictEqual(kept[i].type, kept[i - 1].type, `th=${th}에서 교대 붕괴`);
+    }
+    prevCount = n;
+}
+
+// --- 15. 저변동 구간(1분봉류)에서도 파동 카운팅 가능해야 함 ---
+// 회귀 방지: swingRangeRatio 0.12는 range 1.3% 데이터에서 임계를 0.16%로 올려
+// 피봇을 2개로 붕괴시켰음 (카운팅 최소 5개 미달).
+const lowVol = [];
+{
+    // 전체 range 약 1.3%인 잔파동 시퀀스 (1분봉 실측과 유사)
+    const base = 65000;
+    const nodes = [];
+    for (let i = 0; i < 12; i++) {
+        nodes.push(base * (1 + (i % 2 === 0 ? 0 : 0.004) + i * 0.0008));
+    }
+    lowVol.push(...buildCandles(nodes, 10));
+}
+const lowVolRange = (Math.max(...lowVol.map(c => c.high)) - Math.min(...lowVol.map(c => c.low)))
+    / lowVol[lowVol.length - 1].close;
+assert.ok(lowVolRange < 0.03, `저변동 픽스처여야 함 (range ${(lowVolRange * 100).toFixed(2)}%)`);
+
+const lowVolPivots = engine.extractPivots(lowVol);
+assert.ok(lowVolPivots.length >= 5,
+    `저변동 구간에서도 피봇 5개 이상 필요 (실제 ${lowVolPivots.length}) — swingRangeRatio 과대 의심`);
+for (let i = 1; i < lowVolPivots.length; i++) {
+    assert.notStrictEqual(lowVolPivots[i].type, lowVolPivots[i - 1].type, '저변동 구간도 교대 유지');
+}
+assert.notStrictEqual(engine.analyze(lowVol, {}).stage, '파동 형성 중 (피봇 측정 중)',
+    '저변동 구간에서 파동 국면이 확정돼야 함');
+
+console.log('wave_analyzer 자체 검증 통과 (15개 항목)');

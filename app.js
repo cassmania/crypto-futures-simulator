@@ -3620,6 +3620,13 @@ function AI추천분석및업데이트(symbol) {
         };
     }
 
+    // 엘리엇 파동 분석 (이미 계산된 지표를 확증 자료로 재사용)
+    엘리엇파동분석및업데이트(coin, {
+        rsi: 계산RSI(closes, 14),
+        vpvrPOC,
+        ma: { ema20, sma60, sma200 }
+    });
+
     document.getElementById("project-desc").innerText = pInfo.개요;
     document.getElementById("project-liquidity").innerText = pInfo.유동성;
     document.getElementById("project-scalability").innerText = pInfo.확장성;
@@ -6302,4 +6309,98 @@ async function 실시간달러지수갱신() {
             dxyDescEl.innerHTML = `<span style="color: var(--color-green); font-weight:700;"><i class="fa-solid fa-circle-check"></i> 달러 약세 / DXY 하락 우세</span><br>달러 지수가 하락하면 글로벌 달러화 가치가 하락함을 의미합니다. 이로 인해 시장 유동성이 늘어나며 비트코인을 비롯한 가상자산 및 위험 자산 시장으로 자금이 강하게 유입되는 <strong>상승 호재(매수/Long 우세)</strong>로 작용합니다.`;
         }
     }
+}
+// 엘리엇 파동 + 피보나치 패널 갱신 (analysis_app.js와 동일 구현)
+function 엘리엇파동분석및업데이트(coin, ctx) {
+    const setText = (id, text) => {
+        const el = document.getElementById(id);
+        if (el) el.innerText = text;
+    };
+    const setHTML = (id, html) => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = html;
+    };
+
+    if (typeof ElliottWaveEngine === "undefined") {
+        setText("wave-stage", "파동 분석 엔진을 불러오지 못했습니다.");
+        return;
+    }
+
+    if (!window.파동엔진) window.파동엔진 = new ElliottWaveEngine();
+    const result = window.파동엔진.analyze(coin.캔들데이터, ctx);
+    const dp = coin.소수점;
+    const fmt = v => Number(v).toLocaleString(undefined, { minimumFractionDigits: dp, maximumFractionDigits: dp });
+
+    if (result.error) {
+        setText("wave-stage", result.error);
+        ["wave-confidence", "wave-direction", "wave-rules", "wave-ewo", "wave-fib", "wave-invalidation", "wave-entry", "wave-tp", "wave-sl"]
+            .forEach(id => setText(id, "--"));
+        setText("wave-nodes", "데이터 부족으로 파동 노드를 산출할 수 없습니다.");
+        return;
+    }
+
+    // 캐시 (Gemini 프롬프트 등 타 모듈에서 참조 가능)
+    window.파동분석결과 = result;
+
+    setText("wave-stage", result.stage);
+
+    const 신뢰도색 = result.confidence >= 7 ? "#39FF14" : result.confidence >= 4 ? "#ffd93d" : "#ff4d4d";
+    setHTML("wave-confidence", `<span style="color:${신뢰도색}; font-weight:700;">${result.confidence}/10</span>`);
+
+    if (typeof result.isBullish === "boolean") {
+        const 방향색 = result.isBullish ? "#39FF14" : "#ff4d4d";
+        setHTML("wave-direction", `<span style="color:${방향색}; font-weight:700;">${result.isBullish ? "상승 구조" : "하락 구조"}</span>`);
+    } else {
+        setText("wave-direction", "판정 불가");
+    }
+
+    const r = result.rules || {};
+    const 법칙표기 = [["2파", r.rule1], ["3파", r.rule2], ["4파", r.rule3]].map(([이름, 통과]) => {
+        if (통과 === null || 통과 === undefined) return `<span style="color:#888;">${이름} -</span>`;
+        const 색 = 통과 ? "#39FF14" : "#ff4d4d";
+        return `<span style="color:${색}; font-weight:700;">${이름} ${통과 ? "O" : "X"}</span>`;
+    }).join(" ");
+    setHTML("wave-rules", 법칙표기);
+
+    const ewoLast = result.ewo && result.ewo.length ? result.ewo[result.ewo.length - 1].value : 0;
+    const ewo색 = ewoLast >= 0 ? "#39FF14" : "#ff4d4d";
+    setHTML("wave-ewo", `<span style="color:${ewo색}; font-weight:700;">${ewoLast >= 0 ? "+" : ""}${ewoLast.toFixed(dp)}</span>`);
+
+    // 파동 노드 (0~4파)
+    if (result.pivots && result.pivots.length === 5) {
+        const 라벨 = ["0", "1", "2", "3", "4"];
+        setHTML("wave-nodes", result.pivots.map((p, i) => {
+            const 색 = p.type === "HIGH" ? "#ff4d4d" : "#39FF14";
+            return `<div style="display:flex; justify-content:space-between; padding:2px 0;">
+                <span style="opacity:0.8;">${라벨[i]}번 노드 (${p.type === "HIGH" ? "고점" : "저점"})</span>
+                <span style="color:${색}; font-weight:700;">${fmt(p.price)} USDT</span>
+            </div>`;
+        }).join(""));
+    } else {
+        setText("wave-nodes", "유효 피봇 부족 - 파동 노드 확정 대기");
+    }
+
+    // 피보나치 목표가
+    if (result.fib && Object.keys(result.fib).length) {
+        setHTML("wave-fib", Object.entries(result.fib).map(([이름, 값]) => `
+            <div style="display:flex; justify-content:space-between; padding:2px 0;">
+                <span style="opacity:0.8;">${이름}</span>
+                <span style="color:#ffd93d; font-weight:700;">${fmt(값)} USDT</span>
+            </div>`).join(""));
+    } else {
+        setText("wave-fib", "--");
+    }
+
+    setHTML("wave-invalidation", result.invalidation
+        ? `<span style="color:#ff4d4d; font-weight:700;">${fmt(result.invalidation)} USDT</span> 이탈 시 현재 시나리오 폐기 — ${result.confidenceReason || "대안 시나리오 전환"}`
+        : "--");
+
+    const sig = result.signal || {};
+    const 액션색 = sig.action === "LONG" ? "#39FF14" : sig.action === "SHORT" ? "#ff4d4d" : "#ffd93d";
+    const 액션명 = sig.action === "LONG" ? "롱" : sig.action === "SHORT" ? "숏" : "관망";
+    setHTML("wave-entry", `<span style="color:${액션색}; font-weight:700;">${액션명}</span> ${sig.entry ? "@ " + fmt(sig.entry) : ""}`);
+    setHTML("wave-tp", sig.tp1 || sig.tp2
+        ? `<span style="color:#39FF14; font-weight:700;">${fmt(sig.tp1)}</span> / <span style="color:#39FF14; font-weight:700;">${fmt(sig.tp2)}</span>`
+        : "--");
+    setHTML("wave-sl", sig.sl ? `<span style="color:#ff4d4d; font-weight:700;">${fmt(sig.sl)}</span>` : "--");
 }
