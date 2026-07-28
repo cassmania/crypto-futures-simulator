@@ -43,6 +43,7 @@ class ElliottWaveEngine {
                 rules: { rule1: null, rule2: null, rule3: null },
                 confidence: 2,
                 confidenceReason: '유효 피봇 5개 미달 - 카운팅 불가',
+                grade: { key: 'UNKNOWN', label: '미확정', score: 0, grade: 'D', ceiling: 45, tradable: false, reason: '피봇 부족 - 카운팅 불가' },
                 signal: { action: 'NEUTRAL', reason: '명확한 파동 노드 탐색 중', entry: 0, tp1: 0, tp2: 0, sl: 0 },
                 invalidation: 0
             };
@@ -81,6 +82,12 @@ class ElliottWaveEngine {
 
         const conf = this.scoreConfidence({ rules, stageInfo, candles, ctx, dir });
 
+        // v2 신뢰등급. ctx.mtfDir(상위 타임프레임 파동 방향)이 오면 합의 여부를 반영한다.
+        const mtf = (typeof ctx.mtfDir === 'number' && ctx.mtfDir !== 0)
+            ? (ctx.mtfDir === dir ? 1 : -1)
+            : 0;
+        const grade = this.gradeWave({ stage: stageInfo.stage, rules, allPassed, confidence: conf.score, pivots: [w0, w1, w2, w3, w4] }, ctx.interval, mtf);
+
         return {
             stage: stageInfo.stage,
             isBullish,
@@ -91,6 +98,7 @@ class ElliottWaveEngine {
             invalidation: this.round(invalidation),
             confidence: conf.score,
             confidenceReason: conf.reason,
+            grade,
             signal: {
                 action: stageInfo.action,
                 reason: stageInfo.reason,
@@ -207,6 +215,90 @@ class ElliottWaveEngine {
             sl: w4.price,
             invalidation: w4.price
         };
+    }
+
+    /**
+     * v2 신뢰등급 A~D. 패턴마다 상한을 둬서, 해석이 갈리는 패턴은
+     * 확증이 아무리 좋아도 매매 등급(65점)에 못 오르게 한다.
+     *
+     * @param {Object} r    { stage, rules, allPassed, confidence, pivots }
+     * @param {string} tf   타임프레임 키 ('4h' 등). 없으면 가중 0
+     * @param {number} mtf  1=상위 TF 일치, -1=역행, 0=불명
+     */
+    gradeWave(r, tf, mtf) {
+        let key = this.classifyPattern(r.stage);
+        // ABC 국면이면 조정 세부형으로 덮어쓴다 (지그재그 / 플랫 / 삼각형)
+        if (key === 'ZIGZAG_C') {
+            const refined = this.refineCorrective(r.pivots);
+            if (refined) key = refined;
+        }
+        const tier = ElliottWaveEngine.TIER[key] || ElliottWaveEngine.TIER.UNKNOWN;
+        const notes = [tier.label];
+        let score = tier.base;
+
+        // 절대 법칙 위반은 치명적 - 하나만 깨져도 실전 진입 근거로 쓸 수 없다
+        const violated = ['rule1', 'rule2', 'rule3'].filter(k => r.rules && r.rules[k] === false);
+        if (violated.length) {
+            score -= violated.length * 22;
+            notes.push(`절대법칙 위반 ${violated.length}건`);
+        } else if (r.allPassed) {
+            score += 6;
+            notes.push('절대법칙 3/3 충족');
+        }
+
+        if (typeof r.confidence === 'number') {
+            score += (r.confidence - 5) * 2.4;
+            notes.push(`확증 ${r.confidence}/10`);
+        }
+
+        const tfw = ElliottWaveEngine.TF_WEIGHT[tf] || 0;
+        if (tfw) { score += tfw; notes.push(`${tf} 가중 ${tfw > 0 ? '+' : ''}${tfw}`); }
+
+        // 상한은 MTF 조정 "전에" 건다. 뒤에 걸면 천장에 닿은 점수에서 역행 감점이
+        // 통째로 흡수돼(113 -> 100 -> 93) 카운터 트렌드가 걸러지지 않는다.
+        score = Math.min(tier.ceiling, score);
+        if (mtf === 1) { score += 6; notes.push('상위 TF 일치'); }
+        else if (mtf === -1) { score -= 30; notes.push('상위 TF 역행 - 카운터 트렌드'); }
+
+        score = Math.round(Math.max(0, Math.min(tier.ceiling, score)));
+        const grade = score >= 80 ? 'A' : score >= 65 ? 'B' : score >= 50 ? 'C' : 'D';
+        return {
+            key, label: tier.label, score, grade, ceiling: tier.ceiling,
+            tradable: grade === 'A' || grade === 'B',
+            reason: notes.join(' · ')
+        };
+    }
+
+    /** 국면 문자열을 패턴 키로 환원 */
+    classifyPattern(stage) {
+        const s = stage || '';
+        if (/3파/.test(s)) return 'IMPULSE_3';
+        if (/5파/.test(s)) return 'IMPULSE_5';
+        if (/ABC/.test(s)) return 'ZIGZAG_C';
+        if (/2파/.test(s)) return 'WAVE_2';
+        if (/4파/.test(s)) return 'WAVE_4';
+        return 'UNKNOWN';
+    }
+
+    /**
+     * 조정 세부형 판정. B파 되돌림 깊이로 지그재그/플랫/삼각형을 가른다(엘리엇 표준 구분).
+     *   B < A의 61.8%   -> 지그재그 (샤프, 신뢰 높음)
+     *   B >= A의 90%    -> 플랫 (횡보)
+     *   스윙이 계단식 축소 -> 삼각형
+     */
+    refineCorrective(pivots) {
+        if (!pivots || pivots.length < 5) return null;
+        const P = pivots.map(p => p.price);
+        const legA = Math.abs(P[1] - P[0]);
+        if (!(legA > 0)) return null;
+        const legB = Math.abs(P[2] - P[1]);
+        const legC = Math.abs(P[3] - P[2]);
+        const legD = Math.abs(P[4] - P[3]);
+        if (legB <= legA * 0.9 && legC <= legB * 0.9 && legD <= legC * 0.9) return 'TRIANGLE';
+        const ret = legB / legA;
+        if (ret >= 0.9) return 'FLAT';
+        if (ret <= 0.618) return 'ZIGZAG_C';
+        return 'COMPLEX';
     }
 
     /**
@@ -412,6 +504,83 @@ class ElliottWaveEngine {
         return parseFloat(v.toFixed(digits));
     }
 }
+
+// 패턴별 기본점 / 등급 상한. 상한은 "확증이 아무리 좋아도 이 이상 못 준다".
+// 삼각형·복합조정은 상한 자체가 매매선(65) 아래라 구조적으로 걸러진다.
+ElliottWaveEngine.TIER = {
+    IMPULSE_3: { base: 88, ceiling: 100, label: '임펄스 3파 (최고 신뢰)' },
+    ZIGZAG_C:  { base: 74, ceiling: 92,  label: '지그재그 C파 (샤프 조정)' },
+    IMPULSE_5: { base: 72, ceiling: 90,  label: '임펄스 5파 (종료 임박)' },
+    WAVE_2:    { base: 70, ceiling: 90,  label: '2파 되돌림 (3파 진입 대기)' },
+    WAVE_4:    { base: 60, ceiling: 82,  label: '4파 되돌림 (교대 법칙)' },
+    FLAT:      { base: 48, ceiling: 70,  label: '플랫 조정 (횡보)' },
+    TRIANGLE:  { base: 38, ceiling: 58,  label: '삼각 수렴 (해석 다의성)' },
+    COMPLEX:   { base: 30, ceiling: 50,  label: '복합 조정 (카운팅 불안정)' },
+    UNKNOWN:   { base: 25, ceiling: 45,  label: '미확정' }
+};
+// 코인은 24/7 고변동이라 저타임프레임 파동이 쉽게 무너진다.
+ElliottWaveEngine.TF_WEIGHT = {
+    '1m': -18, '3m': -15, '5m': -12, '15m': -8, '30m': -5,
+    '1h': 0, '2h': 2, '4h': 5, '6h': 6, '8h': 6, '12h': 7, '1d': 8, '3d': 8, '1w': 8
+};
+// 각 TF의 상위 확인 대상. 자기보다 한참 위를 봐야 추세 역행이 드러난다.
+ElliottWaveEngine.MTF_PARENT = {
+    '1m': '1h', '3m': '1h', '5m': '1h', '15m': '4h', '30m': '4h',
+    '1h': '4h', '2h': '12h', '4h': '1d', '6h': '1d', '8h': '1d', '12h': '1d', '1d': '1w'
+};
+
+/**
+ * 상위 타임프레임 파동 방향 조회 (v2 MTF 합의용).
+ *
+ * 동기 함수다. 캐시에 값이 있으면 그 방향(1/-1)을, 없으면 0(불명)을 즉시 돌려주고
+ * 백그라운드로 캔들을 받아 캐시를 채운다. 파동 패널은 라이브 틱마다 다시 그려지므로
+ * 다음 갱신에서 자연히 확정 등급이 반영된다. (렌더 경로를 async로 바꾸지 않기 위한 선택)
+ */
+(function () {
+    if (typeof window === 'undefined' || typeof fetch !== 'function') return;  // node(테스트) 환경에서는 건너뛴다
+    const 캐시 = new Map();          // 'SYMBOL|tf' -> { dir, at }
+    const TTL = 5 * 60 * 1000;       // 상위 TF는 5분 안에 방향이 자주 바뀌지 않는다
+    const 진행중 = new Set();
+
+    async function 캔들받기(symbol, interval) {
+        const qs = `?symbol=${symbol}&interval=${interval}&limit=150`;
+        let res;
+        try {
+            res = await fetch(`https://fapi.binance.com/fapi/v1/klines${qs}`);
+            if (!res.ok) throw new Error('futures 실패');
+        } catch (e) {
+            res = await fetch(`https://api.binance.com/api/v3/klines${qs}`);
+            if (!res.ok) throw new Error('spot 실패');
+        }
+        const raw = await res.json();
+        return raw.map(c => ({
+            time: Math.floor(c[0] / 1000),
+            open: parseFloat(c[1]), high: parseFloat(c[2]),
+            low: parseFloat(c[3]), close: parseFloat(c[4]), volume: parseFloat(c[5])
+        }));
+    }
+
+    window.상위파동방향 = function (symbol, tf) {
+        const parent = ElliottWaveEngine.MTF_PARENT[tf];
+        if (!symbol || !parent) return 0;
+        const key = symbol + '|' + parent;
+        const hit = 캐시.get(key);
+        if (hit && Date.now() - hit.at < TTL) return hit.dir;
+
+        if (!진행중.has(key)) {
+            진행중.add(key);
+            캔들받기(symbol, parent).then(rows => {
+                if (!rows || rows.length < 30) return;
+                if (!window.파동엔진) window.파동엔진 = new ElliottWaveEngine();
+                // 상위 TF는 방향만 필요하므로 확증지표 없이 돌린다
+                const r = window.파동엔진.analyze(rows, {});
+                const dir = (typeof r.isBullish === 'boolean') ? (r.isBullish ? 1 : -1) : 0;
+                캐시.set(key, { dir, at: Date.now() });
+            }).catch(() => {}).finally(() => 진행중.delete(key));
+        }
+        return hit ? hit.dir : 0;   // 만료된 캐시라도 새 값이 올 때까진 직전 방향을 쓴다
+    };
+})();
 
 if (typeof module !== 'undefined') module.exports = ElliottWaveEngine;
 if (typeof window !== 'undefined') window.ElliottWaveEngine = ElliottWaveEngine;

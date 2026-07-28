@@ -203,4 +203,63 @@ for (let i = 1; i < lowVolPivots.length; i++) {
 assert.notStrictEqual(engine.analyze(lowVol, {}).stage, '파동 형성 중 (피봇 측정 중)',
     '저변동 구간에서 파동 국면이 확정돼야 함');
 
-console.log('wave_analyzer 자체 검증 통과 (15개 항목)');
+// ── v2 신뢰등급 ────────────────────────────────────────────
+const pv = prices => prices.map((p, i) => ({ price: p, type: i % 2 ? 'HIGH' : 'LOW' }));
+const ALL_PASS = { rule1: true, rule2: true, rule3: true };
+const mk = (stage, extra = {}) => ({ stage, rules: ALL_PASS, allPassed: true, confidence: 7, pivots: pv([0, 100, 50, 160, 120]), ...extra });
+
+// 국면 -> 패턴 분류
+assert.strictEqual(engine.classifyPattern('메인 상승 3파 진행 중 (최강 임펄스)'), 'IMPULSE_3');
+assert.strictEqual(engine.classifyPattern('5파 상승 진행 중 (다이버전스 경계)'), 'IMPULSE_5');
+assert.strictEqual(engine.classifyPattern('2파 조정 진행 중 (매수 대기)'), 'WAVE_2');
+assert.strictEqual(engine.classifyPattern('ABC 조정파 진입 (추진 파동 종료 추정)'), 'ZIGZAG_C');
+
+// 조정 세부형: B파 되돌림 깊이로 갈린다
+assert.strictEqual(engine.refineCorrective(pv([0, 100, 62, 160, 130])), 'ZIGZAG_C');  // 38% 얕음
+assert.strictEqual(engine.refineCorrective(pv([0, 100, 5, 98, 10])), 'FLAT');         // 95% 깊음
+assert.strictEqual(engine.refineCorrective(pv([0, 100, 20, 80, 35])), 'TRIANGLE');    // 단조 축소
+assert.strictEqual(engine.refineCorrective(pv([0, 100, 25, 200, 60])), 'COMPLEX');
+
+// 3파 + 일봉 + 상위 일치 = A등급 매매가능
+const gA = engine.gradeWave(mk('메인 상승 3파 진행 중'), '1d', 1);
+assert.strictEqual(gA.grade, 'A', `3파 A등급이어야 함 (실제 ${gA.grade} ${gA.score})`);
+assert.ok(gA.tradable);
+
+// 삼각형은 확증 최고여도 매매 등급 도달 불가 (상한 58)
+const gT = engine.gradeWave(mk('ABC 조정파 진입', { confidence: 10, pivots: pv([0, 100, 20, 80, 35]) }), '1d', 1);
+assert.strictEqual(gT.key, 'TRIANGLE', `삼각형 분류 실패: ${gT.key}`);
+assert.ok(gT.score <= 58, `삼각형 상한 초과: ${gT.score}`);
+assert.strictEqual(gT.tradable, false, '삼각형이 매매가능으로 새어나옴');
+
+// 상위 TF 역행은 확실히 강등 (상한 클램프에 감점이 먹히면 안 됨)
+const up5 = engine.gradeWave(mk('5파 상승 진행 중'), '4h', 1);
+const dn5 = engine.gradeWave(mk('5파 상승 진행 중'), '4h', -1);
+assert.ok(dn5.score < up5.score - 25, `역행 감점 부족: ${up5.score} -> ${dn5.score}`);
+assert.ok(up5.tradable && !dn5.tradable, `5파 역행 강등 실패: ${up5.score} -> ${dn5.score}`);
+
+// 절대법칙 위반 시 매매 불가
+const gV = engine.gradeWave(mk('메인 상승 3파 진행 중', { rules: { rule1: false, rule2: false, rule3: true }, allPassed: false, confidence: 6 }), '1d', 0);
+assert.strictEqual(gV.tradable, false, `법칙 위반인데 tradable: ${gV.score}`);
+
+// 저타임프레임 감점 + 점수는 항상 0~상한
+assert.ok(engine.gradeWave(mk('메인 상승 3파 진행 중'), '1m', 0).score
+        < engine.gradeWave(mk('메인 상승 3파 진행 중'), '1d', 0).score, 'TF 가중 미적용');
+for (const stage of ['메인 상승 3파 진행 중', '5파 상승 진행 중', '2파 조정 진행 중', '4파 조정 진행 중', 'ABC 조정파 진입']) {
+    for (const c of [1, 5, 10]) {
+        for (const m of [-1, 0, 1]) {
+            const g = engine.gradeWave(mk(stage, { confidence: c }), '1d', m);
+            assert.ok(g.score >= 0 && g.score <= g.ceiling, `범위 이탈 ${stage}/${c}/${m}: ${g.score}`);
+            assert.ok(['A', 'B', 'C', 'D'].includes(g.grade));
+        }
+    }
+}
+
+// analyze() 결과에 grade가 실린다 + ctx.mtfDir 반영
+const gRes = engine.analyze(lowVol, { interval: '1d' });
+assert.ok(gRes.grade && gRes.grade.grade, 'analyze 결과에 grade 없음');
+const bullDir = gRes.isBullish ? 1 : -1;
+const agree = engine.analyze(lowVol, { interval: '1d', mtfDir: bullDir });
+const against = engine.analyze(lowVol, { interval: '1d', mtfDir: -bullDir });
+assert.ok(against.grade.score < agree.grade.score, 'ctx.mtfDir 역행이 반영되지 않음');
+
+console.log('wave_analyzer 자체 검증 통과 (15개 항목 + v2 등급 14개)');

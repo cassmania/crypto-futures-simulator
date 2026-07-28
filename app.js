@@ -6327,6 +6327,10 @@ function 엘리엇파동분석및업데이트(coin, ctx) {
     }
 
     if (!window.파동엔진) window.파동엔진 = new ElliottWaveEngine();
+    // v2 신뢰등급용 컨텍스트. 상위 타임프레임 방향은 비동기 조회라
+    // 캐시가 채워지기 전에는 0(불명)으로 매겨지고, 조회가 끝나면 다음 갱신에서 확정된다.
+    ctx.interval = coin.시간단위;
+    ctx.mtfDir = (typeof window.상위파동방향 === "function") ? window.상위파동방향(coin.코인심볼, coin.시간단위) : 0;
     const result = window.파동엔진.analyze(coin.캔들데이터, ctx);
     const dp = coin.소수점;
     const fmt = v => Number(v).toLocaleString(undefined, { minimumFractionDigits: dp, maximumFractionDigits: dp });
@@ -6344,8 +6348,15 @@ function 엘리엇파동분석및업데이트(coin, ctx) {
 
     setText("wave-stage", result.stage);
 
-    const 신뢰도색 = result.confidence >= 7 ? "#39FF14" : result.confidence >= 4 ? "#ffd93d" : "#ff4d4d";
-    setHTML("wave-confidence", `<span style="color:${신뢰도색}; font-weight:700;">${result.confidence}/10</span>`);
+    // v2 신뢰등급. A/B만 매매 대상, C/D는 관망으로 강등한다.
+    const 등급 = result.grade || { grade: "D", score: 0, label: "미확정", ceiling: 45, tradable: false, reason: "" };
+    const 등급색 = 등급.grade === "A" ? "#39FF14" : 등급.grade === "B" ? "#ffd93d" : "#888";
+    setHTML("wave-confidence",
+        `<span style="color:${등급색}; font-weight:700;">${등급.grade}등급 ${등급.score}점</span>`
+        + `<span style="opacity:0.7; font-size:0.85em;"> / 상한 ${등급.ceiling} · 확증 ${result.confidence}/10</span>`
+        + `<div style="opacity:0.75; font-size:0.85em; margin-top:2px;">${등급.label}`
+        + `<span style="color:${등급.tradable ? "#39FF14" : "#888"}; font-weight:700;"> — ${등급.tradable ? "★ 매매가능" : "관망"}</span></div>`
+        + `<div style="opacity:0.6; font-size:0.8em;">${등급.reason || ""}</div>`);
 
     if (typeof result.isBullish === "boolean") {
         const 방향색 = result.isBullish ? "#39FF14" : "#ff4d4d";
@@ -6396,11 +6407,20 @@ function 엘리엇파동분석및업데이트(coin, ctx) {
         : "--");
 
     const sig = result.signal || {};
-    const 액션색 = sig.action === "LONG" ? "#39FF14" : sig.action === "SHORT" ? "#ff4d4d" : "#ffd93d";
-    const 액션명 = sig.action === "LONG" ? "롱" : sig.action === "SHORT" ? "숏" : "관망";
-    setHTML("wave-entry", `<span style="color:${액션색}; font-weight:700;">${액션명}</span> ${sig.entry ? "@ " + fmt(sig.entry) : ""}`);
-    setHTML("wave-tp", sig.tp1 || sig.tp2
-        ? `<span style="color:#39FF14; font-weight:700;">${fmt(sig.tp1)}</span> / <span style="color:#39FF14; font-weight:700;">${fmt(sig.tp2)}</span>`
-        : "--");
-    setHTML("wave-sl", sig.sl ? `<span style="color:#ff4d4d; font-weight:700;">${fmt(sig.sl)}</span>` : "--");
+    // C/D 등급은 카운팅 자체가 불안정하다. 진입가·목표가를 그대로 보여주면
+    // 저신뢰 파동으로 매매하게 되므로 관망으로 강등한다 (v2의 존재 이유).
+    if (!등급.tradable) {
+        setHTML("wave-entry", `<span style="color:#888; font-weight:700;">관망</span>`
+            + `<span style="opacity:0.7; font-size:0.85em;"> — ${등급.grade}등급(${등급.score}점) 신뢰도 미달</span>`);
+        setHTML("wave-tp", `<span style="opacity:0.6;">A/B 등급에서만 목표가 제시</span>`);
+        setHTML("wave-sl", `<span style="opacity:0.6;">--</span>`);
+    } else {
+        const 액션색 = sig.action === "LONG" ? "#39FF14" : sig.action === "SHORT" ? "#ff4d4d" : "#ffd93d";
+        const 액션명 = sig.action === "LONG" ? "롱" : sig.action === "SHORT" ? "숏" : "관망";
+        setHTML("wave-entry", `<span style="color:${액션색}; font-weight:700;">${액션명}</span> ${sig.entry ? "@ " + fmt(sig.entry) : ""}`);
+        setHTML("wave-tp", sig.tp1 || sig.tp2
+            ? `<span style="color:#39FF14; font-weight:700;">${fmt(sig.tp1)}</span> / <span style="color:#39FF14; font-weight:700;">${fmt(sig.tp2)}</span>`
+            : "--");
+        setHTML("wave-sl", sig.sl ? `<span style="color:#ff4d4d; font-weight:700;">${fmt(sig.sl)}</span>` : "--");
+    }
 }
