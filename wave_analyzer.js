@@ -82,11 +82,23 @@ class ElliottWaveEngine {
 
         const conf = this.scoreConfidence({ rules, stageInfo, candles, ctx, dir });
 
-        // v2 신뢰등급. ctx.mtfDir(상위 타임프레임 파동 방향)이 오면 합의 여부를 반영한다.
-        const mtf = (typeof ctx.mtfDir === 'number' && ctx.mtfDir !== 0)
-            ? (ctx.mtfDir === dir ? 1 : -1)
-            : 0;
-        const grade = this.gradeWave({ stage: stageInfo.stage, rules, allPassed, confidence: conf.score, pivots: [w0, w1, w2, w3, w4] }, ctx.interval, mtf);
+        // v4 신뢰등급. MTF(ctx.mtfDir)는 더 이상 쓰지 않는다 — 실측 판별력이 0이었다.
+        // 대신 ATR·MA·RSI를 넘긴다. ATR은 호출자가 안 주면 캔들에서 직접 계산한다.
+        const ma = ctx.ma || {};
+        const rsiArr = ctx.rsi;
+        const grade = this.gradeWave(
+            {
+                stage: stageInfo.stage, rules, allPassed, confidence: conf.score,
+                pivots: [w0, w1, w2, w3, w4], isBullish, invalidation
+            },
+            ctx.interval,
+            {
+                atr: ctx.atr > 0 ? ctx.atr : ElliottWaveEngine.atr(candles),
+                ema20: ma.ema20, sma60: ma.sma60,
+                rsi: Array.isArray(rsiArr) ? rsiArr[rsiArr.length - 1] : rsiArr,
+                price: last.close
+            }
+        );
 
         return {
             stage: stageInfo.stage,
@@ -218,53 +230,94 @@ class ElliottWaveEngine {
     }
 
     /**
-     * v2 신뢰등급 A~D. 패턴마다 상한을 둬서, 해석이 갈리는 패턴은
-     * 확증이 아무리 좋아도 매매 등급(65점)에 못 오르게 한다.
+     * v4 신뢰등급 — 백테스트 실측 기대값 채점.
      *
-     * @param {Object} r    { stage, rules, allPassed, confidence, pivots }
-     * @param {string} tf   타임프레임 키 ('4h' 등). 없으면 가중 0
-     * @param {number} mtf  1=상위 TF 일치, -1=역행, 0=불명
+     * v2는 엘리엇 교과서의 패턴 서열을 점수화했다. v4는 그 서열을 15개 심볼
+     * 일봉 8,778건으로 검증한 뒤 실측 기대값(R)으로 다시 썼다.
+     * 아웃샘플: 워크포워드 69.6% / +0.831R, 심볼 홀드아웃 76.5% / +0.917R
+     * (v2 A/B 57.3% / +0.52R, 무필터 48.4% / +0.26R)
+     *
+     * v2 가정 중 실측에서 뒤집힌 것:
+     *  1) MTF 합의는 판별력이 없었다(일치 48.7% vs 역행 48.4%). v2는 역행에
+     *     -30점을 때려 오히려 좋은 신호를 강등시켰다. MTF 가중을 쓰지 않는다.
+     *  2) 임펄스 3파 최상위(base 88)는 틀렸다. 승률 63%지만 목표가가 가까워
+     *     RR 1.03, 기대값 +0.28R. 기대값 상위는 2파 되돌림이 독점한다.
+     *  3) 손절폭이 최강 변수인데 v2 채점에 없었다. ATR 1배 미만 승률 31.9%,
+     *     2배 이상 72%. 파동이 맞아도 손절이 잡음 범위 안이면 먼저 털린다.
+     *  4) RSI는 직관과 반대다. 상승 파동에서 RSI가 높을수록 유리
+     *     (58+ 승률 72.7% vs 42미만 31.7%). 과매도 저점 잡기가 아니라
+     *     강세 유지 중 되돌림 매수가 먹힌다.
+     *
+     * @param {Object} r   { stage, rules, allPassed, confidence, pivots, signal, isBullish }
+     * @param {string} tf  타임프레임(표시용). v4는 채점에 쓰지 않는다 —
+     *                     v2의 TF 가중도 MTF와 함께 실측 근거를 잃었다.
+     * @param {Object} ind { atr, ema20, sma60, rsi, price } — 하나라도 없으면 판정 보류
      */
-    gradeWave(r, tf, mtf) {
-        let key = this.classifyPattern(r.stage);
-        // ABC 국면이면 조정 세부형으로 덮어쓴다 (지그재그 / 플랫 / 삼각형)
-        if (key === 'ZIGZAG_C') {
-            const refined = this.refineCorrective(r.pivots);
-            if (refined) key = refined;
-        }
-        const tier = ElliottWaveEngine.TIER[key] || ElliottWaveEngine.TIER.UNKNOWN;
-        const notes = [tier.label];
-        let score = tier.base;
+    gradeWave(r, tf, ind) {
+        const key = this.classifyPattern(r.stage);
+        const fail = (reason) => ({
+            key, cell: null, ev: null, score: 0, grade: 'D', tradable: false,
+            reason, warnings: ['등급 판정 보류 - 매매 근거로 쓰지 말 것']
+        });
 
-        // 절대 법칙 위반은 치명적 - 하나만 깨져도 실전 진입 근거로 쓸 수 없다
-        const violated = ['rule1', 'rule2', 'rule3'].filter(k => r.rules && r.rules[k] === false);
-        if (violated.length) {
-            score -= violated.length * 22;
-            notes.push(`절대법칙 위반 ${violated.length}건`);
-        } else if (r.allPassed) {
-            score += 6;
-            notes.push('절대법칙 3/3 충족');
-        }
+        if (!ind) return fail('지표 미제공 (ATR·MA·RSI 필요)');
+        const { atr, ema20, sma60, rsi, price } = ind;
+        if (!(atr > 0)) return fail('ATR 미산출 - 손절폭 검증 불가');
+        if (!(ema20 > 0) || !(sma60 > 0)) return fail('MA20/60 미산출 - 정렬 확인 불가');
+        if (typeof rsi !== 'number' || !isFinite(rsi)) return fail('RSI 미산출 - 추세 강도 확인 불가');
+        if (!(price > 0)) return fail('현재가 미산출');
 
-        if (typeof r.confidence === 'number') {
-            score += (r.confidence - 5) * 2.4;
-            notes.push(`확증 ${r.confidence}/10`);
-        }
+        const sl = r.invalidation;
+        if (!(sl > 0)) return fail('무효화선 미산출');
+        const isLong = !!r.isBullish;
+        // 무효화선이 현재가의 반대쪽에 있으면(상승 파동인데 손절이 위) 방향이 모순이다.
+        // 이 상태로 R을 계산하면 부호가 뒤집혀 손실이 이익으로 표시된다.
+        if (isLong ? (sl >= price) : (sl <= price)) return fail('손절 방향이 신호와 모순');
 
-        const tfw = ElliottWaveEngine.TF_WEIGHT[tf] || 0;
-        if (tfw) { score += tfw; notes.push(`${tf} 가중 ${tfw > 0 ? '+' : ''}${tfw}`); }
+        const slDist = Math.abs(price - sl);
+        const slMult = slDist / atr;
+        const aBand = slMult >= 2 ? 'a2+' : slMult >= 1 ? 'a1-2' : 'a<1';
+        const mBand = (isLong === (ema20 > sma60)) ? 'm+' : 'm-';
+        // RSI 방향 보정: 하락 파동은 100에서 빼 "내 방향의 추세가 살아있나"로 통일
+        const rsiAdj = isLong ? rsi : 100 - rsi;
+        const rBand = rsiAdj >= 58 ? 'r高' : rsiAdj >= 52 ? 'r中' : 'r低';
+        const c = r.confidence;
+        const cBand = c >= 8 ? 'c8+' : c >= 6 ? 'c6-7' : 'c<6';
 
-        // 상한은 MTF 조정 "전에" 건다. 뒤에 걸면 천장에 닿은 점수에서 역행 감점이
-        // 통째로 흡수돼(113 -> 100 -> 93) 카운터 트렌드가 걸러지지 않는다.
-        score = Math.min(tier.ceiling, score);
-        if (mtf === 1) { score += 6; notes.push('상위 TF 일치'); }
-        else if (mtf === -1) { score -= 30; notes.push('상위 TF 역행 - 카운터 트렌드'); }
+        const cell = `${key} ${cBand} ${aBand} ${mBand} ${rBand}`;
+        const known = Object.prototype.hasOwnProperty.call(ElliottWaveEngine.CELL_EV, cell);
+        const ev = known ? ElliottWaveEngine.CELL_EV[cell] : 0;
+        const grade = ev >= 0.9 ? 'A' : ev >= ElliottWaveEngine.TRADE_CUT ? 'B' : ev >= 0.2 ? 'C' : 'D';
 
-        score = Math.round(Math.max(0, Math.min(tier.ceiling, score)));
-        const grade = score >= 80 ? 'A' : score >= 65 ? 'B' : score >= 50 ? 'C' : 'D';
+        const notes = [`조합 ${cell}`, `실측 기대값 ${ev >= 0 ? '+' : ''}${ev.toFixed(2)}R`];
+        const warnings = [];
+        if (aBand === 'a<1') warnings.push('손절 자리가 너무 가까워 잡음에 털린다');
+        if (mBand === 'm-') warnings.push('이동평균이 파동 방향과 반대다');
+        if (cBand === 'c<6') warnings.push('보조지표 확증이 약하다');
+        if (rBand === 'r低') warnings.push('RSI가 실측 승률 최하 구간이다');
+        if (!known) warnings.push('백테스트에 없는 조합이라 검증되지 않았다');
+
+        // 매도 표: 가격이 각 R 지점에 닿았을 때 손절이 어디로 오는지.
+        // 트레일링은 "따라 올린다"는 말만으론 운용이 안 되고 숫자로 봐야 쓸 수 있다.
+        const trail = atr * ElliottWaveEngine.ATR_MULT;
+        const ladder = [1, 2, 3, 4].map(k => {
+            const p = isLong ? price + slDist * k : price - slDist * k;
+            const raw = isLong ? p - trail : p + trail;
+            const stop = isLong ? Math.max(sl, raw) : Math.min(sl, raw);
+            const locked = (isLong ? stop - price : price - stop) / slDist;
+            return { atR: k, price: p, stop, lockedR: +locked.toFixed(2) };
+        });
+
         return {
-            key, label: tier.label, score, grade, ceiling: tier.ceiling,
-            tradable: grade === 'A' || grade === 'B',
+            key, cell, ev, grade,
+            // 점수는 기대값의 표시용 사상(-0.7R~+1.3R -> 0~100)
+            score: Math.round(Math.max(0, Math.min(100, (ev + 0.7) / 2.0 * 100))),
+            tradable: known && ev >= ElliottWaveEngine.TRADE_CUT,
+            isLong, entry: price, sl,
+            slAtr: +slMult.toFixed(2), rsiAdj: +rsiAdj.toFixed(1),
+            trailDistance: trail,
+            breakeven: isLong ? price + trail : price - trail,
+            ladder, warnings,
             reason: notes.join(' · ')
         };
     }
@@ -505,82 +558,76 @@ class ElliottWaveEngine {
     }
 }
 
-// 패턴별 기본점 / 등급 상한. 상한은 "확증이 아무리 좋아도 이 이상 못 준다".
-// 삼각형·복합조정은 상한 자체가 매매선(65) 아래라 구조적으로 걸러진다.
-ElliottWaveEngine.TIER = {
-    IMPULSE_3: { base: 88, ceiling: 100, label: '임펄스 3파 (최고 신뢰)' },
-    ZIGZAG_C:  { base: 74, ceiling: 92,  label: '지그재그 C파 (샤프 조정)' },
-    IMPULSE_5: { base: 72, ceiling: 90,  label: '임펄스 5파 (종료 임박)' },
-    WAVE_2:    { base: 70, ceiling: 90,  label: '2파 되돌림 (3파 진입 대기)' },
-    WAVE_4:    { base: 60, ceiling: 82,  label: '4파 되돌림 (교대 법칙)' },
-    FLAT:      { base: 48, ceiling: 70,  label: '플랫 조정 (횡보)' },
-    TRIANGLE:  { base: 38, ceiling: 58,  label: '삼각 수렴 (해석 다의성)' },
-    COMPLEX:   { base: 30, ceiling: 50,  label: '복합 조정 (카운팅 불안정)' },
-    UNKNOWN:   { base: 25, ceiling: 45,  label: '미확정' }
+// v4 조합표 — 패턴 x 확증대 x 손절폭 x MA정렬 x RSI대 5축의 실측 기대값(R).
+// 15개 심볼 일봉 8,778건 백테스트 산출물이며 표본 60건 이상인 조합만 싣는다.
+// 값은 반올림하지 않는다 — 0.4961을 0.50으로 줄여 적었더니 매매선(0.5R)을 넘겨
+// 관망이어야 할 조합이 신호로 나간 적이 있다.
+ElliottWaveEngine.CELL_EV = {
+    // 매매 가능 (>= 0.5R)
+    'WAVE_2 c6-7 a1-2 m- r中': 1.1943,   // n=75 승률 87%
+    'WAVE_2 c8+ a2+ m+ r高': 1.1427,     // n=189 승률 84%
+    'WAVE_2 c8+ a1-2 m+ r高': 1.1171,    // n=164 승률 83%
+    'WAVE_2 c6-7 a1-2 m+ r高': 0.9705,   // n=96 승률 78%
+    'WAVE_2 c8+ a<1 m+ r中': 0.9240,     // n=92 승률 76%
+    'WAVE_2 c8+ a2+ m+ r中': 0.8776,     // n=132 승률 74%
+    'WAVE_2 c6-7 a<1 m+ r高': 0.8607,    // n=60 승률 73%
+    'WAVE_2 c8+ a1-2 m+ r中': 0.8393,    // n=292 승률 73%
+    'WAVE_2 c6-7 a2+ m- r低': 0.7041,    // n=82 승률 67%
+    'WAVE_2 c<6 a1-2 m- r中': 0.6370,    // n=94 승률 65%
+    'IMPULSE_3 c6-7 a2+ m- r中': 0.5421, // n=71 승률 79%
+    // 관망 (양수지만 컷 미달)
+    'WAVE_2 c6-7 a1-2 m- r低': 0.4457,
+    'WAVE_2 c<6 a<1 m- r中': 0.4079,
+    'WAVE_2 c6-7 a<1 m+ r中': 0.4028,
+    'IMPULSE_5 c<6 a<1 m- r低': 0.3587,
+    'IMPULSE_5 c6-7 a<1 m- r低': 0.3338,  // 승률 27%지만 RR 3.90으로 버티는 유형
+    'WAVE_2 c6-7 a1-2 m+ r中': 0.3302,
+    'IMPULSE_3 c8+ a1-2 m+ r中': 0.2623,
+    'IMPULSE_3 c8+ a2+ m+ r高': 0.2586,
+    'WAVE_2 c8+ a1-2 m+ r低': 0.2462,
+    'IMPULSE_5 c8+ a1-2 m+ r低': 0.2393,
+    'IMPULSE_5 c<6 a1-2 m- r低': 0.2347,
+    'IMPULSE_5 c8+ a1-2 m+ r高': 0.2139,
+    'IMPULSE_3 c8+ a2+ m+ r中': 0.2089,
+    'IMPULSE_5 c6-7 a2+ m+ r高': 0.2059,
+    'WAVE_2 c8+ a<1 m+ r低': 0.2011,
+    'WAVE_2 c6-7 a<1 m- r低': 0.1905,
+    'IMPULSE_5 c8+ a2+ m+ r高': 0.1801,
+    'IMPULSE_5 c6-7 a1-2 m- r低': 0.1261,
+    'IMPULSE_5 c6-7 a1-2 m+ r低': 0.1184,
+    'IMPULSE_5 c<6 a2+ m- r高': 0.1164,
+    'WAVE_2 c8+ a2+ m+ r低': 0.0815,
+    'IMPULSE_3 c8+ a1-2 m+ r高': 0.0197,
+    // 진입 금지 (음수)
+    'IMPULSE_5 c8+ a<1 m+ r低': -0.1084,  // 승률 17% - 목표가 과다
+    'IMPULSE_5 c6-7 a<1 m+ r低': -0.1309,
+    'WAVE_2 c<6 a1-2 m- r低': -0.4230,
+    'WAVE_2 c6-7 a1-2 m+ r低': -0.5771,
+    'WAVE_2 c6-7 a<1 m+ r低': -0.5961,
+    'WAVE_2 c<6 a<1 m- r低': -0.6578      // n=1090 승률 14% - 최악 조합
 };
-// 코인은 24/7 고변동이라 저타임프레임 파동이 쉽게 무너진다.
-ElliottWaveEngine.TF_WEIGHT = {
-    '1m': -18, '3m': -15, '5m': -12, '15m': -8, '30m': -5,
-    '1h': 0, '2h': 2, '4h': 5, '6h': 6, '8h': 6, '12h': 7, '1d': 8, '3d': 8, '1w': 8
-};
-// 각 TF의 상위 확인 대상. 자기보다 한참 위를 봐야 추세 역행이 드러난다.
-ElliottWaveEngine.MTF_PARENT = {
-    '1m': '1h', '3m': '1h', '5m': '1h', '15m': '4h', '30m': '4h',
-    '1h': '4h', '2h': '12h', '4h': '1d', '6h': '1d', '8h': '1d', '12h': '1d', '1d': '1w'
-};
+// 매매 허용 컷. 실측: 0.3R -> 58.5%/+0.66R, 0.5R -> 67.1%/+0.70R,
+// 0.8R -> 73.4%/+0.86R(신호 과소). 0.5R이 성능과 빈도의 균형점.
+ElliottWaveEngine.TRADE_CUT = 0.5;
+// 트레일링 폭. 청산 10종 비교에서 채택(고정TP +0.660R -> +0.843R).
+// 3배가 인샘플 1등이었으나 검증구간에서 2배가 역전했고 낙폭도 8R vs 13R로 낮았다.
+ElliottWaveEngine.ATR_MULT = 2;
 
-/**
- * 상위 타임프레임 파동 방향 조회 (v2 MTF 합의용).
- *
- * 동기 함수다. 캐시에 값이 있으면 그 방향(1/-1)을, 없으면 0(불명)을 즉시 돌려주고
- * 백그라운드로 캔들을 받아 캐시를 채운다. 파동 패널은 라이브 틱마다 다시 그려지므로
- * 다음 갱신에서 자연히 확정 등급이 반영된다. (렌더 경로를 async로 바꾸지 않기 위한 선택)
- */
-(function () {
-    if (typeof window === 'undefined' || typeof fetch !== 'function') return;  // node(테스트) 환경에서는 건너뛴다
-    const 캐시 = new Map();          // 'SYMBOL|tf' -> { dir, at }
-    const TTL = 5 * 60 * 1000;       // 상위 TF는 5분 안에 방향이 자주 바뀌지 않는다
-    const 진행중 = new Set();
-
-    async function 캔들받기(symbol, interval) {
-        const qs = `?symbol=${symbol}&interval=${interval}&limit=150`;
-        let res;
-        try {
-            res = await fetch(`https://fapi.binance.com/fapi/v1/klines${qs}`);
-            if (!res.ok) throw new Error('futures 실패');
-        } catch (e) {
-            res = await fetch(`https://api.binance.com/api/v3/klines${qs}`);
-            if (!res.ok) throw new Error('spot 실패');
-        }
-        const raw = await res.json();
-        return raw.map(c => ({
-            time: Math.floor(c[0] / 1000),
-            open: parseFloat(c[1]), high: parseFloat(c[2]),
-            low: parseFloat(c[3]), close: parseFloat(c[4]), volume: parseFloat(c[5])
-        }));
+/** ATR(14) — v4 최강 변수. 손절폭을 이 값으로 정규화한다. */
+ElliottWaveEngine.atr = function (candles, period) {
+    period = period || 14;
+    if (!candles || candles.length < period + 1) return 0;
+    let sum = 0;
+    for (let i = candles.length - period; i < candles.length; i++) {
+        const c = candles[i], p = candles[i - 1];
+        sum += Math.max(c.high - c.low, Math.abs(c.high - p.close), Math.abs(c.low - p.close));
     }
+    return sum / period;
+};
 
-    window.상위파동방향 = function (symbol, tf) {
-        const parent = ElliottWaveEngine.MTF_PARENT[tf];
-        if (!symbol || !parent) return 0;
-        const key = symbol + '|' + parent;
-        const hit = 캐시.get(key);
-        if (hit && Date.now() - hit.at < TTL) return hit.dir;
-
-        if (!진행중.has(key)) {
-            진행중.add(key);
-            캔들받기(symbol, parent).then(rows => {
-                if (!rows || rows.length < 30) return;
-                if (!window.파동엔진) window.파동엔진 = new ElliottWaveEngine();
-                // 상위 TF는 방향만 필요하므로 확증지표 없이 돌린다
-                const r = window.파동엔진.analyze(rows, {});
-                const dir = (typeof r.isBullish === 'boolean') ? (r.isBullish ? 1 : -1) : 0;
-                캐시.set(key, { dir, at: Date.now() });
-            }).catch(() => {}).finally(() => 진행중.delete(key));
-        }
-        return hit ? hit.dir : 0;   // 만료된 캐시라도 새 값이 올 때까진 직전 방향을 쓴다
-    };
-})();
+// v2의 상위 타임프레임(MTF) 합의 조회는 제거했다. 백테스트 8,778건에서
+// 일치 48.7% vs 역행 48.4%로 판별력이 없었고, v2는 역행에 -30점을 때려
+// 오히려 좋은 신호를 강등시키고 있었다. 관련 캐시·비동기 조회도 함께 사라진다.
 
 if (typeof module !== 'undefined') module.exports = ElliottWaveEngine;
 if (typeof window !== 'undefined') window.ElliottWaveEngine = ElliottWaveEngine;

@@ -6327,10 +6327,9 @@ function 엘리엇파동분석및업데이트(coin, ctx) {
     }
 
     if (!window.파동엔진) window.파동엔진 = new ElliottWaveEngine();
-    // v2 신뢰등급용 컨텍스트. 상위 타임프레임 방향은 비동기 조회라
-    // 캐시가 채워지기 전에는 0(불명)으로 매겨지고, 조회가 끝나면 다음 갱신에서 확정된다.
+    // v4 등급용 컨텍스트. 상위 TF 합의(v2 mtfDir)는 실측 판별력이 0이라 제거했다.
+    // 엔진이 ATR을 직접 계산하므로 여기서는 타임프레임만 넘긴다.
     ctx.interval = coin.시간단위;
-    ctx.mtfDir = (typeof window.상위파동방향 === "function") ? window.상위파동방향(coin.코인심볼, coin.시간단위) : 0;
     const result = window.파동엔진.analyze(coin.캔들데이터, ctx);
     const dp = coin.소수점;
     const fmt = v => Number(v).toLocaleString(undefined, { minimumFractionDigits: dp, maximumFractionDigits: dp });
@@ -6348,15 +6347,21 @@ function 엘리엇파동분석및업데이트(coin, ctx) {
 
     setText("wave-stage", result.stage);
 
-    // v2 신뢰등급. A/B만 매매 대상, C/D는 관망으로 강등한다.
-    const 등급 = result.grade || { grade: "D", score: 0, label: "미확정", ceiling: 45, tradable: false, reason: "" };
-    const 등급색 = 등급.grade === "A" ? "#39FF14" : 등급.grade === "B" ? "#ffd93d" : "#888";
+    // v4 신뢰등급. 실측 기대값(R)이 매매 가부를 정한다. 컷 미달은 관망으로 강등한다.
+    const 등급 = result.grade || { grade: "D", ev: null, cell: null, tradable: false, reason: "", warnings: [] };
+    const 등급색 = 등급.grade === "A" ? "#39FF14" : 등급.grade === "B" ? "#0ecb81"
+                 : 등급.grade === "C" ? "#ffd93d" : "#888";
+    const ev표기 = 등급.ev === null ? "판정 보류"
+                 : `실측 기대값 ${등급.ev >= 0 ? "+" : ""}${등급.ev.toFixed(2)}R`;
     setHTML("wave-confidence",
-        `<span style="color:${등급색}; font-weight:700;">${등급.grade}등급 ${등급.score}점</span>`
-        + `<span style="opacity:0.7; font-size:0.85em;"> / 상한 ${등급.ceiling} · 확증 ${result.confidence}/10</span>`
-        + `<div style="opacity:0.75; font-size:0.85em; margin-top:2px;">${등급.label}`
-        + `<span style="color:${등급.tradable ? "#39FF14" : "#888"}; font-weight:700;"> — ${등급.tradable ? "★ 매매가능" : "관망"}</span></div>`
-        + `<div style="opacity:0.6; font-size:0.8em;">${등급.reason || ""}</div>`);
+        `<span style="color:${등급색}; font-weight:700;">${등급.grade}등급 · ${ev표기}</span>`
+        + `<span style="color:${등급.tradable ? "#39FF14" : "#888"}; font-weight:700; font-size:0.85em;">`
+        + ` ${등급.tradable ? "★ 매매 가능" : "— 관망"}</span>`
+        // 조합키·ATR배수는 근거 추적용이라 작게 뒤로 뺀다.
+        + (등급.cell ? `<div style="opacity:0.6; font-size:0.8em; margin-top:2px;">${등급.cell}`
+            + ` · 손절폭 ATR ${등급.slAtr}배 · RSI보정 ${등급.rsiAdj} · 확증 ${result.confidence}/10</div>` : "")
+        + ((등급.warnings && 등급.warnings.length)
+            ? `<div style="color:#ffd93d; font-size:0.8em; margin-top:2px;">${등급.warnings.map(w => "⚠ " + w).join("<br>")}</div>` : ""));
 
     if (typeof result.isBullish === "boolean") {
         const 방향색 = result.isBullish ? "#39FF14" : "#ff4d4d";
@@ -6407,20 +6412,45 @@ function 엘리엇파동분석및업데이트(coin, ctx) {
         : "--");
 
     const sig = result.signal || {};
-    // C/D 등급은 카운팅 자체가 불안정하다. 진입가·목표가를 그대로 보여주면
-    // 저신뢰 파동으로 매매하게 되므로 관망으로 강등한다 (v2의 존재 이유).
+    // 기대값이 매매선 미달이면 진입가·목표가를 감춘다. 그대로 보여주면 저신뢰
+    // 파동으로 매매하게 되고, 실측상 그 구간 승률은 14~23%까지 떨어진다.
     if (!등급.tradable) {
+        const 사유 = 등급.ev === null ? "등급 판정 보류"
+                   : `기대값 ${등급.ev >= 0 ? "+" : ""}${등급.ev.toFixed(2)}R — 매매 기준선 +0.5R 미달`;
         setHTML("wave-entry", `<span style="color:#888; font-weight:700;">관망</span>`
-            + `<span style="opacity:0.7; font-size:0.85em;"> — ${등급.grade}등급(${등급.score}점) 신뢰도 미달</span>`);
-        setHTML("wave-tp", `<span style="opacity:0.6;">A/B 등급에서만 목표가 제시</span>`);
+            + `<span style="opacity:0.7; font-size:0.85em;"> — ${사유}</span>`);
+        setHTML("wave-tp", `<span style="opacity:0.6;">매매 가능 등급에서만 청산 계획 제시</span>`);
         setHTML("wave-sl", `<span style="opacity:0.6;">--</span>`);
     } else {
-        const 액션색 = sig.action === "LONG" ? "#39FF14" : sig.action === "SHORT" ? "#ff4d4d" : "#ffd93d";
-        const 액션명 = sig.action === "LONG" ? "롱" : sig.action === "SHORT" ? "숏" : "관망";
-        setHTML("wave-entry", `<span style="color:${액션색}; font-weight:700;">${액션명}</span> ${sig.entry ? "@ " + fmt(sig.entry) : ""}`);
-        setHTML("wave-tp", sig.tp1 || sig.tp2
-            ? `<span style="color:#39FF14; font-weight:700;">${fmt(sig.tp1)}</span> / <span style="color:#39FF14; font-weight:700;">${fmt(sig.tp2)}</span>`
-            : "--");
-        setHTML("wave-sl", sig.sl ? `<span style="color:#ff4d4d; font-weight:700;">${fmt(sig.sl)}</span>` : "--");
+        const 롱 = 등급.isLong;
+        const 액션색 = 롱 ? "#39FF14" : "#ff4d4d";
+        setHTML("wave-entry", `<span style="color:${액션색}; font-weight:700; font-size:1.05em;">`
+            + `${롱 ? "매수" : "매도(숏)"} ${fmt(등급.entry)}</span>`);
+        // 청산은 고정 목표가가 아니라 ATR 2배 트레일링이다. 백테스트에서 고정TP 대비
+        // 건당 +0.660R -> +0.843R로 개선됐다. 말로만 하면 운용이 안 되므로
+        // 각 지점 도달 시 손절이 어디로 오는지 가격으로 풀어준다.
+        if (등급.ladder && 등급.ladder.length) {
+            const 행 = 등급.ladder.map(st => {
+                const 이익 = st.lockedR > 0.05, 본전 = !이익 && st.lockedR >= -0.05;
+                const 색 = 이익 ? "#39FF14" : 본전 ? "#ffd93d" : "#888";
+                const 상태 = 이익 ? "이익 확정" : 본전 ? "본전" : "아직 손실";
+                return `<div style="display:flex; justify-content:space-between; gap:6px; padding:1px 0;">`
+                    + `<span style="opacity:0.85;">${fmt(st.price)} ${롱 ? "오면" : "가면"}</span>`
+                    + `<span>→ 손절 <b>${fmt(st.stop)}</b></span>`
+                    + `<span style="color:${색};">${상태} ${st.lockedR >= 0 ? "+" : ""}${st.lockedR}R</span></div>`;
+            }).join("");
+            const 본전지점 = 등급.ladder.find(x => x.lockedR >= 0);
+            setHTML("wave-tp", `<div style="opacity:0.7; font-size:0.85em; margin-bottom:2px;">`
+                + `${롱 ? "오르면" : "내려가면"} 손절을 따라 ${롱 ? "올린다" : "내린다"} (고정 목표가 없음)</div>`
+                + 행
+                + `<div style="color:#ffd93d; font-size:0.85em; margin-top:3px;">`
+                + (본전지점 ? `${fmt(본전지점.price)} ${롱 ? "넘기" : "밑으로 가기"} 전까진 손실 구간이다.`
+                            : `추적폭이 넓어 표 구간에서는 아직 본전에 못 온다.`)
+                + `</div>`);
+        } else {
+            setHTML("wave-tp", "--");
+        }
+        setHTML("wave-sl", `<span style="color:#ff4d4d; font-weight:700;">${fmt(등급.sl)}</span>`
+            + `<span style="opacity:0.7; font-size:0.85em;"> — 여기 깨지면 무조건 정리</span>`);
     }
 }
