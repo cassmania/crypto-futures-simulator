@@ -3606,8 +3606,12 @@ function AI추천분석및업데이트(symbol) {
         const liqLevel = coin.호가매수.length > 3 ? "A- (중견 규모)" : "BBB (보통)";
         const scalLevel = symbol.endsWith("USDT") ? "High (전용 선물 인프라 병렬 처리)" : "Medium";
         const instPref = rsiVal > 55 ? "상승 선호 유입" : "관망 상태";
-        const supportL = coin.현재가 * 0.982;
-        const resistanceL = coin.현재가 * 1.018;
+        // 현재가 ±1.8%는 매물대와 무관한 임의값이라 실제 캔들 극값을 폴백으로 쓴다.
+        // (정상 경로에서는 아래 실시간지지저항문구가 이 값을 덮어쓴다)
+        const 폴백고 = Math.max(...coin.캔들데이터.map(c => c.high));
+        const 폴백저 = Math.min(...coin.캔들데이터.map(c => c.low));
+        const supportL = 폴백저;
+        const resistanceL = 폴백고;
 
         pInfo = {
             개요: `${symbol.replace("USDT", "")} 프로젝트는 탈중앙화 생태계를 지향하는 실시간 스마트 통화 자산으로, ${estCap} 규모를 구성하고 있습니다.`,
@@ -3633,7 +3637,9 @@ function AI추천분석및업데이트(symbol) {
     document.getElementById("project-institutional").innerText = pInfo.기관선호도;
     document.getElementById("project-lockup").innerText = pInfo.락업이벤트;
     document.getElementById("project-news").innerText = pInfo.호재뉴스;
-    document.getElementById("project-levels").innerText = pInfo.지지저항;
+    // 지지·저항만은 DB 고정값 대신 실시간 매물대로 덮어쓴다. 계산이 실패할 때만 DB 값으로 되돌아간다.
+    const 실시간레벨 = 실시간지지저항문구(coin, coin.캔들데이터);
+    document.getElementById("project-levels").innerText = 실시간레벨 || pInfo.지지저항;
 
     // [NEW] 광고 아래 모니터링 섹션 값 업데이트 (데스크톱/모바일 일괄 갱신)
     const adCmeStatusElements = document.querySelectorAll(".ad-cme-gap-status");
@@ -5122,7 +5128,67 @@ function 계산VPVR매물대(candles, priceDecimal = 2) {
     return { poc, volProfile };
 }
 
+// VPVR 프로파일에서 POC / Value Area(거래량 70%) / 마지노선(전 구간 극값) 산출
+// 지지·저항은 매물이 두꺼운 가격대가 1차 근거다. 고정값을 쓰면 시세가 흐르면서 반드시 어긋난다.
+function 계산매물대구간(candles, bins = 40) {
+    if (!candles || candles.length < 10) return null;
+    const highest = Math.max(...candles.map(c => c.high));
+    const lowest = Math.min(...candles.map(c => c.low));
+    const range = highest - lowest;
+    if (range <= 0) return null;
+
+    const arr = Array.from({ length: bins }, (_, i) => ({ price: lowest + (i + 0.5) * range / bins, vol: 0 }));
+    candles.forEach(c => {
+        const tp = (c.high + c.low + c.close) / 3;
+        const idx = Math.min(bins - 1, Math.max(0, Math.floor((tp - lowest) / range * bins)));
+        arr[idx].vol += c.volume;
+    });
+
+    const total = arr.reduce((s, b) => s + b.vol, 0);
+    if (total <= 0) return null;
+
+    let pocIdx = 0;
+    arr.forEach((b, i) => { if (b.vol > arr[pocIdx].vol) pocIdx = i; });
+
+    // POC에서 양옆으로 넓혀가며 거래량 70% 채우기 → Value Area
+    let lo = pocIdx, hi = pocIdx, acc = arr[pocIdx].vol;
+    const target = total * 0.7;
+    while (acc < target && (lo > 0 || hi < arr.length - 1)) {
+        const dn = lo > 0 ? arr[lo - 1].vol : -1;
+        const up = hi < arr.length - 1 ? arr[hi + 1].vol : -1;
+        if (up >= dn) { hi++; acc += arr[hi].vol; } else { lo--; acc += arr[lo].vol; }
+    }
+
+    return {
+        poc: arr[pocIdx].price,
+        val: arr[lo].price,
+        vah: arr[hi].price,
+        마지노선: lowest,
+        구간최고: highest
+    };
+}
+
+// 실시간 캔들로 지지·저항 문구를 만든다. 현재가 기준으로 위/아래를 갈라 가까운 벽을 고른다.
+function 실시간지지저항문구(coin, candles) {
+    const z = 계산매물대구간(candles, 40);
+    if (!z) return null;
+    const 현재가 = coin.현재가;
+    const dec = coin.소수점 != null ? coin.소수점 : 2;
+    const fmt = v => v.toLocaleString(undefined, { minimumFractionDigits: dec, maximumFractionDigits: dec });
+
+    // 이탈한 지지는 저항으로, 돌파한 저항은 지지로 전환된다
+    const 후보 = [z.poc, z.val, z.vah, z.마지노선, z.구간최고];
+    const 위 = 후보.filter(p => p > 현재가).sort((a, b) => a - b);
+    const 아래 = 후보.filter(p => p <= 현재가).sort((a, b) => b - a);
+
+    const 저항 = 위.length ? fmt(위[0]) : "구간 최고 돌파 (저항 공백)";
+    const 지지 = 아래.length ? fmt(아래[0]) : "마지노선 이탈 (지지 공백)";
+    return `강력 지지선: ${지지} USDT | 강력 저항선: ${저항} USDT` +
+           ` (POC ${fmt(z.poc)} · 매물대 ${fmt(z.val)}~${fmt(z.vah)} · 마지노선 ${fmt(z.마지노선)})`;
+}
+
 // 주요 코인 기본적 분석 데이터베이스 (Project Fundamental DB)
+// 지지저항 항목은 시세가 흐르면 낡으므로 실시간 계산값으로 덮어쓴다. 서술형 항목만 유효하다.
 const 프로젝트데이터베이스 = {
     "BTCUSDT": {
         개요: "비트코인(Bitcoin)은 최초의 분산형 암호화폐로, 디지털 자산의 기축통화 지위를 공고히 하고 있습니다. 탈중앙화된 가치 저장소(SoV)로 작동합니다.",
