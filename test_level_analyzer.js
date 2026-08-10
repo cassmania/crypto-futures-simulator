@@ -166,7 +166,7 @@ console.log('\n[5] 다중 타임프레임 겹침 강도');
     const 최강 = [...r.resistance, ...r.support].filter(x => x.tfCount === 4);
     assert.ok(최강.length > 0, '동일 캔들 4봉이면 4중 겹침이 나와야 한다');
     assert.strictEqual(최강[0].strength.rank, 4);
-    assert.ok(최강[0].strength.label.includes('4중'), 최강[0].strength.label);
+    assert.ok(최강[0].strength.label.includes('4개 봉'), 최강[0].strength.label);
 });
 
 검증('겹침 수가 많을수록 점수가 높다', () => {
