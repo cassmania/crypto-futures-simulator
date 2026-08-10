@@ -1525,7 +1525,164 @@ function AI추천분석및업데이트(symbol) {
         vpvrPOC,
         ma: { ema20, sma60, sma200 }
     });
+
+    // 다중 타임프레임 지지·저항 (비동기 — 캔들 4봉을 따로 받아 겹침을 센다)
+    지지저항분석및업데이트(coin, symbol);
 }
+
+// 다중 타임프레임 지지·저항 패널 갱신 (coin-ta-brief 스킬 방법론)
+// 현재 차트 봉 하나로는 겹침을 못 센다. 1h/4h/12h/1d를 따로 받아 겹치는 레벨을 강한 벽으로 친다.
+const 레벨봉캐시 = { key: null, data: null, ts: 0, 진행중: false };
+
+async function 지지저항분석및업데이트(coin, symbol) {
+    const setText = (id, text) => {
+        const el = document.getElementById(id);
+        if (el) el.innerText = text;
+    };
+    const setHTML = (id, html) => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = html;
+    };
+
+    if (typeof LevelEngine === "undefined") {
+        setText("levels-summary", "지지·저항 엔진을 불러오지 못했습니다.");
+        return;
+    }
+
+    symbol = symbol || coin.코인심볼;
+    const 현재가 = coin.현재가;
+    if (!symbol || !(현재가 > 0)) return;
+
+    // 봉 데이터는 5분 캐시. 매 틱마다 4번씩 때리면 레이트리밋에 걸린다.
+    const 이제 = Date.now();
+    if (레벨봉캐시.key !== symbol || 이제 - 레벨봉캐시.ts > 300000) {
+        if (레벨봉캐시.진행중) return;          // 중복 요청 차단
+        레벨봉캐시.진행중 = true;
+        setText("levels-summary", "다중 타임프레임 캔들을 불러오는 중...");
+        try {
+            const 봉들 = ["1h", "4h", "12h", "1d"];
+            const 결과 = await Promise.all(봉들.map(iv => 레벨캔들가져오기(symbol, iv)));
+            const 묶음 = {};
+            봉들.forEach((iv, i) => { if (결과[i]) 묶음[iv] = 결과[i]; });
+            if (!Object.keys(묶음).length) {
+                setText("levels-summary", "캔들 데이터를 불러오지 못했습니다. 잠시 후 자동 재시도합니다.");
+                레벨봉캐시.진행중 = false;
+                return;
+            }
+            레벨봉캐시.key = symbol;
+            레벨봉캐시.data = 묶음;
+            레벨봉캐시.ts = 이제;
+        } catch (e) {
+            setText("levels-summary", "캔들 조회 실패: " + (e && e.message ? e.message : "네트워크 오류"));
+            레벨봉캐시.진행중 = false;
+            return;
+        }
+        레벨봉캐시.진행중 = false;
+    }
+
+    const r = LevelEngine.analyze(레벨봉캐시.data, 현재가, { limit: 6 });
+    if (r.error) {
+        setText("levels-summary", r.error);
+        ["levels-next-res", "levels-next-sup", "levels-floor", "levels-tfs"].forEach(id => setText(id, "--"));
+        setText("levels-resistance", "--");
+        setText("levels-support", "--");
+        setText("levels-scenario", "--");
+        return;
+    }
+
+    window.지지저항결과 = r;   // Gemini 프롬프트 등 타 모듈 참조용
+
+    const dp = coin.소수점 != null ? coin.소수점 : 2;
+    const fmt = v => Number(v).toLocaleString(undefined, { minimumFractionDigits: dp, maximumFractionDigits: dp });
+    const 색 = rank => rank >= 4 ? "#39FF14" : rank === 3 ? "#0ecb81" : rank === 2 ? "#ffd93d" : "#888";
+
+    const 봉표기 = r.사용봉.map(u => u.tf).join(" / ");
+    setHTML("levels-summary",
+        `현재가 <b>${fmt(현재가)}</b> 기준, <b>${봉표기}</b> ${r.사용봉.length}개 봉의 매물대·스윙·피보를 겹쳐 계산했습니다. `
+        + `겹치는 봉이 많을수록 두꺼운 벽입니다.`);
+
+    // 요약 박스
+    if (r.직상) {
+        setHTML("levels-next-res",
+            `<span style="color:#ff4d4d; font-weight:700;">${fmt(r.직상.price)}</span>`
+            + `<span style="opacity:0.7; font-size:0.8em;"> (+${r.직상.거리pct.toFixed(2)}%)</span>`);
+    } else setText("levels-next-res", "저항 공백");
+
+    if (r.직하) {
+        setHTML("levels-next-sup",
+            `<span style="color:#39FF14; font-weight:700;">${fmt(r.직하.price)}</span>`
+            + `<span style="opacity:0.7; font-size:0.8em;"> (${r.직하.거리pct.toFixed(2)}%)</span>`);
+    } else setText("levels-next-sup", "지지 공백");
+
+    if (r.마지노선) {
+        const 여유 = ((현재가 - r.마지노선.price) / 현재가) * 100;
+        setHTML("levels-floor",
+            `<span style="color:#ffd93d; font-weight:700;">${fmt(r.마지노선.price)}</span>`
+            + `<span style="opacity:0.7; font-size:0.8em;"> ${r.마지노선.tf} 최저 · ${여유.toFixed(1)}% 아래</span>`);
+    } else setText("levels-floor", "--");
+
+    setText("levels-tfs", r.사용봉.map(u => `${u.tf}(${u.bars})`).join(" "));
+
+    // 레벨 표. 강도 뱃지 + 근거 병기가 스킬 출력 형식이다.
+    const 행 = (x, 방향색) => `
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.06);">
+            <div style="flex:1; min-width:0;">
+                <div style="color:${방향색}; font-weight:700;">${fmt(x.price)}
+                    <span style="opacity:0.6; font-weight:400; font-size:0.85em;">(${x.거리pct >= 0 ? "+" : ""}${x.거리pct.toFixed(2)}%)</span>
+                </div>
+                <div style="opacity:0.7; font-size:0.78em; word-break:keep-all;">${x.reason}</div>
+            </div>
+            <span style="color:${색(x.strength.rank)}; font-size:0.75em; font-weight:700; white-space:nowrap;">${x.strength.label}</span>
+        </div>`;
+
+    setHTML("levels-resistance", r.resistance.length
+        ? r.resistance.map(x => 행(x, "#ff4d4d")).join("")
+        : `<div style="color:#ffd93d;">현재가가 전 구간 최고 위 — 저항 공백</div>`);
+
+    setHTML("levels-support", r.support.length
+        ? r.support.map(x => 행(x, "#39FF14")).join("")
+        : `<div style="color:#ffd93d;">현재가가 전 구간 최저 아래 — 지지 공백</div>`);
+
+    // 조건부 시나리오. 단정하지 않고 돌파/이탈 두 갈래만 제시한다.
+    const 시나리오 = [];
+    if (r.직상) {
+        const 다음 = r.resistance[1];
+        시나리오.push(`<div style="padding:3px 0;"><span style="color:#ff4d4d; font-weight:700;">▲ ${fmt(r.직상.price)} 돌파 + 유지</span>`
+            + (다음 ? ` → 다음 목표 ${fmt(다음.price)}` : ` → 위쪽 벽 소진, 천장 ${r.천장 ? fmt(r.천장.price) : "-"}까지 공백`) + `</div>`);
+    }
+    if (r.직하) {
+        const 다음 = r.support[1];
+        시나리오.push(`<div style="padding:3px 0;"><span style="color:#39FF14; font-weight:700;">▼ ${fmt(r.직하.price)} 이탈</span>`
+            + (다음 ? ` → 다음 지지 ${fmt(다음.price)}` : ` → 마지노선 ${r.마지노선 ? fmt(r.마지노선.price) : "-"}까지 공백`) + `</div>`);
+    }
+    if (r.마지노선) {
+        시나리오.push(`<div style="padding:3px 0; opacity:0.85;">마지노선 <b>${fmt(r.마지노선.price)}</b> 이탈 시 이 구간에 지지가 없습니다.</div>`);
+    }
+    const 경고HTML = r.경고.length
+        ? `<div style="color:#ffd93d; margin-top:6px; font-size:0.85em;">${r.경고.map(w => "⚠ " + w).join("<br>")}</div>` : "";
+    setHTML("levels-scenario", 시나리오.join("") + 경고HTML);
+}
+
+// 지지·저항 전용 캔들 조회. 선물 우선, 실패하면 현물로 폴백한다(기존 차트 로직과 동일 정책).
+async function 레벨캔들가져오기(symbol, interval) {
+    const 파싱 = raw => raw.map(k => ({
+        high: parseFloat(k[2]), low: parseFloat(k[3]),
+        close: parseFloat(k[4]), volume: parseFloat(k[5])
+    }));
+    try {
+        let res = await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=${interval}&limit=200`);
+        if (!res.ok) {
+            res = await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=200`);
+        }
+        if (!res.ok) return null;
+        const raw = await res.json();
+        if (!Array.isArray(raw) || raw.length < 20) return null;
+        return 파싱(raw);
+    } catch (e) {
+        return null;
+    }
+}
+
 
 // 엘리엇 파동 + 피보나치 패널 갱신
 function 엘리엇파동분석및업데이트(coin, ctx) {
