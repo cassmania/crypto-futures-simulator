@@ -1,7 +1,7 @@
 /* ----------------------------------------------------
    BINANCE REAL-TIME LIVE TRADING ENGINE (app.js)
-   본 스크립트는 브라우저 환경에서 CORS 차단이 없는 바이낸스(Binance) 실시간 API를
-   연동하여 실시간 시세 및 알트코인 차트를 100% 완벽히 로딩하고 분석하는 핵심 코어입니다.
+   본 스크립트는 브라우저 환경에서 바이낸스(Binance) 공개 API를 연동합니다.
+   네트워크 실패와 데이터 공백은 추정값으로 숨기지 않고 화면에 명시합니다.
    모든 변수(Variable)와 설명은 한국어로 상세히 서술하고 기술 용어는 영어를 병기하였습니다.
    ---------------------------------------------------- */
 
@@ -25,7 +25,8 @@ const 상태 = {
     기본코인: "BTCUSDT",       // 현재 활성화되어 차트에 그릴 코인 심볼 (Active Symbol)
     코인목록: {},              // 각 코인의 실시간 데이터 및 히스토리 관리용 딕셔너리
     CME갭캐시: {},             // 각 코인별 CME 갭 분석 결과 캐싱 (symbol: { 결과: '', 클래스: '', 갱신시간: 0 })
-    달러지수: { 가격: 104.50, 변동률: "0.00%" }, // 실시간 달러 인덱스 (DXY) 정보
+    파생데이터캐시: {},        // Binance Futures 펀딩비·OI·글로벌 롱숏 비율
+    달러지수: { 가격: null, 변동률: null, 출처: null, 갱신시간: 0 },
     
     // 즐겨찾기 및 카테고리 관리 (Favorites & Categories)
     즐겨찾기목록: ["BTCUSDT", "ETHUSDT"], // 즐겨찾기 코인 심볼 배열 (Favorites List)
@@ -68,6 +69,24 @@ const 상태 = {
         ]
     }
 };
+
+// 분석에는 실제 확정 봉만 사용합니다. 진행 중인 봉과 합성 폴백 봉은 제외합니다.
+function 확정봉만추출(candles) {
+    if (typeof MarketDataIntegrity === "undefined") return [];
+    return MarketDataIntegrity.closedCandles(candles, Date.now());
+}
+
+// 화면에 표시할 데이터 갱신 시각을 짧게 표기합니다.
+function 갱신시각표기(timestamp) {
+    if (!Number.isFinite(timestamp)) return "시각 미확인";
+    return new Date(timestamp).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+}
+
+// 큰 수를 읽기 쉬운 단위로 바꾸되 원래 단위는 함께 적습니다.
+function 축약숫자표기(value) {
+    if (!Number.isFinite(value)) return "--";
+    return new Intl.NumberFormat("ko-KR", { notation: "compact", maximumFractionDigits: 2 }).format(value);
+}
 
 // 코인 기초 규격 정보 (Coin Specifications)
 const 코인정의 = {
@@ -112,11 +131,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     // 3.5단계: 로컬 스토리지로부터 모의 매매 잔고, 대기 주문, 포지션 정보 복원
     모의매매상태복원();
 
-    // [보완] 최초 코인 실시간 실제 시세(Spot API) 로딩으로 가격 괴리 사전 차단
+    // 최초 코인 Binance Futures 실제 시세 로딩
     await 최초시세로딩();
 
     // 4단계: 바이낸스 REST API 기반 초기 과거 캔들 데이터 로딩
     await 최초과거데이터로드();
+
+    // 신호 계산 전용 1분 확정 봉 버퍼를 차트 시간봉과 분리해 준비합니다.
+    await Promise.all(Object.keys(상태.코인목록).map(신호용1분봉초기화));
 
     // 5단계: 바이낸스 WebSocket 실시간 채널 오픈 및 연결
     바이낸스웹소켓연결();
@@ -178,9 +200,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         }, 350);
     }
 
-    // 달러 인덱스 실시간 수집 및 주기적 갱신 가동
+    // 달러 인덱스는 무료 브라우저 원천의 갱신 주기가 느리므로 5분마다 확인합니다.
     실시간달러지수갱신();
-    setInterval(실시간달러지수갱신, 5000);
+    setInterval(실시간달러지수갱신, 5 * 60 * 1000);
 });
 
 // [퀀트 정밀도 보정 엔진 V3] 코인 실시간 가격에 따른 지능형 소수점 자동 조율 함수 (한글 주석 준수)
@@ -251,6 +273,9 @@ function 초기코인데이터정의() {
             최고24h: 코인정의[symbol].시작가 * 1.02,
             최저24h: 코인정의[symbol].시작가 * 0.97,
             캔들데이터: [],
+            신호캔들데이터: [],
+            시간단위: null,
+            데이터출처: "데이터 대기",
             호가매도: [], 
             호가매수: [], 
             소수점: 소수점,
@@ -276,6 +301,9 @@ function 초기코인데이터정의() {
                         최고24h: 10.20,
                         최저24h: 9.70,
                         캔들데이터: [],
+                        신호캔들데이터: [],
+                        시간단위: null,
+                        데이터출처: "데이터 대기",
                         호가매도: [],
                         호가매수: [],
                         소수점: symbol.startsWith("BTC") ? 2 : 3,
@@ -438,28 +466,38 @@ function 차트설정저장() {
     localStorage.setItem("선물시뮬레이터_차트시간설정", JSON.stringify(시간설정));
 }
 
-// [신규] 전체 등록 코인의 실시간 실제 시세 일괄 로딩 (CORS 친화적 Spot API 활용)
+// 현재 포커스한 차트의 시간봉을 해당 코인 분석 데이터로 명시적으로 동기화합니다.
+function 활성차트데이터를코인에동기화(chartIdx) {
+    const chartData = 상태.차트객체.분할차트들[chartIdx];
+    if (!chartData || !chartData.캔들데이터.length) return;
+    const coin = 상태.코인목록[chartData.코인심볼];
+    if (!coin) return;
+    상태.차트객체.활성인덱스 = chartIdx;
+    coin.캔들데이터 = [...chartData.캔들데이터];
+    coin.시간단위 = chartData.시간단위;
+    coin.데이터출처 = chartData.데이터출처 || "Binance Futures";
+}
+
+// 전체 등록 코인의 Binance Futures 시세 일괄 로딩
 async function 최초시세로딩() {
     try {
         console.log("[Binance API] 초기 전체 시세 동기화 시작...");
-        let res = await fetch("https://fapi.binance.com/fapi/v1/ticker/price");
-        if (!res.ok) {
-            res = await fetch("https://api.binance.com/api/v3/ticker/price");
-        }
+        const res = await fetch("https://fapi.binance.com/fapi/v1/ticker/24hr");
         if (res.ok) {
             const tickers = await res.json();
             const priceMap = {};
             tickers.forEach(t => {
-                priceMap[t.symbol] = parseFloat(t.price);
+                priceMap[t.symbol] = t;
             });
             Object.keys(상태.코인목록).forEach(symbol => {
                 if (priceMap[symbol]) {
-                    const price = priceMap[symbol];
+                    const ticker = priceMap[symbol];
+                    const price = parseFloat(ticker.lastPrice);
                     const coin = 상태.코인목록[symbol];
                     coin.현재가 = price;
-                    coin.어제종가 = price * 0.98;
-                    coin.최고24h = price * 1.02;
-                    coin.최저24h = price * 0.97;
+                    coin.어제종가 = parseFloat(ticker.prevClosePrice) || price;
+                    coin.최고24h = parseFloat(ticker.highPrice) || price;
+                    coin.최저24h = parseFloat(ticker.lowPrice) || price;
                     const { 소수점, 수량소수점 } = 자동소수점결정(price);
                     coin.소수점 = 소수점;
                     coin.수량소수점 = 수량소수점;
@@ -485,6 +523,9 @@ async function 전체분할차트데이터로드() {
     });
     
     await Promise.all(로드프로미스들);
+
+    const 초기활성인덱스 = 상태.차트객체.분할차트들.findIndex(c => c.코인심볼 === 상태.기본코인);
+    활성차트데이터를코인에동기화(초기활성인덱스 >= 0 ? 초기활성인덱스 : 0);
     
     // 로드 완료 후 렌더링
     분할차트들렌더링();
@@ -499,6 +540,7 @@ async function 탭전환시분할차트데이터로드(symbol) {
     if (targetChartIdx !== -1) {
         // 이미 해당 코인을 띄우고 있는 차트가 있다면, 그 차트로 포커스(활성차트) 인덱스 변경
         상태.차트객체.활성인덱스 = targetChartIdx;
+        활성차트데이터를코인에동기화(targetChartIdx);
         window.활성차트강조테두리(targetChartIdx);
         window.차트지지저항선드로잉(targetChartIdx);
     } else {
@@ -554,16 +596,13 @@ async function 분할차트캔들데이터로드(chartIdx) {
     const coin = 상태.코인목록[symbol];
     if (!coin) return;
 
+    // 사용자가 코인이나 시간봉을 빠르게 바꿀 때 이전 응답이 새 선택을 덮지 못하게 합니다.
+    const 요청번호 = (chartData.요청번호 || 0) + 1;
+    chartData.요청번호 = 요청번호;
+
     try {
-        let response;
-        try {
-            response = await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=${interval}&limit=150`);
-            if (!response.ok) throw new Error(`${interval} Futures API 호출 실패`);
-        } catch (fErr) {
-            console.log(`[CORS/Network Fallback] ${symbol} ${interval} 현물(Spot) API로 백업 캔들 로드 시도.`);
-            response = await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=150`);
-            if (!response.ok) throw new Error(`${interval} Spot API 백업 호출 실패`);
-        }
+        const response = await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=${interval}&limit=150`);
+        if (!response.ok) throw new Error(`${interval} Binance Futures 캔들 호출 실패 (${response.status})`);
 
         const rawData = await response.json();
         const formattedCandles = rawData.map(c => ({
@@ -572,18 +611,29 @@ async function 분할차트캔들데이터로드(chartIdx) {
             high: parseFloat(c[2]),
             low: parseFloat(c[3]),
             close: parseFloat(c[4]),
-            volume: parseFloat(c[5])
+            volume: parseFloat(c[5]),
+            closeTime: Number(c[6]),
+            isClosed: Number(c[6]) <= Date.now(),
+            interval,
+            source: "Binance Futures"
         }));
 
+        if (chartData.요청번호 !== 요청번호 || chartData.코인심볼 !== symbol || chartData.시간단위 !== interval) {
+            console.log(`[Stale Response Ignore] ${symbol} ${interval} 이전 요청 응답 폐기`);
+            return;
+        }
+
         chartData.캔들데이터 = formattedCandles;
+        chartData.데이터출처 = "Binance Futures";
         
         // 각 코인의 실시간 시뮬레이션용 데이터 버퍼도 항상 함께 완벽히 초기화하여 퀀트 분석 즉각 구동 보장
         if (formattedCandles.length > 0) {
             coin.현재가 = formattedCandles[formattedCandles.length - 1].close;
-            coin.어제종가 = formattedCandles[0].close;
-            coin.최고24h = Math.max(...formattedCandles.map(c => c.high));
-            coin.최저24h = Math.min(...formattedCandles.map(c => c.low));
             coin.캔들데이터 = [...formattedCandles];
+            coin.시간단위 = interval;
+            coin.데이터출처 = "Binance Futures";
+            coin.가상시세여부 = false;
+            if (interval === "1m") coin.신호캔들데이터 = [...formattedCandles];
             
             // [퀀트 정밀도 보정 엔진 V3] 과거 캔들 적재 및 실시간 시세 파악 즉시 지능형 소수점 자동 조율 연쇄 격발
             const { 소수점, 수량소수점 } = 자동소수점결정(coin.현재가);
@@ -593,8 +643,37 @@ async function 분할차트캔들데이터로드(chartIdx) {
 
         console.log(`[Binance Futures] Chart ${chartIdx+1} (${symbol} ${interval}) 과거 캔들 ${formattedCandles.length}개 적재 완료.`);
     } catch (err) {
-        console.warn(`[CORS/Network Alert] ${symbol} ${interval} 로드 실패. 가상 캔들 구성:`, err.message);
-        CORS분할폴백데이터빌드(symbol, chartIdx);
+        if (chartData.요청번호 !== 요청번호) return;
+        chartData.캔들데이터 = [];
+        chartData.데이터출처 = "데이터 없음";
+        coin.데이터출처 = "데이터 없음";
+        console.warn(`[Market Data Unavailable] ${symbol} ${interval}:`, err.message);
+    }
+}
+
+// 코인별 신호 엔진은 오직 Binance Futures 1분봉만 사용합니다.
+async function 신호용1분봉초기화(symbol) {
+    const coin = 상태.코인목록[symbol];
+    if (!coin) return;
+    try {
+        const response = await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=1m&limit=200`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const raw = await response.json();
+        coin.신호캔들데이터 = raw.map(c => ({
+            time: Math.floor(Number(c[0]) / 1000),
+            open: parseFloat(c[1]),
+            high: parseFloat(c[2]),
+            low: parseFloat(c[3]),
+            close: parseFloat(c[4]),
+            volume: parseFloat(c[5]),
+            closeTime: Number(c[6]),
+            isClosed: Number(c[6]) <= Date.now(),
+            interval: "1m",
+            source: "Binance Futures"
+        }));
+    } catch (error) {
+        coin.신호캔들데이터 = [];
+        console.warn(`[Signal Candle Unavailable] ${symbol} 1m:`, error.message);
     }
 }
 
@@ -830,7 +909,7 @@ function 실시간캔들메시지파싱(data) {
 
     coin.가상시세여부 = false; // 실제 웹소켓(WebSocket) 캔들 데이터 수신 시 가상 시세 플래그 강제 해제 (가상 시세 감지 락)
 
-    // 바이낸스 K라인 페이로드 규격: t: 시작시각(ms), o: 시가, h: 고가, l: 저가, c: 종가, v: 거래량
+    // 바이낸스 K라인 페이로드 규격: T는 종료시각, x는 봉 확정 여부입니다.
     const k = data.k;
     const candleTime = Math.floor(k.t / 1000);
     const 현재가 = parseFloat(k.c);
@@ -841,30 +920,18 @@ function 실시간캔들메시지파싱(data) {
         high: parseFloat(k.h),
         low: parseFloat(k.l),
         close: 현재가,
-        volume: parseFloat(k.v)
+        volume: parseFloat(k.v),
+        closeTime: Number(k.T),
+        isClosed: k.x === true,
+        interval: "1m",
+        source: "Binance Futures"
     };
 
     coin.현재가 = 현재가;
 
-    // 1. 실시간 1분봉 버퍼 누적 및 신호 가동 (분할 시간대와 별개로 1분봉으로 타점 분석 유지)
-    const candles = coin.캔들데이터;
-    if (candles.length === 0) {
-        candles.push(실시간캔들);
-    } else {
-        const lastCandle = candles[candles.length - 1];
-        
-        // 동일 시간대 분봉 캔들 실시간 데이터 갱신
-        if (candleTime === lastCandle.time) {
-            candles[candles.length - 1] = 실시간캔들;
-        } else if (candleTime > lastCandle.time) {
-            // 1분 지나서 새로운 캔들 영역 진입 시 추가 삽입
-            candles.push(실시간캔들);
-            if (candles.length > 500) candles.shift();
-
-            // 신규 1분봉 확정 시 기술 지표 신호 분석 가동
-            분석및신호생성(symbol);
-        }
-    }
+    // 1. 신호 전용 1분봉 버퍼만 갱신합니다. 1h/4h/1d 차트 배열에는 절대 섞지 않습니다.
+    coin.신호캔들데이터 = MarketDataIntegrity.upsertCandle(coin.신호캔들데이터, 실시간캔들, 500);
+    if (k.x === true) 분석및신호생성(symbol);
 
     // 24시간 최고/최저가 실시간 갱신
     if (현재가 > coin.최고24h) coin.최고24h = 현재가;
@@ -939,11 +1006,21 @@ function 실시간캔들메시지파싱(data) {
                 high: 현재가,
                 low: 현재가,
                 close: 현재가,
-                volume: 실시간캔들.volume
+                volume: 0,
+                closeTime: (targetT + 봉단위초) * 1000 - 1,
+                isClosed: false,
+                interval: c.시간단위,
+                source: "Binance Futures live preview",
+                synthetic: true
             };
             c.캔들데이터.push(신규분할캔들);
             if (c.캔들데이터.length > 500) c.캔들데이터.shift();
             c.캔들시리즈.update(신규분할캔들);
+
+            // 경계가 바뀌면 REST로 확정 OHLCV를 다시 받아 미리보기 봉을 교체합니다.
+            분할차트캔들데이터로드(idx).then(() => {
+                if (c.캔들시리즈 && c.캔들데이터.length) c.캔들시리즈.setData(c.캔들데이터);
+            });
             
             // 신규 K라인 완성 시점에 지지/저항선 및 AI 추천 타점 가격선 실시간 재드로잉
             window.차트지지저항선드로잉(idx);
@@ -1167,12 +1244,15 @@ function 계산MACD(data, shortPeriod, longPeriod, signalPeriod) {
 // 9. 매매 타이밍 신호 발생 분석기 (Technical Indicator Signal Analyzer)
 function 분석및신호생성(symbol) {
     const coin = 상태.코인목록[symbol];
-    if (!coin || coin.캔들데이터.length < 30) return;
+    if (!coin) return;
 
-    const closes = coin.캔들데이터.map(c => c.close);
-    const highs = coin.캔들데이터.map(c => c.high);
-    const lows = coin.캔들데이터.map(c => c.low);
-    const times = coin.캔들데이터.map(c => c.time);
+    const 분석캔들 = 확정봉만추출(coin.신호캔들데이터);
+    if (분석캔들.length < 30) return;
+
+    const closes = 분석캔들.map(c => c.close);
+    const highs = 분석캔들.map(c => c.high);
+    const lows = 분석캔들.map(c => c.low);
+    const times = 분석캔들.map(c => c.time);
     const idx = closes.length - 1;
 
     // 1. 실시간 다중 지표 정밀 연산부 도입 (Advanced Multi-Indicator Calculations)
@@ -1204,7 +1284,7 @@ function 분석및신호생성(symbol) {
     const 최고24h = Math.max(...highs.slice(Math.max(0, idx - 100), idx + 1));
     const 최저24h = Math.min(...lows.slice(Math.max(0, idx - 100), idx + 1));
     const fiboLevels = 계산피보나치되돌림(최고24h, 최저24h);
-    const vpvrData = 계산VPVR매물대(coin.캔들데이터, coin.소수점);
+    const vpvrData = 계산VPVR매물대(분석캔들, coin.소수점);
     const vpvrPOC = vpvrData.poc || coin.현재가;
 
     // 2. 다각적 연립 필터링 3단계 검증 시스템 구축 (3-Step Confluence System)
@@ -1355,7 +1435,7 @@ function 분석및신호생성(symbol) {
 // AI 자동 매매 실제 포지션 진입 및 안전 마진/수량 연산 처리 엔진
 function AI자동매매실행(symbol, 방향) {
     const coin = 상태.코인목록[symbol];
-    if (!coin || coin.캔들데이터.length < 30) return;
+    if (!coin) return;
 
     // 1. 중복 포지션(Duplicate Position) 진입 방지 설정에 따른 조건부 가드(Guard) 적용
     if (상태.자동매매설정.중복방지) {
@@ -1389,9 +1469,14 @@ function AI자동매매실행(symbol, 방향) {
     let 익절가 = 0;
     let 손절가 = 0;
 
-    const closes = coin.캔들데이터.map(c => c.close);
-    const highs = coin.캔들데이터.map(c => c.high);
-    const lows = coin.캔들데이터.map(c => c.low);
+    const 분석캔들 = 확정봉만추출(coin.캔들데이터);
+    if (분석캔들.length < 20) {
+        새신호알림(symbol, "[자동매매 보류] 확정 봉이 20개 미만이어서 TP/SL을 안전하게 계산할 수 없습니다.", "neutral");
+        return;
+    }
+    const closes = 분석캔들.map(c => c.close);
+    const highs = 분석캔들.map(c => c.high);
+    const lows = 분석캔들.map(c => c.low);
     const idx = closes.length - 1;
     const 최고가 = Math.max(...highs.slice(Math.max(0, idx - 100), idx + 1));
     const 최저가 = Math.min(...lows.slice(Math.max(0, idx - 100), idx + 1));
@@ -1401,11 +1486,9 @@ function AI자동매매실행(symbol, 방향) {
     const bbLower = bbData.lower[idx] || coin.현재가 * 0.98;
     const rsiVal = 계산RSI(closes, 14)[idx] || 50;
 
-    // 호가 비율 연산 및 실시간 펀딩비 / 미결제약정 변화 추론 모델
-    const 호가비율 = coin.호가매수.length > 0 && coin.호가매도.length > 0 ? 
-        parseFloat(coin.호가매수[0][1]) / (parseFloat(coin.호가매수[0][1]) + parseFloat(coin.호가매도[0][1])) : 0.5;
-    const 실시간펀딩비 = (rsiVal - 50) * 0.0004 + (호가비율 - 0.5) * 0.01 + 0.01;
-    const oiChange = (Math.abs(coin.현재가 - coin.어제종가) / coin.어제종가) * 350 + (호가비율 - 0.5) * 20;
+    // 펀딩비는 Binance Futures 실제 응답이 있을 때만 위험 보정에 사용합니다.
+    const 파생데이터 = 상태.파생데이터캐시[symbol]?.data;
+    const 실시간펀딩비 = Number.isFinite(파생데이터?.fundingRatePct) ? 파생데이터.fundingRatePct : null;
 
     // A. 익절 타점(Take-Profit Price) 산출
     if (상태.자동매매설정.익절옵션 === "manual") {
@@ -1427,10 +1510,10 @@ function AI자동매매실행(symbol, 방향) {
         // [안전 장치 1] 펀딩비(Funding Rate) 오버헤드 과열에 따른 익절가(TP) 목표 조기 단축 (10% 타겟 리듀스)
         // 롱 포지션 진입 시 펀딩비가 극도로 양수(0.015% 이상)이거나, 숏 진입 시 극도로 음수(-0.015% 이하)인 경우 보유 수수료(Funding Fee) 오버헤드를 막기 위해 익절 폭을 10% 좁혀 빠르게 털고 나옵니다.
         let tpGap = Math.abs(익절가 - coin.현재가);
-        if (방향 === "LONG" && 실시간펀딩비 >= 0.015) {
+        if (방향 === "LONG" && Number.isFinite(실시간펀딩비) && 실시간펀딩비 >= 0.015) {
             tpGap *= 0.90; // 익절 폭 10% 좁힘 (롱 과열 방어)
             익절가 = coin.현재가 + tpGap;
-        } else if (방향 === "SHORT" && 실시간펀딩비 <= -0.015) {
+        } else if (방향 === "SHORT" && Number.isFinite(실시간펀딩비) && 실시간펀딩비 <= -0.015) {
             tpGap *= 0.90; // 익절 폭 10% 좁힘 (숏 과열 방어)
             익절가 = coin.현재가 - tpGap;
         }
@@ -1455,18 +1538,7 @@ function AI자동매매실행(symbol, 방향) {
             손절가 = Math.max(추천진입가 * 1.008, fiboLevels["11.4%"] * 1.002);
         }
 
-        // [안전 장치 2] 미결제약정(OI) 가속 변화에 따른 손절가(SL) 변동성 스프레드 동적 1.2배 스케일링 확장
-        // 미결제약정 변화율이 급격히 증가(5% 이상 상승)한 경우 변동성이 극도로 커져 스탑헌팅(Stop-Hunting) 꼬리 털기에 당할 확률이 높으므로,
-        // 손절가를 기존 대비 1.2배 동적으로 넓혀주어 안전하게 포지션을 보호합니다.
-        if (oiChange >= 5.0) {
-            let slGap = Math.abs(손절가 - coin.현재가);
-            slGap *= 1.20; // 손절 마진 20% 동적 확보
-            if (방향 === "LONG") {
-                손절가 = coin.현재가 - slGap;
-            } else {
-                손절가 = coin.현재가 + slGap;
-            }
-        }
+        // 공개 단일 OI 스냅샷만으로 변화율을 만들 수 없으므로 OI 기반 손절폭 추정은 적용하지 않습니다.
     }
 
     익절가 = parseFloat(익절가.toFixed(coin.소수점));
@@ -1482,9 +1554,9 @@ function AI자동매매실행(symbol, 방향) {
     };
 
     const 익절안내타입 = 상태.자동매매설정.익절옵션 === "manual" ? `수동 ${상태.자동매매설정.수동익절율}%` : 
-        ((방향 === "LONG" && 실시간펀딩비 >= 0.015) || (방향 === "SHORT" && 실시간펀딩비 <= -0.015) ? "AI 조기익절 가드" : "AI 정밀");
+        ((방향 === "LONG" && Number.isFinite(실시간펀딩비) && 실시간펀딩비 >= 0.015) || (방향 === "SHORT" && Number.isFinite(실시간펀딩비) && 실시간펀딩비 <= -0.015) ? "실제 펀딩비 조기익절 가드" : "기술 지표 기준");
     const 손절안내타입 = 상태.자동매매설정.손절옵션 === "manual" ? `수동 ${상태.자동매매설정.수동손절율}%` : 
-        (oiChange >= 5.0 ? "AI OI스프레드확장 가드" : "AI 가드");
+        "기술 지표 기준";
 
     새신호알림(symbol, `[🤖 AI 자동매매 작동] ${방향} 매매 신호가 감지되어 가용자산의 ${진입비율}% (레버리지 ${leverage}x, 수량 ${qty})로 시장가 자동 포지션 진입합니다. (익절 TP: ${익절가} (${익절안내타입}) | 손절 SL: ${손절가} (${손절안내타입}))`, 방향 === "LONG" ? "long" : "short");
     
@@ -2147,6 +2219,9 @@ window.검색코인강제등록액션 = async function(symbol) {
         최고24h: 10.20,
         최저24h: 9.70,
         캔들데이터: [],
+        신호캔들데이터: [],
+        시간단위: null,
+        데이터출처: "데이터 대기",
         호가매도: [],
         호가매수: [],
         소수점: 3,
@@ -3286,6 +3361,104 @@ function 시장상태판정({ 현재가, ema20, sma60, bbUpper, bbLower, bbBasis
     };
 }
 
+// Binance Futures 공개 API에서 검증 가능한 파생상품 지표만 수집합니다.
+async function 파생시장데이터갱신(symbol) {
+    const 기존 = 상태.파생데이터캐시[symbol];
+    const now = Date.now();
+    if (기존?.data && now - 기존.ts < 60_000) {
+        파생시장데이터렌더링(symbol);
+        return 기존.data;
+    }
+    if (기존?.promise) return 기존.promise;
+
+    const json요청 = async url => {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.json();
+    };
+
+    const promise = Promise.allSettled([
+        json요청(`https://fapi.binance.com/fapi/v1/premiumIndex?symbol=${symbol}`),
+        json요청(`https://fapi.binance.com/fapi/v1/openInterest?symbol=${symbol}`),
+        json요청(`https://fapi.binance.com/futures/data/globalLongShortAccountRatio?symbol=${symbol}&period=5m&limit=2`)
+    ]).then(results => {
+        const premium = results[0].status === "fulfilled" ? results[0].value : null;
+        const openInterest = results[1].status === "fulfilled" ? results[1].value : null;
+        const ratios = results[2].status === "fulfilled" && Array.isArray(results[2].value) ? results[2].value : [];
+        const latestRatio = ratios[ratios.length - 1] || null;
+        const coin = 상태.코인목록[symbol];
+        const oiAmount = parseFloat(openInterest?.openInterest);
+        const fundingRate = parseFloat(premium?.lastFundingRate);
+        const longAccount = parseFloat(latestRatio?.longAccount);
+        const shortAccount = parseFloat(latestRatio?.shortAccount);
+
+        const data = {
+            source: "Binance Futures",
+            updatedAt: Number(latestRatio?.timestamp) || Number(premium?.time) || now,
+            fundingRatePct: Number.isFinite(fundingRate) ? fundingRate * 100 : null,
+            openInterest: Number.isFinite(oiAmount) ? oiAmount : null,
+            openInterestNotional: Number.isFinite(oiAmount) && Number.isFinite(coin?.현재가) ? oiAmount * coin.현재가 : null,
+            longAccountPct: Number.isFinite(longAccount) ? longAccount * 100 : null,
+            shortAccountPct: Number.isFinite(shortAccount) ? shortAccount * 100 : null
+        };
+        상태.파생데이터캐시[symbol] = { data, ts: now, promise: null };
+        if (symbol === 상태.기본코인) 파생시장데이터렌더링(symbol);
+        return data;
+    }).catch(error => {
+        상태.파생데이터캐시[symbol] = { data: null, ts: now, promise: null, error: error.message };
+        if (symbol === 상태.기본코인) 파생시장데이터렌더링(symbol);
+        return null;
+    });
+
+    상태.파생데이터캐시[symbol] = { data: 기존?.data || null, ts: 기존?.ts || 0, promise };
+    return promise;
+}
+
+function 파생시장데이터렌더링(symbol) {
+    if (symbol !== 상태.기본코인) return;
+    const data = 상태.파생데이터캐시[symbol]?.data;
+    const setUnavailable = (id, text) => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.innerText = text;
+            el.className = "metric-val text-neutral";
+        }
+    };
+
+    const fundingEl = document.getElementById("metric-funding-rate");
+    if (fundingEl) {
+        if (Number.isFinite(data?.fundingRatePct)) {
+            fundingEl.innerText = `${data.fundingRatePct >= 0 ? "+" : ""}${data.fundingRatePct.toFixed(4)}% · ${갱신시각표기(data.updatedAt)}`;
+            fundingEl.className = "metric-val " + (data.fundingRatePct >= 0.015 ? "text-red" : (data.fundingRatePct < 0 ? "text-green" : "text-neutral"));
+        } else setUnavailable("metric-funding-rate", "데이터 없음 (Binance Futures 조회 실패)");
+    }
+
+    const oiEl = document.getElementById("metric-oi");
+    if (oiEl) {
+        if (Number.isFinite(data?.openInterest)) {
+            oiEl.innerText = `${축약숫자표기(data.openInterest)} ${symbol.replace("USDT", "")} · 약 ${축약숫자표기(data.openInterestNotional)} USDT`;
+            oiEl.className = "metric-val text-neutral";
+        } else setUnavailable("metric-oi", "데이터 없음 (Binance Futures 조회 실패)");
+    }
+
+    setUnavailable("metric-mvrv-sopr", "데이터 없음 (온체인 API 미연동)");
+    setUnavailable("metric-whale-flow", "데이터 없음 (고래 지갑 원천 미연동)");
+    setUnavailable("metric-liq-map", "데이터 없음 (공개 청산맵 원천 미연동)");
+
+    document.querySelectorAll(".ad-long-short-flow").forEach(el => {
+        const ratioText = Number.isFinite(data?.longAccountPct) && Number.isFinite(data?.shortAccountPct)
+            ? `<span>롱 계정 <strong class="text-green">${data.longAccountPct.toFixed(1)}%</strong> vs 숏 계정 <strong class="text-red">${data.shortAccountPct.toFixed(1)}%</strong></span>`
+            : `<span class="text-neutral">롱·숏 계정 비율 데이터 없음</span>`;
+        el.innerHTML = `
+            <div style="display:flex; justify-content:space-between; margin-bottom:4px; font-size:11px; gap:8px;">
+                <span>Binance 5분 글로벌 비율</span>${ratioText}
+            </div>
+            <div style="border-top:1px dashed rgba(0,0,0,0.08); padding-top:4px; font-size:10px; color:var(--color-text-muted);">
+                청산맵·고래 유입: 데이터 없음 · ${data ? 갱신시각표기(data.updatedAt) : "조회 실패"}
+            </div>`;
+    });
+}
+
 // AI 실시간 지표 분석 및 추천 타점 업데이트 함수 (초정밀 퀀트 V2 & 다요소 스코어 엔진)
 function AI추천분석및업데이트(symbol) {
     const coin = 상태.코인목록[symbol];
@@ -3296,51 +3469,30 @@ function AI추천분석및업데이트(symbol) {
         elQuantTarget.innerText = `(${symbol})`;
     }
 
-    const closes = coin.캔들데이터.map(c => c.close);
-    const highs = coin.캔들데이터.map(c => c.high);
-    const lows = coin.캔들데이터.map(c => c.low);
+    파생시장데이터갱신(symbol);
+
+    const 분석캔들 = 확정봉만추출(coin.캔들데이터);
+    const closes = 분석캔들.map(c => c.close);
+    const highs = 분석캔들.map(c => c.high);
+    const lows = 분석캔들.map(c => c.low);
     const idx = closes.length - 1;
 
-    // [데이터 과소 상태 가드] 캔들 개수가 15봉 미만일 때의 기본 타점 초기화 규칙 (한국어 주석 준수)
+    // 확정 봉이 부족하면 임의 퍼센트로 지지·저항을 만들지 않습니다.
     if (closes.length < 15) {
-        const resistance1 = parseFloat((coin.현재가 * 1.015).toFixed(coin.소수점));
-        const resistance2 = parseFloat((coin.현재가 * 1.030).toFixed(coin.소수점));
-        const resistance3 = parseFloat((coin.현재가 * 1.050).toFixed(coin.소수점));
-    
-        const support1 = parseFloat((coin.현재가 * 0.985).toFixed(coin.소수점));
-        const support2 = parseFloat((coin.현재가 * 0.970).toFixed(coin.소수점));
-        const support3 = parseFloat((coin.현재가 * 0.950).toFixed(coin.소수점));
-    
         AI추천캐시.방향 = "NEUTRAL";
-        AI추천캐시.저항선 = resistance1;
-        AI추천캐시.지지선 = support1;
-        AI추천캐시.저항선1 = resistance1;
-        AI추천캐시.저항선2 = resistance2;
-        AI추천캐시.저항선3 = resistance3;
-        AI추천캐시.지지선1 = support1;
-        AI추천캐시.지지선2 = support2;
-        AI추천캐시.지지선3 = support3;
+        AI추천캐시.저항선 = null;
+        AI추천캐시.지지선 = null;
+        AI추천캐시.저항선1 = null;
+        AI추천캐시.저항선2 = null;
+        AI추천캐시.저항선3 = null;
+        AI추천캐시.지지선1 = null;
+        AI추천캐시.지지선2 = null;
+        AI추천캐시.지지선3 = null;
     
         const resistanceEl = document.getElementById("rec-resistance");
         const supportEl = document.getElementById("rec-support");
-        if (resistanceEl) {
-            resistanceEl.innerHTML = `
-                <span style="color: #ff6b8b; font-size: 11px; font-weight:600;">1차: ${resistance1.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}</span>
-                <span style="color: #f6465d; font-size: 11px; font-weight:600; margin-left: 6px;">2차: ${resistance2.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}</span>
-                <span style="color: #b3001e; font-size: 11px; font-weight:800; margin-left: 6px;">★3차: ${resistance3.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}</span>
-            `;
-            resistanceEl.style.display = "flex";
-            resistanceEl.style.flexWrap = "wrap";
-        }
-        if (supportEl) {
-            supportEl.innerHTML = `
-                <span style="color: #5cd6ff; font-size: 11px; font-weight:600;">1차: ${support1.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}</span>
-                <span style="color: #0066ff; font-size: 11px; font-weight:600; margin-left: 6px;">2차: ${support2.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}</span>
-                <span style="color: #001a80; font-size: 11px; font-weight:800; margin-left: 6px;">★3차: ${support3.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}</span>
-            `;
-            supportEl.style.display = "flex";
-            supportEl.style.flexWrap = "wrap";
-        }
+        if (resistanceEl) resistanceEl.innerText = "데이터 없음 (확정 봉 부족)";
+        if (supportEl) supportEl.innerText = "데이터 없음 (확정 봉 부족)";
 
         // 신뢰 지표 기본값 바인딩
         const resAccEl = document.getElementById("res-accuracy");
@@ -3348,10 +3500,10 @@ function AI추천분석및업데이트(symbol) {
         const supAccEl = document.getElementById("sup-accuracy");
         const supConfEl = document.getElementById("sup-confidence");
 
-        if (resAccEl) resAccEl.innerText = "80.0% (수렴 진행)";
-        if (resConfEl) resConfEl.innerText = "80.0% (데이터 부족)";
-        if (supAccEl) supAccEl.innerText = "80.0% (수렴 진행)";
-        if (supConfEl) supConfEl.innerText = "80.0% (데이터 부족)";
+        if (resAccEl) resAccEl.innerText = "산출 불가 (확정 봉 부족)";
+        if (resConfEl) resConfEl.innerText = "산출 불가";
+        if (supAccEl) supAccEl.innerText = "산출 불가 (확정 봉 부족)";
+        if (supConfEl) supConfEl.innerText = "산출 불가";
 
         const marketRegimeLabel = document.getElementById("market-regime-label");
         const signalConfidenceLabel = document.getElementById("signal-confidence-label");
@@ -3381,7 +3533,7 @@ function AI추천분석및업데이트(symbol) {
     const stochData = 계산스토캐스틱(highs, lows, closes, 14, 3, 3);
     const stochK = stochData.k[idx] || 50;
     const stochD = stochData.d[idx] || 50;
-    const vwapVal = 계산VWAP(coin.캔들데이터)[idx] || coin.현재가;
+    const vwapVal = 계산VWAP(분석캔들)[idx] || coin.현재가;
     const bbData = 계산볼린저밴드(closes, 20, 2);
     const bbUpper = bbData.upper[idx] || coin.현재가 * 1.02;
     const bbLower = bbData.lower[idx] || coin.현재가 * 0.98;
@@ -3390,7 +3542,7 @@ function AI추천분석및업데이트(symbol) {
     const 최고24h = Math.max(...highs.slice(Math.max(0, idx - 100), idx + 1)); // 100캔들 기준 정밀 추적
     const 최저24h = Math.min(...lows.slice(Math.max(0, idx - 100), idx + 1));
     const fiboLevels = 계산피보나치되돌림(최고24h, 최저24h);
-    const vpvrData = 계산VPVR매물대(coin.캔들데이터, coin.소수점);
+    const vpvrData = 계산VPVR매물대(분석캔들, coin.소수점);
     const vpvrPOC = vpvrData.poc || coin.현재가;
 
     // [퀀트 보증 가드] 피보나치 되돌림(Fibonacci Retracement) 구간과 볼린저 밴드(Bollinger Bands) 하단/상단 수렴 지능형 보정 (한국어 주석 준수)
@@ -3514,49 +3666,8 @@ function AI추천분석및업데이트(symbol) {
         elRSISuper.innerHTML = `RSI: ${rsiVal.toFixed(1)}% | 슈퍼: <span class="${슈퍼트렌드클래스}" style="font-weight:700;">${슈퍼트렌드텍스트}</span>`;
     }
 
-    // 3. 온체인 & 선물 지표 DOM 연동 바인딩 (Tab 2)
-    // 펀딩비 (Derivatives Funding Rate) : 실시간 RSI 및 매수/매도 호가 비율 연동식 계산
-    const 호가비율 = coin.호가매수.length > 0 && coin.호가매도.length > 0 ? 
-        parseFloat(coin.호가매수[0][1]) / (parseFloat(coin.호가매수[0][1]) + parseFloat(coin.호가매도[0][1])) : 0.5;
-    const 펀딩비 = (rsiVal - 50) * 0.0004 + (호가비율 - 0.5) * 0.01 + 0.01; 
-    const elFunding = document.getElementById("metric-funding-rate");
-    if (elFunding) {
-        elFunding.innerText = (펀딩비 >= 0 ? "+" : "") + 펀딩비.toFixed(4) + "%";
-        elFunding.className = "metric-val " + (펀딩비 >= 0.015 ? "text-red" : (펀딩비 < 0 ? "text-green" : "text-neutral"));
-    }
-
-    // 미결제약정 (Open Interest) : 실제 24시간 변동률과 거래량 가중 연동
-    const oiChange = (Math.abs(coin.현재가 - coin.어제종가) / coin.어제종가) * 350 + (호가비율 - 0.5) * 20;
-    const elOI = document.getElementById("metric-oi");
-    if (elOI) {
-        elOI.innerText = `${(oiChange >= 0 ? "+" : "") + oiChange.toFixed(2)}% (신규 거래량 급증)`;
-        elOI.className = "metric-val " + (oiChange > 5 ? "text-green" : (oiChange < -5 ? "text-red" : "text-neutral"));
-    }
-
-    // 청산 맵 (Derivatives Liquidation Map) : 롱/숏 세력 청산 집중도
-    const liqLongRatio = Math.max(20, Math.min(80, Math.floor(52 + (rsiVal - 50) * 0.8 + (호가비율 - 0.5) * 15)));
-    const liqShortRatio = 100 - liqLongRatio;
-    const elLiq = document.getElementById("metric-liq-map");
-    if (elLiq) {
-        elLiq.innerHTML = `<span class="text-green">롱 풀 ${liqLongRatio}%</span> vs <span class="text-red">숏 풀 ${liqShortRatio}%</span>`;
-    }
-
-    // MVRV & SOPR 온체인 지표 추론
-    const mvrv = 1.2 + (coin.현재가 / sma200 - 1) * 2;
-    const sopr = 1.0 + (rsiVal - 50) * 0.002 + (호가비율 - 0.5) * 0.05;
-    const elMVRVSOPR = document.getElementById("metric-mvrv-sopr");
-    if (elMVRVSOPR) {
-        elMVRVSOPR.innerText = `MVRV: ${mvrv.toFixed(2)} (${mvrv > 2.0 ? '저항 과열' : '매집 매력'}) | SOPR: ${sopr.toFixed(3)}`;
-        elMVRVSOPR.className = "metric-val " + (sopr >= 1.0 ? "text-green" : "text-red");
-    }
-
-    // 고래 지갑 순유입량 (Whale Flows)
-    const whaleRatio = Math.max(-95, Math.min(95, Math.floor((coin.호가매수.length - coin.호가매도.length) * 15 + (rsiVal - 50) * 2 + (호가비율 - 0.5) * 80)));
-    const elWhale = document.getElementById("metric-whale-flow");
-    if (elWhale) {
-        elWhale.innerText = `${(whaleRatio >= 0 ? "+" : "") + whaleRatio}% (고래 ${whaleRatio >= 0 ? '순유입 매집' : '순유출 이탈'})`;
-        elWhale.className = "metric-val " + (whaleRatio >= 0 ? "text-green" : "text-red");
-    }
+    // 3. 온체인 & 선물 지표: 검증 가능한 Binance 값만 표시합니다.
+    파생시장데이터렌더링(symbol);
 
     // VPVR 가장 많이 거래된 POC 구간
     const elVPVR = document.getElementById("metric-vpvr");
@@ -3602,24 +3713,21 @@ function AI추천분석및업데이트(symbol) {
     let pInfo = 프로젝트데이터베이스[symbol];
     if (!pInfo) {
         // 동적 분석 생성 엔진 가동
-        const estCap = symbol.startsWith("BTC") ? "1.4조 달러" : (symbol.startsWith("ETH") ? "3,800억 달러" : "추정 시가총액 중위권");
         const liqLevel = coin.호가매수.length > 3 ? "A- (중견 규모)" : "BBB (보통)";
-        const scalLevel = symbol.endsWith("USDT") ? "High (전용 선물 인프라 병렬 처리)" : "Medium";
-        const instPref = rsiVal > 55 ? "상승 선호 유입" : "관망 상태";
         // 현재가 ±1.8%는 매물대와 무관한 임의값이라 실제 캔들 극값을 폴백으로 쓴다.
         // (정상 경로에서는 아래 실시간지지저항문구가 이 값을 덮어쓴다)
-        const 폴백고 = Math.max(...coin.캔들데이터.map(c => c.high));
-        const 폴백저 = Math.min(...coin.캔들데이터.map(c => c.low));
+        const 폴백고 = Math.max(...분석캔들.map(c => c.high));
+        const 폴백저 = Math.min(...분석캔들.map(c => c.low));
         const supportL = 폴백저;
         const resistanceL = 폴백고;
 
         pInfo = {
-            개요: `${symbol.replace("USDT", "")} 프로젝트는 탈중앙화 생태계를 지향하는 실시간 스마트 통화 자산으로, ${estCap} 규모를 구성하고 있습니다.`,
-            유동성: liqLevel,
-            확장성: scalLevel,
-            기관선호도: instPref,
-            락업이벤트: "정기 오버행 해제 순항 중 및 유통량 조정 완료",
-            호재뉴스: "바이낸스 신규 무기한 레버리지 마진 페어 추가 및 커뮤니티 파트너십 구축 호재 뉴스",
+            개요: `${symbol.replace("USDT", "")} 프로젝트 설명 데이터가 연결되지 않았습니다. 가격·기술 분석과 프로젝트 기본 정보는 분리해서 확인하세요.`,
+            유동성: `${liqLevel} (현재 Binance 상위 호가 기준 내부 분류)`,
+            확장성: "데이터 없음 (프로젝트 원천 미연동)",
+            기관선호도: "데이터 없음 (기관 수급 원천 미연동)",
+            락업이벤트: "데이터 없음 (토큰 언락 원천 미연동)",
+            호재뉴스: "데이터 없음 (검증된 뉴스 원천 미연동)",
             지지저항: `강력 지지선: ${supportL.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })} USDT | 강력 저항선: ${resistanceL.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })} USDT`
         };
     }
@@ -3635,13 +3743,15 @@ function AI추천분석및업데이트(symbol) {
     지지저항분석및업데이트(coin, symbol);
 
     document.getElementById("project-desc").innerText = pInfo.개요;
-    document.getElementById("project-liquidity").innerText = pInfo.유동성;
-    document.getElementById("project-scalability").innerText = pInfo.확장성;
-    document.getElementById("project-institutional").innerText = pInfo.기관선호도;
-    document.getElementById("project-lockup").innerText = pInfo.락업이벤트;
-    document.getElementById("project-news").innerText = pInfo.호재뉴스;
+    document.getElementById("project-liquidity").innerText = coin.호가매수.length > 0
+        ? `현재 Binance 상위 호가 ${coin.호가매수.length + coin.호가매도.length}단계 수신 (등급화하지 않음)`
+        : "데이터 없음 (호가 미수신)";
+    document.getElementById("project-scalability").innerText = "데이터 없음 (프로젝트 원천 미연동)";
+    document.getElementById("project-institutional").innerText = "데이터 없음 (기관 수급 원천 미연동)";
+    document.getElementById("project-lockup").innerText = "데이터 없음 (토큰 언락 원천 미연동)";
+    document.getElementById("project-news").innerText = "데이터 없음 (검증된 뉴스 원천 미연동)";
     // 지지·저항만은 DB 고정값 대신 실시간 매물대로 덮어쓴다. 계산이 실패할 때만 DB 값으로 되돌아간다.
-    const 실시간레벨 = 실시간지지저항문구(coin, coin.캔들데이터);
+    const 실시간레벨 = 실시간지지저항문구(coin, 분석캔들);
     document.getElementById("project-levels").innerText = 실시간레벨 || pInfo.지지저항;
 
     // [NEW] 광고 아래 모니터링 섹션 값 업데이트 (데스크톱/모바일 일괄 갱신)
@@ -3657,24 +3767,7 @@ function AI추천분석및업데이트(symbol) {
         }
     });
 
-    const adLongShortElements = document.querySelectorAll(".ad-long-short-flow");
-    adLongShortElements.forEach(el => {
-        const longVolPct = (호가비율 * 100).toFixed(1);
-        const shortVolPct = ((1 - 호가비율) * 100).toFixed(1);
-        el.innerHTML = `
-            <div style="display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 11px;">
-                <span><i class="fa-solid fa-scale-balanced" style="color: var(--color-yellow); margin-right: 4px;"></i>실시간 물량 비율</span>
-                <span>롱 <strong class="text-green">${longVolPct}%</strong> vs 숏 <strong class="text-red">${shortVolPct}%</strong></span>
-            </div>
-            <div style="display: flex; justify-content: space-between; border-top: 1px dashed rgba(0,0,0,0.08); padding-top: 4px; font-size: 11px;">
-                <span><i class="fa-solid fa-fire text-red" style="margin-right: 4px;"></i>청산맵 (100x Pool)</span>
-                <span>롱 풀 <strong class="text-green">${liqLongRatio}%</strong> vs 숏 풀 <strong class="text-red">${liqShortRatio}%</strong></span>
-            </div>
-            <div style="font-size: 9.5px; color: var(--color-text-muted); margin-top: 4px; text-align: right;">
-                고래 유입 강도: <span style="font-weight: 700; color: ${whaleRatio >= 0 ? 'var(--color-green)' : 'var(--color-red)'};">${whaleRatio >= 0 ? '+' : ''}${whaleRatio}%</span>
-            </div>
-        `;
-    });
+    파생시장데이터렌더링(symbol);
 
     // 달러 인덱스 브리핑룸 전향으로 기존 단순 뉴스 렌더링은 비활성화합니다.
     // const adNewsElements = document.querySelectorAll(".ad-live-news-content");
@@ -3817,7 +3910,7 @@ function AI추천분석및업데이트(symbol) {
         signalConfidenceLabel.className = `reliability-value ${추천신뢰도.클래스}`;
     }
     if (syntheticWarningLabel) {
-        syntheticWarningLabel.innerText = "온체인/OI/청산맵은 추정";
+        syntheticWarningLabel.innerText = "온체인·청산맵 데이터 없음";
         syntheticWarningLabel.className = "reliability-value text-red";
     }
 
@@ -3970,7 +4063,7 @@ function AI추천분석및업데이트(symbol) {
     // RSI가 과매수(65 이상) 영역에 있거나 CCI가 강세 모멘텀(100 이상)일수록 저항의 신뢰도가 강화
     let resConfBase = 81.0 + (rsiVal > 65 ? (rsiVal - 65) * 0.7 : 0) + (cciVal > 100 ? (cciVal - 100) * 0.05 : 0);
     // 현재가가 저항선에 가까울수록(저항 테스트 상황) 신뢰 지수 상승 가산
-    const resDist = Math.abs(coin.currentlyPrice || coin.현재가 - 정밀저항가격) / coin.현재가;
+    const resDist = Math.abs((coin.currentlyPrice || coin.현재가) - 정밀저항가격) / coin.현재가;
     if (resDist < 0.01) resConfBase += 4.5;
 
     // 저항선이 시세 상승으로 뚫려버린 돌파 국면일 때는 정밀도 및 신뢰도를 긴급 감쇄 조정
@@ -4002,7 +4095,7 @@ function AI추천분석및업데이트(symbol) {
     // RSI가 과매도(35 이하) 영역에 도달하거나 CCI가 낙폭 과대(-100 이하)일수록 반등 신뢰도가 강화
     let supConfBase = 83.0 + (rsiVal < 35 ? (35 - rsiVal) * 0.8 : 0) + (cciVal < -100 ? (Math.abs(cciVal) - 100) * 0.06 : 0);
     // 현재가가 지지선에 바짝 달라붙었을 때(지지 테스팅 상태) 신뢰 지수 가산
-    const supDist = Math.abs(coin.currentlyPrice || coin.현재가 - 정밀지지가격) / coin.현재가;
+    const supDist = Math.abs((coin.currentlyPrice || coin.현재가) - 정밀지지가격) / coin.현재가;
     if (supDist < 0.01) supConfBase += 4.8;
     // VPVR 매물 중심(POC) 하단에 현재가가 위치하여 강한 하방 매집 메리트를 보일 때 가산
     if (coin.현재가 < vpvrPOC) supConfBase += 3.5;
@@ -4034,16 +4127,20 @@ function AI추천분석및업데이트(symbol) {
     const supAccEl = document.getElementById("sup-accuracy");
     const supConfEl = document.getElementById("sup-confidence");
 
-    if (resAccEl) resAccEl.innerText = `${resAcc.toFixed(1)}% (매우 높음)`;
-    if (resConfEl) resConfEl.innerHTML = `<span style="color: ${resColor}; font-weight: 700;">${resConf.toFixed(1)}% [${resRating}]</span>`;
-    if (supAccEl) supAccEl.innerText = `${supAcc.toFixed(1)}% (신뢰성 확실)`;
-    if (supConfEl) supConfEl.innerHTML = `<span style="color: ${supColor}; font-weight: 700;">${supConf.toFixed(1)}% [${supRating}]</span>`;
+    if (resAccEl) resAccEl.innerText = `${resAcc.toFixed(1)}/100 (내부 수렴)`;
+    if (resConfEl) resConfEl.innerHTML = `<span style="color: ${resColor}; font-weight: 700;">${resConf.toFixed(1)}/100 [${resRating}]</span>`;
+    if (supAccEl) supAccEl.innerText = `${supAcc.toFixed(1)}/100 (내부 수렴)`;
+    if (supConfEl) supConfEl.innerHTML = `<span style="color: ${supColor}; font-weight: 700;">${supConf.toFixed(1)}/100 [${supRating}]</span>`;
 }
 
 // 정밀 분석된 저항선과 지지선 가격을 주문창 폼에 최적 배분하여 즉시 꽂아넣는 스마트 주입 기능
 function AI추천타점적용() {
     const coin = 상태.코인목록[상태.기본코인];
     if (!coin) return;
+    if (!Number.isFinite(AI추천캐시.저항선) || !Number.isFinite(AI추천캐시.지지선)) {
+        alert("확정 봉 데이터가 부족하여 주문창에 적용할 지지·저항 가격이 없습니다.");
+        return;
+    }
 
     // 1. 방향 전환 및 버튼 상태 일치
     const btnLong = document.getElementById("btn-direction-long");
@@ -4123,6 +4220,8 @@ window.시간단위변경액션 = async function(chartIdx, tf) {
     
     // 바이낸스 API 호출을 통해 새로운 타임프레임의 K-Lines 과거 데이터 적재 (REST API)
     await 분할차트캔들데이터로드(chartIdx);
+    if (chartData.시간단위 !== tf) return;
+    if (상태.기본코인 === chartData.코인심볼) 활성차트데이터를코인에동기화(chartIdx);
     
     // 해당 개별 차트 및 보조지표 렌더링(Rendering) 즉시 갱신
     if (chartData.메인차트 && chartData.캔들시리즈 && chartData.캔들데이터.length > 0) {
@@ -4162,6 +4261,11 @@ window.차트코인변경액션 = async function(chartIdx, symbol) {
     // 분석 연계를 위해 메인 기본 코인도 동시 핫스왑
     상태.기본코인 = symbol;
     localStorage.setItem("선물시뮬레이터_현재코인", symbol);
+    const 선택코인 = 상태.코인목록[symbol];
+    const titleEl = document.getElementById("current-coin-title");
+    const qtySymbolEl = document.getElementById("qty-symbol-addon");
+    if (titleEl && 선택코인) titleEl.innerText = 선택코인.이름;
+    if (qtySymbolEl) qtySymbolEl.innerText = symbol.replace("USDT", "");
     
     // UI에 반영 (active 버튼 상태 및 select박스 값)
     시간단위UI동기화();
@@ -4171,6 +4275,10 @@ window.차트코인변경액션 = async function(chartIdx, symbol) {
     
     // 해당 차트의 새로운 코인에 대한 과거 데이터 적재
     await 분할차트캔들데이터로드(chartIdx);
+
+    // 대기 중 사용자가 다시 선택을 바꿨다면 이전 선택의 후속 렌더링을 중단합니다.
+    if (chartData.코인심볼 !== symbol || 상태.기본코인 !== symbol) return;
+    활성차트데이터를코인에동기화(chartIdx);
     
     // 차트 리렌더링
     if (chartData.메인차트 && chartData.캔들시리즈 && chartData.캔들데이터.length > 0) {
@@ -4218,9 +4326,12 @@ window.차트클릭포커스액션 = function(chartIdx, event) {
     if (!chartData) return;
 
     const symbol = chartData.코인심볼;
+    활성차트데이터를코인에동기화(chartIdx);
     if (상태.기본코인 === symbol) {
-        // 이미 포커스 중인 코인일지라도 시각적 강조 테두리는 보장
+        // 같은 코인이 다른 시간봉 차트에도 있을 수 있으므로 분석 시간봉까지 다시 맞춥니다.
+        AI추천분석및업데이트(symbol);
         활성차트강조테두리(chartIdx);
+        window.차트지지저항선드로잉(chartIdx);
         return;
     }
 
@@ -4349,9 +4460,11 @@ window.차트지지저항선드로잉 = function(chartIdx) {
     if (!coin) return;
 
     // 2. 피보나치 지지/저항 및 볼린저밴드 수치 산출
-    const closes = coin.캔들데이터.map(x => x.close);
-    const highs = coin.캔들데이터.map(x => x.high);
-    const lows = coin.캔들데이터.map(x => x.low);
+    const 분석캔들 = 확정봉만추출(c.캔들데이터);
+    if (분석캔들.length < 30) return;
+    const closes = 분석캔들.map(x => x.close);
+    const highs = 분석캔들.map(x => x.high);
+    const lows = 분석캔들.map(x => x.low);
     const idx = closes.length - 1;
 
     const 최고가 = Math.max(...highs.slice(Math.max(0, idx - 100), idx + 1));
@@ -4574,6 +4687,7 @@ window.AI자동매매버튼상태동기화 = function() {
 // 끊어지거나 제한될 경우, 1초마다 초경량 REST API 호출을 주기적 폴링하여 실시간 시세를 연동합니다.
 
 let REST폴링타이머 = null;
+let 마지막전체시세폴링 = 0;
 
 function 실시간시세REST폴러() {
     if (REST폴링타이머) clearInterval(REST폴링타이머);
@@ -4593,7 +4707,8 @@ function 실시간시세REST폴러() {
                 statusText.innerText = "Binance 라이브 시세 연동 중";
                 statusText.className = "status-text text-green";
             }
-            if (Math.random() < 0.15) {
+            if (Date.now() - 마지막전체시세폴링 >= 60_000) {
+                마지막전체시세폴링 = Date.now();
                 백그라운드전체시세폴링();
             }
             return;
@@ -4611,20 +4726,11 @@ function 실시간시세REST폴러() {
 
         // C. 현재 보고 있는 메인 코인의 실시간 시세와 호가 데이터를 병렬 수집
         try {
-            let priceRes, depthRes;
-            try {
-                [priceRes, depthRes] = await Promise.all([
-                    fetch(`https://fapi.binance.com/fapi/v1/ticker/price?symbol=${targetSymbol}`),
-                    fetch(`https://fapi.binance.com/fapi/v1/depth?symbol=${targetSymbol}&limit=5`)
-                ]);
-                if (!priceRes.ok || !depthRes.ok) throw new Error("Futures API 응답 에러");
-            } catch (fErr) {
-                // Futures API CORS 차단 시 Spot API로 폴백
-                [priceRes, depthRes] = await Promise.all([
-                    fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${targetSymbol}`),
-                    fetch(`https://api.binance.com/api/v3/depth?symbol=${targetSymbol}&limit=5`)
-                ]);
-            }
+            const [priceRes, depthRes] = await Promise.all([
+                fetch(`https://fapi.binance.com/fapi/v1/ticker/price?symbol=${targetSymbol}`),
+                fetch(`https://fapi.binance.com/fapi/v1/depth?symbol=${targetSymbol}&limit=5`)
+            ]);
+            if (!priceRes.ok || !depthRes.ok) throw new Error("Binance Futures API 응답 오류");
 
             if (priceRes.ok && depthRes.ok) {
                 const priceData = await priceRes.json();
@@ -4640,30 +4746,34 @@ function 실시간시세REST폴러() {
         }
 
         // D. 백그라운드 및 포지션 대기 코인 전체 실시간 동기화
-        await 백그라운드전체시세폴링();
-    }, 1500);
+        if (Date.now() - 마지막전체시세폴링 >= 60_000) {
+            마지막전체시세폴링 = Date.now();
+            await 백그라운드전체시세폴링();
+        }
+    }, 5000);
 }
 
-// 백그라운드 전체 코인의 시세를 단 한 번의 API 호출로 안전하게 업데이트 (CORS 친화적 Spot API 활용)
+// 백그라운드 전체 코인의 Binance Futures 시세를 한 번의 API 호출로 업데이트
 async function 백그라운드전체시세폴링() {
     try {
-        let res = await fetch("https://fapi.binance.com/fapi/v1/ticker/price");
-        if (!res.ok) {
-            res = await fetch("https://api.binance.com/api/v3/ticker/price");
-        }
+        const res = await fetch("https://fapi.binance.com/fapi/v1/ticker/24hr");
         if (res.ok) {
             const tickers = await res.json();
             const priceMap = {};
             tickers.forEach(t => {
-                priceMap[t.symbol] = parseFloat(t.price);
+                priceMap[t.symbol] = t;
             });
             Object.keys(상태.코인목록).forEach(symbol => {
                 if (priceMap[symbol]) {
-                    const 현재가 = priceMap[symbol];
+                    const ticker = priceMap[symbol];
+                    const 현재가 = parseFloat(ticker.lastPrice);
                     const coin = 상태.코인목록[symbol];
                     if (coin) {
                         coin.가상시세여부 = false;
                         coin.현재가 = 현재가;
+                        coin.어제종가 = parseFloat(ticker.prevClosePrice) || coin.어제종가;
+                        coin.최고24h = parseFloat(ticker.highPrice) || coin.최고24h;
+                        coin.최저24h = parseFloat(ticker.lowPrice) || coin.최저24h;
                     }
                 }
             });
@@ -4673,7 +4783,7 @@ async function 백그라운드전체시세폴링() {
     }
 }
 
-// [신규] CME 갭 (CME Gap) 연산 및 업데이트 (CORS 친화적 Spot API 활용)
+// CME 갭 상태 갱신: 검증된 CME 선물 원천이 없으면 데이터 없음으로 처리
 async function CME갭연산및업데이트(symbol) {
     // 1. BTCUSDT, ETHUSDT 외의 알트코인은 CME 분석 비대상으로 즉각 반환 처리
     if (symbol !== "BTCUSDT" && symbol !== "ETHUSDT") {
@@ -4684,6 +4794,16 @@ async function CME갭연산및업데이트(symbol) {
         };
         return;
     }
+
+    // Binance 현물 주말 가격으로 CME 선물 갭을 대신 계산하면 서로 다른 시장을 섞게 됩니다.
+    // 검증된 CME 원천이 연결될 때까지 수치를 만들지 않습니다.
+    상태.CME갭캐시[symbol] = {
+        결과: "데이터 없음 (CME 선물 원천 미연동)",
+        간단결과: "CME 데이터 없음",
+        클래스: "text-neutral",
+        갱신시간: Date.now()
+    };
+    return;
 
     // 캐시 기간 검사 (5분 캐시) - 실시간 시뮬레이션을 위해 디버그 기간 동안 캐시 무시
     // const 캐시 = 상태.CME갭캐시[symbol];
@@ -4823,34 +4943,7 @@ function REST폴링데이터수입(symbol, 현재가, asks, bids) {
     coin.호가매도 = asks || [];
     coin.호가매수 = bids || [];
 
-    // 1분봉 캔들 버퍼 구성 (타점 분석 시스템 실시간 감지용)
-    const candleTime = Math.floor(Date.now() / 1000 / 60) * 60; // 1분 단위 타임스탬프
-    const 실시간캔들 = {
-        time: candleTime,
-        open: coin.캔들데이터.length > 0 ? coin.캔들데이터[coin.캔들데이터.length - 1].close : 현재가,
-        high: 현재가,
-        low: 현재가,
-        close: 현재가,
-        volume: Math.random() * 50 + 5
-    };
-
-    const candles = coin.캔들데이터;
-    if (candles.length === 0) {
-        candles.push(실시간캔들);
-    } else {
-        const lastCandle = candles[candles.length - 1];
-        if (candleTime === lastCandle.time) {
-            lastCandle.close = 현재가;
-            if (현재가 > lastCandle.high) lastCandle.high = 현재가;
-            if (현재가 < lastCandle.low) lastCandle.low = 현재가;
-        } else if (candleTime > lastCandle.time) {
-            candles.push(실시간캔들);
-            if (candles.length > 500) candles.shift();
-            
-            // 신규 캔들 생성 시 1분봉 분석 및 신호 생성(RSI/MACD 크로스 감지)
-            분석및신호생성(symbol);
-        }
-    }
+    // REST 가격·호가만으로는 실제 OHLCV를 복원할 수 없으므로 캔들이나 거래량을 만들지 않습니다.
 
     if (현재가 > coin.최고24h) coin.최고24h = 현재가;
     if (현재가 < coin.최저24h) coin.최저24h = 현재가;
@@ -4886,54 +4979,7 @@ function REST폴링데이터수입(symbol, 현재가, asks, bids) {
         AI추천분석및업데이트(symbol);
     }
 
-    // 8개 분할 차트 실시간 틱 갱신 및 신규 봉 자동 생성 (REST 폴백 모드 - 글로벌 틱 라우팅)
-    상태.차트객체.분할차트들.forEach(c => {
-        if (!c.메인차트 || !c.캔들시리즈 || c.캔들데이터.length === 0) return;
-        
-        // 차트의 코인 심볼과 유입된 데이터의 코인 심볼이 다를 경우 무시 (8개 차트 개별 코인 갱신)
-        if (c.코인심볼 !== symbol) return;
-
-        let 봉단위초 = 60;
-        if (c.시간단위 === "1m") 봉단위초 = 60;
-        else if (c.시간단위 === "1h") 봉단위초 = 3600;
-        else if (c.시간단위 === "4h") 봉단위초 = 14400;
-        else if (c.시간단위 === "8h") 봉단위초 = 28800;
-        else if (c.시간단위 === "12h") 봉단위초 = 43200;
-        else if (c.시간단위 === "1d") 봉단위초 = 86400;
-        else if (c.시간단위 === "1w") 봉단위초 = 604800;
-
-        const targetT = Math.floor(candleTime / 봉단위초) * 봉단위초;
-        const lastCandle = c.캔들데이터[c.캔들데이터.length - 1];
-
-        if (targetT === lastCandle.time) {
-            lastCandle.close = 현재가;
-            if (현재가 > lastCandle.high) lastCandle.high = 현재가;
-            if (현재가 < lastCandle.low) lastCandle.low = 현재가;
-            c.캔들시리즈.update(lastCandle);
-        } else if (targetT > lastCandle.time) {
-            const 신규분할캔들 = {
-                time: targetT,
-                open: 현재가,
-                high: 현재가,
-                low: 현재가,
-                close: 현재가,
-                volume: 실시간캔들.volume
-            };
-            c.캔들데이터.push(신규분할캔들);
-            if (c.캔들데이터.length > 500) c.캔들데이터.shift();
-            c.캔들시리즈.update(신규분할캔들);
-        }
-
-        const closesList = c.캔들데이터.map(x => x.close);
-        const ema5 = 계산EMA(closesList, 5);
-        const ema20 = 계산EMA(closesList, 20);
-        const sma60 = 계산SMA(closesList, 60);
-        
-        const activeCandle = c.캔들데이터[c.캔들데이터.length - 1];
-        c.EMA5시리즈.update({ time: activeCandle.time, value: ema5[ema5.length - 1] });
-        c.EMA20시리즈.update({ time: activeCandle.time, value: ema20[ema20.length - 1] });
-        c.SMA60시리즈.update({ time: activeCandle.time, value: sma60[sma60.length - 1] });
-    });
+    // REST 가격과 호가만으로는 OHLCV를 복원할 수 없으므로 차트 봉은 수정하지 않습니다.
 
     // 상단 탭(Tab) 가격 정보 실시간 연동
     const tabPriceEl = document.getElementById(`tab-price-${symbol}`);
@@ -5780,36 +5826,35 @@ window.퀀트분석데이터추출 = function(symbol) {
     const coin = 상태.코인목록[symbol];
     if (!coin) return null;
 
-    const closes = coin.캔들데이터 ? coin.캔들데이터.map(c => c.close) : [];
-    const highs = coin.캔들데이터 ? coin.캔들데이터.map(c => c.high) : [];
-    const lows = coin.캔들데이터 ? coin.캔들데이터.map(c => c.low) : [];
+    const 분석캔들 = 확정봉만추출(coin.캔들데이터);
+    const closes = 분석캔들.map(c => c.close);
+    const highs = 분석캔들.map(c => c.high);
+    const lows = 분석캔들.map(c => c.low);
     const idx = closes.length - 1;
 
     // [데이터 과소 상태 가드] 캔들 데이터가 15봉 미만일 때의 기본 폴백 퀀트 데이터 리턴
     if (closes.length < 15) {
-        const 정밀저항가격 = parseFloat((coin.현재가 * 1.025).toFixed(coin.소수점));
-        const 정밀지지가격 = parseFloat((coin.현재가 * 0.975).toFixed(coin.소수점));
         return {
             symbol: symbol,
             이름: (코인정의[symbol] && 코인정의[symbol].이름) || symbol,
             현재가: coin.현재가,
-            지지선: 정밀지지가격,
-            저항선: 정밀저항가격,
+            지지선: null,
+            저항선: null,
             방향: "NEUTRAL",
             진입가: coin.현재가,
-            익절가: 정밀저항가격,
-            손절가: 정밀지지가격,
+            익절가: null,
+            손절가: null,
             점수: 50,
             시장상태: "데이터 부족",
             추천신뢰도: "낮음",
             rsi: 50,
             cci: 0,
             macd: "0.00 / 0.00",
-            fundingRate: "0.0100%",
-            openInterest: "0.00%",
-            whaleFlow: "0%",
-            liqMap: "롱 50% vs 숏 50%",
-            vpvrPOC: coin.현재가,
+            fundingRate: "데이터 없음",
+            openInterest: "데이터 없음",
+            whaleFlow: "데이터 없음",
+            liqMap: "데이터 없음",
+            vpvrPOC: null,
             소수점: coin.소수점
         };
     }
@@ -5830,7 +5875,7 @@ window.퀀트분석데이터추출 = function(symbol) {
     const stochData = 계산스토캐스틱(highs, lows, closes, 14, 3, 3);
     const stochK = stochData.k[idx] || 50;
     const stochD = stochData.d[idx] || 50;
-    const vwapVal = 계산VWAP(coin.캔들데이터)[idx] || coin.현재가;
+    const vwapVal = 계산VWAP(분석캔들)[idx] || coin.현재가;
     const bbData = 계산볼린저밴드(closes, 20, 2);
     const bbUpper = bbData.upper[idx] || coin.현재가 * 1.02;
     const bbLower = bbData.lower[idx] || coin.현재가 * 0.98;
@@ -5839,7 +5884,7 @@ window.퀀트분석데이터추출 = function(symbol) {
     const 최고24h = Math.max(...highs.slice(Math.max(0, idx - 100), idx + 1));
     const 최저24h = Math.min(...lows.slice(Math.max(0, idx - 100), idx + 1));
     const fiboLevels = 계산피보나치되돌림(최고24h, 최저24h);
-    const vpvrData = 계산VPVR매물대(coin.캔들데이터, coin.소수점);
+    const vpvrData = 계산VPVR매물대(분석캔들, coin.소수점);
     const vpvrPOC = vpvrData.poc || coin.현재가;
 
     const bbUpperSanitized = Math.min(bbUpper, coin.현재가 * 1.15);
@@ -5883,14 +5928,8 @@ window.퀀트분석데이터추출 = function(symbol) {
         정밀지지가격 = parseFloat(((확장지지 + bbLower * 0.988) / 2).toFixed(coin.소수점));
     }
 
-    // B. 온체인 및 선물 심리 데이터 퀀트 산출 (On-chain & Sentiment Quant Calculations)
-    const 호가비율 = coin.호가매수.length > 0 && coin.호가매도.length > 0 ? 
-        parseFloat(coin.호가매수[0][1]) / (parseFloat(coin.호가매수[0][1]) + parseFloat(coin.호가매도[0][1])) : 0.5;
-    const 펀딩비 = (rsiVal - 50) * 0.0004 + (호가비율 - 0.5) * 0.01 + 0.01;
-    const oiChange = (Math.abs(coin.현재가 - coin.어제종가) / coin.어제종가) * 350 + (호가비율 - 0.5) * 20;
-    const liqLongRatio = Math.max(20, Math.min(80, Math.floor(52 + (rsiVal - 50) * 0.8 + (호가비율 - 0.5) * 15)));
-    const liqShortRatio = 100 - liqLongRatio;
-    const whaleRatio = Math.max(-95, Math.min(95, Math.floor((coin.호가매수.length - coin.호가매도.length) * 15 + (rsiVal - 50) * 2 + (호가비율 - 0.5) * 80)));
+    // B. 파생상품 데이터는 앞에서 수집한 Binance Futures 실제 캐시만 사용합니다.
+    const 파생데이터 = 상태.파생데이터캐시[symbol]?.data;
 
     const 시장상태 = 시장상태판정({
         현재가: coin.현재가,
@@ -6040,10 +6079,10 @@ window.퀀트분석데이터추출 = function(symbol) {
         rsi: rsiVal,
         cci: cciVal,
         macd: `${현재MACD.toFixed(3)} / ${현재MACD시그널.toFixed(3)}`,
-        fundingRate: `${(펀딩비 >= 0 ? "+" : "") + 펀딩비.toFixed(4)}%`,
-        openInterest: `${(oiChange >= 0 ? "+" : "") + oiChange.toFixed(2)}%`,
-        whaleFlow: `${(whaleRatio >= 0 ? "+" : "") + whaleRatio}%`,
-        liqMap: `롱 ${liqLongRatio}% vs 숏 ${liqShortRatio}%`,
+        fundingRate: Number.isFinite(파생데이터?.fundingRatePct) ? `${파생데이터.fundingRatePct >= 0 ? "+" : ""}${파생데이터.fundingRatePct.toFixed(4)}%` : "데이터 없음",
+        openInterest: Number.isFinite(파생데이터?.openInterest) ? `${축약숫자표기(파생데이터.openInterest)} ${symbol.replace("USDT", "")}` : "데이터 없음",
+        whaleFlow: "데이터 없음",
+        liqMap: "데이터 없음",
         vpvrPOC: vpvrPOC,
         소수점: coin.소수점
     };
@@ -6250,10 +6289,11 @@ window.카카오정기발송타이머시작 = function() {
             let summaryLines = [];
             info.symbols.forEach(sym => {
                 const coin = 상태.코인목록[sym]; // [오류 수정] 상태.코인데이터가 아닌 상태.코인목록 참조
-                if (!coin || !coin.캔들데이터 || coin.캔들데이터.length === 0) return;
+                if (!coin) return;
                 
-                // [오류 수정] 정의되지 않은 지표계산(coin) 함수 호출 제거 및 직접 RSI 연산 호출
-                const closes = coin.캔들데이터.map(c => c.close);
+                const 확정봉 = 확정봉만추출(coin.캔들데이터);
+                if (확정봉.length < 15) return;
+                const closes = 확정봉.map(c => c.close);
                 const rsiArr = 계산RSI(closes, 14);
                 const rsi = rsiArr.length > 0 ? rsiArr[rsiArr.length - 1] : 50;
                 
@@ -6276,107 +6316,50 @@ window.카카오정기발송타이머시작 = function() {
 
 // 달러 인덱스 (DXY) 실시간 수집 및 화면 갱신 함수 (한글 주석 준수)
 async function 실시간달러지수갱신() {
-    let 가격 = 104.50;
-    let 변동률 = "0.00%";
-    let 수집성공 = false;
-
-    // 1. 야후 파이낸스 API 시도 (CORS 차단 우회를 위해 Allorigins 프록시 경유)
+    let 가격 = null;
+    let 갱신시간 = 0;
     try {
-        const targetUrl = encodeURIComponent("https://query2.finance.yahoo.com/v8/finance/chart/DX=F");
-        const res = await fetch(`https://api.allorigins.win/get?url=${targetUrl}`);
-        if (res.ok) {
-            const wrapper = await res.json();
-            // allorigins 응답 구조는 { contents: "실제응답문자열" } 형태이므로 JSON 파싱을 거쳐야 합니다.
-            if (wrapper && wrapper.contents) {
-                const data = JSON.parse(wrapper.contents);
-                const meta = data.chart?.result?.[0]?.meta;
-                if (meta) {
-                    가격 = meta.regularMarketPrice;
-                    const prevClose = meta.chartPreviousClose || meta.previousClose;
-                    const changeNum = prevClose ? ((가격 - prevClose) / prevClose * 100) : 0;
-                    변동률 = (changeNum >= 0 ? "+" : "") + changeNum.toFixed(2) + "%";
-                    수집성공 = true;
-                    console.log(`[DXY Live] Allorigins 프록시 경유 야후 파이낸스 실시간 수집 성공! Price: ${가격}, Change: ${변동률}`);
-                }
-            }
+        const res = await fetch("https://open.er-api.com/v6/latest/USD");
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const rates = data.rates;
+        if (!rates || ![rates.EUR, rates.JPY, rates.GBP, rates.CAD, rates.SEK, rates.CHF].every(Number.isFinite)) {
+            throw new Error("필수 환율 누락");
         }
-    } catch (e) {
-        console.error("[DXY] 야후 API 프록시 수집 에러:", e);
+
+        // ICE 공식 실시간 지수가 아니라 공개 환율 바스켓으로 계산한 근사값입니다.
+        가격 = 50.14348112
+            * Math.pow(1 / rates.EUR, -0.576)
+            * Math.pow(rates.JPY, 0.136)
+            * Math.pow(1 / rates.GBP, -0.119)
+            * Math.pow(rates.CAD, 0.091)
+            * Math.pow(rates.SEK, 0.042)
+            * Math.pow(rates.CHF, 0.036);
+        갱신시간 = Number(data.time_last_update_unix) * 1000 || Date.now();
+        상태.달러지수 = { 가격, 변동률: null, 출처: "open.er-api 환율 바스켓 근사", 갱신시간 };
+    } catch (error) {
+        상태.달러지수 = { 가격: null, 변동률: null, 출처: null, 갱신시간: 0 };
+        console.warn("[DXY Approximation Unavailable]:", error.message);
     }
 
-    // 2. 야후 API 실패 시 오픈 환율 API로 바스켓 계산
-    if (!수집성공) {
-        try {
-            const res = await fetch("https://open.er-api.com/v6/latest/USD");
-            if (res.ok) {
-                const data = await res.json();
-                const rates = data.rates;
-                if (rates) {
-                    const eur = 1 / rates.EUR;
-                    const jpy = rates.JPY;
-                    const gbp = 1 / rates.GBP;
-                    const cad = rates.CAD;
-                    const sek = rates.SEK;
-                    const chf = rates.CHF;
-                    
-                    const dxy = 50.14348112 * 
-                                Math.pow(eur, -0.576) * 
-                                Math.pow(jpy, 0.136) * 
-                                Math.pow(gbp, -0.119) * 
-                                Math.pow(cad, 0.091) * 
-                                Math.pow(sek, 0.042) * 
-                                Math.pow(chf, 0.036);
-                    
-                    가격 = parseFloat(dxy.toFixed(2));
-                    const changeNum = ((가격 - 104.20) / 104.20 * 100);
-                    변동률 = (changeNum >= 0 ? "+" : "") + changeNum.toFixed(2) + "%";
-                    수집성공 = true;
-                }
-            }
-        } catch (e) {
-            console.error("[DXY] 오픈 환율 API 에러:", e);
-        }
-    }
-
-    // 3. 둘 다 실패할 경우 시뮬레이션 랜덤 워크 (미세 틱 등락 보정)
-    if (!수집성공) {
-        const baseDXY = 상태.달러지수?.가격 || 104.50;
-        const randomWalk = (Math.random() - 0.5) * 0.04;
-        가격 = parseFloat((baseDXY + randomWalk).toFixed(2));
-        const changeNum = ((가격 - 104.50) / 104.50 * 100);
-        변동률 = (changeNum >= 0 ? "+" : "") + changeNum.toFixed(2) + "%";
-    }
-
-    // 상태 객체 업데이트
-    상태.달러지수 = { 가격, 변동률 };
-
-    // 화면 UI 요소 일괄 업데이트 (PC 및 모바일 동일 값 보장)
     const pcDisplay = document.getElementById("dxy-value-display");
     const moDisplay = document.getElementById("mo-dxy-value-display");
-
-    const textContent = `${가격.toFixed(2)} (${변동률})`;
-    
-    // 등락에 따른 색상 분기
-    const isUp = !변동률.startsWith("-");
-    const displayColor = isUp ? "var(--color-red)" : "var(--color-green)";
+    const textContent = Number.isFinite(가격) ? `근사 ${가격.toFixed(2)} · ${갱신시각표기(갱신시간)}` : "데이터 없음";
 
     if (pcDisplay) {
         pcDisplay.innerText = textContent;
-        pcDisplay.style.color = displayColor;
+        pcDisplay.style.color = "var(--color-yellow)";
     }
     if (moDisplay) {
         moDisplay.innerText = textContent;
-        moDisplay.style.color = displayColor;
+        moDisplay.style.color = "var(--color-yellow)";
     }
 
-    // DXY 방향에 따른 시장 영향 설명문 동적 생성 및 브리핑 (한글 주석 준수)
     const dxyDescEl = document.getElementById("dxy-description-content");
     if (dxyDescEl) {
-        if (isUp) {
-            dxyDescEl.innerHTML = `<span style="color: var(--color-red); font-weight:700;"><i class="fa-solid fa-triangle-exclamation"></i> 달러 강세 / DXY 상승 우세</span><br>달러 지수가 상승하면 안전 자산에 대한 선호도가 증가함을 의미합니다. 이로 인해 글로벌 투자 자금이 비트코인 및 주식 등 위험 자산 시장에서 유출되어 코인 시세에 <strong>강한 하락 압력(매도/Short 우세)</strong>으로 작용하게 됩니다.`;
-        } else {
-            dxyDescEl.innerHTML = `<span style="color: var(--color-green); font-weight:700;"><i class="fa-solid fa-circle-check"></i> 달러 약세 / DXY 하락 우세</span><br>달러 지수가 하락하면 글로벌 달러화 가치가 하락함을 의미합니다. 이로 인해 시장 유동성이 늘어나며 비트코인을 비롯한 가상자산 및 위험 자산 시장으로 자금이 강하게 유입되는 <strong>상승 호재(매수/Long 우세)</strong>로 작용합니다.`;
-        }
+        dxyDescEl.innerHTML = Number.isFinite(가격)
+            ? `<span style="color:var(--color-yellow); font-weight:700;">공개 환율 바스켓 근사치</span><br>ICE 공식 실시간 DXY가 아니며 일간 변동률은 검증할 수 없습니다. 이 값은 매매 신호 점수에 사용하지 않습니다.`
+            : `<span style="color:var(--color-text-muted);">DXY 데이터 없음</span><br>원천 조회 실패 시 임의 수치를 생성하지 않습니다.`;
     }
 }
 // 엘리엇 파동 + 피보나치 패널 갱신 (analysis_app.js와 동일 구현)
@@ -6396,10 +6379,17 @@ function 엘리엇파동분석및업데이트(coin, ctx) {
     }
 
     if (!window.파동엔진) window.파동엔진 = new ElliottWaveEngine();
-    // v4 등급용 컨텍스트. 상위 TF 합의(v2 mtfDir)는 실측 판별력이 0이라 제거했다.
-    // 엔진이 ATR을 직접 계산하므로 여기서는 타임프레임만 넘긴다.
+    const 분석캔들 = 확정봉만추출(coin.캔들데이터);
+    if (분석캔들.length < 30) {
+        setText("wave-stage", "확정 봉 30개 미만 - 파동 확정 대기");
+        ["wave-confidence", "wave-direction", "wave-rules", "wave-ewo", "wave-fib", "wave-invalidation", "wave-entry", "wave-tp", "wave-sl"]
+            .forEach(id => setText(id, "--"));
+        setText("wave-nodes", "진행 중인 현재 봉은 파동 분석에서 제외됩니다.");
+        return;
+    }
+    // 엔진이 ATR을 직접 계산하므로 여기서는 분석 시간봉만 넘깁니다.
     ctx.interval = coin.시간단위;
-    const result = window.파동엔진.analyze(coin.캔들데이터, ctx);
+    const result = window.파동엔진.analyze(분석캔들, ctx);
     const dp = coin.소수점;
     const fmt = v => Number(v).toLocaleString(undefined, { minimumFractionDigits: dp, maximumFractionDigits: dp });
 
@@ -6416,17 +6406,17 @@ function 엘리엇파동분석및업데이트(coin, ctx) {
 
     setText("wave-stage", result.stage);
 
-    // v4 신뢰등급. 실측 기대값(R)이 매매 가부를 정한다. 컷 미달은 관망으로 강등한다.
+    // 내부 조합표 기반 등급이며 미래 적중률이나 수익을 보장하지 않습니다.
     const 등급 = result.grade || { grade: "D", ev: null, cell: null, tradable: false, reason: "", warnings: [] };
     const 등급색 = 등급.grade === "A" ? "#39FF14" : 등급.grade === "B" ? "#0ecb81"
                  : 등급.grade === "C" ? "#ffd93d" : "#888";
     const ev표기 = 등급.ev === null ? "판정 보류"
-                 : `실측 기대값 ${등급.ev >= 0 ? "+" : ""}${등급.ev.toFixed(2)}R`;
+                 : `내부 기대값 ${등급.ev >= 0 ? "+" : ""}${등급.ev.toFixed(2)}R`;
     setHTML("wave-confidence",
         `<span style="color:${등급색}; font-weight:700;">${등급.grade}등급 · ${ev표기}</span>`
         + `<span style="color:${등급.tradable ? "#39FF14" : "#888"}; font-weight:700; font-size:0.85em;">`
-        + ` ${등급.tradable ? "★ 매매 가능" : "— 관망"}</span>`
-        // 조합키·ATR배수는 근거 추적용이라 작게 뒤로 뺀다.
+        + ` ${등급.tradable ? "★ 모의 조건 충족" : "— 관망"}</span>`
+        // 조합키·ATR배수는 근거 추적용이라 작게 뒤로 뺍니다.
         + (등급.cell ? `<div style="opacity:0.6; font-size:0.8em; margin-top:2px;">${등급.cell}`
             + ` · 손절폭 ATR ${등급.slAtr}배 · RSI보정 ${등급.rsiAdj} · 확증 ${result.confidence}/10</div>` : "")
         + ((등급.warnings && 등급.warnings.length)
@@ -6488,7 +6478,7 @@ function 엘리엇파동분석및업데이트(coin, ctx) {
                    : `기대값 ${등급.ev >= 0 ? "+" : ""}${등급.ev.toFixed(2)}R — 매매 기준선 +0.5R 미달`;
         setHTML("wave-entry", `<span style="color:#888; font-weight:700;">관망</span>`
             + `<span style="opacity:0.7; font-size:0.85em;"> — ${사유}</span>`);
-        setHTML("wave-tp", `<span style="opacity:0.6;">매매 가능 등급에서만 청산 계획 제시</span>`);
+        setHTML("wave-tp", `<span style="opacity:0.6;">모의 조건 충족 등급에서만 청산 계획 제시</span>`);
         setHTML("wave-sl", `<span style="opacity:0.6;">--</span>`);
     } else {
         const 롱 = 등급.isLong;
@@ -6657,17 +6647,14 @@ async function 지지저항분석및업데이트(coin, symbol) {
     setHTML("levels-scenario", 시나리오.join("") + 경고HTML);
 }
 
-// 지지·저항 전용 캔들 조회. 선물 우선, 실패하면 현물로 폴백한다(기존 차트 로직과 동일 정책).
+// 지지·저항 전용 캔들 조회. 시장 혼합을 막기 위해 Binance Futures만 사용합니다.
 async function 레벨캔들가져오기(symbol, interval) {
-    const 파싱 = raw => raw.map(k => ({
+    const 파싱 = raw => raw.filter(k => Number(k[6]) <= Date.now()).map(k => ({
         high: parseFloat(k[2]), low: parseFloat(k[3]),
         close: parseFloat(k[4]), volume: parseFloat(k[5])
     }));
     try {
-        let res = await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=${interval}&limit=200`);
-        if (!res.ok) {
-            res = await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=200`);
-        }
+        const res = await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=${interval}&limit=200`);
         if (!res.ok) return null;
         const raw = await res.json();
         if (!Array.isArray(raw) || raw.length < 20) return null;

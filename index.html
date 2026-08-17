@@ -117,7 +117,7 @@
                 <!-- 실시간 시세 요약 바(Market Bar) -->
                 <div class="market-bar">
                     <div class="market-ticker">
-                        <span id="current-coin-title" class="ticker-name">BTC/USDT Spot</span>
+                        <span id="current-coin-title" class="ticker-name">BTC/USDT Perpetual</span>
                         <span id="current-price" class="ticker-price text-green">Loading...</span>
                     </div>
                     <div class="market-stats">
@@ -446,7 +446,7 @@
                     </div>
                     <div class="briefing-box volume-flow-box">
                         <div class="briefing-title">
-                            <i class="fa-solid fa-arrows-up-down text-yellow"></i> 롱 / 숏 물량 및 청산맵 (Flow & Liquidation)
+                            <i class="fa-solid fa-arrows-up-down text-yellow"></i> Binance 롱·숏 계정 비율 (5분)
                         </div>
                         <div class="briefing-value ad-long-short-flow" id="ad-long-short-flow">
                             분석 중...
@@ -455,8 +455,8 @@
                     <div class="briefing-box live-news-box">
                         <!-- 달러 인덱스 실시간 정보 연동 -->
                         <div class="dxy-briefing-row" style="margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px dashed var(--color-border); display: flex; justify-content: space-between; font-size: 11px; font-weight: 600; font-family: var(--font-primary);">
-                            <span><i class="fa-solid fa-coins text-yellow"></i> 실시간 달러 인덱스 (DXY)</span>
-                            <span class="dxy-value-display" id="dxy-value-display" style="color: var(--color-yellow);">104.50 (0.00%)</span>
+                            <span><i class="fa-solid fa-coins text-yellow"></i> 달러 인덱스 (DXY)</span>
+                            <span class="dxy-value-display" id="dxy-value-display" style="color: var(--color-yellow);">데이터 대기</span>
                         </div>
                         <div class="briefing-value dxy-description-content" id="dxy-description-content" style="font-size: 11px; line-height: 1.5; color: var(--color-text-muted);">
                             달러 지수 분석 중...
@@ -650,10 +650,10 @@
                                         <span class="rec-label" id="rec-resistance-label" style="color: #f6465d !important; font-weight: 600;">저항선</span>
                                         <span id="rec-resistance" class="rec-value" style="color: #f6465d !important; font-family:var(--font-display); font-weight: 800;">--</span>
                                     </div>
-                                    <!-- 저항선 실시간 정확도 & 신뢰도 분석 패널 (Resistance Metrics) -->
+                                    <!-- 저항선 내부 수렴 점수 패널: 백테스트 적중률이 아님 -->
                                     <div id="rec-res-stat" style="font-size: 0.73em; margin-top: 4px; border-top: 1px solid rgba(246, 70, 93, 0.18); padding-top: 4px; line-height: 1.3; text-align: left;">
-                                        정밀도: <span id="res-accuracy" style="color: #ffc107; font-weight: 700;">--</span><br>
-                                        신뢰도: <span id="res-confidence" style="color: #ffc107; font-weight: 700;">--</span>
+                                        수렴 점수: <span id="res-accuracy" style="color: #ffc107; font-weight: 700;">--</span><br>
+                                        근거 강도: <span id="res-confidence" style="color: #ffc107; font-weight: 700;">--</span>
                                     </div>
                                 </div>
                                 <div class="rec-box" style="display: flex; flex-direction: column; justify-content: space-between;">
@@ -661,10 +661,10 @@
                                         <span class="rec-label" id="rec-support-label" style="color: #0066ff !important; font-weight: 600;">지지선</span>
                                         <span id="rec-support" class="rec-value" style="color: #0066ff !important; font-family:var(--font-display); font-weight: 800;">--</span>
                                     </div>
-                                    <!-- 지지선 실시간 정확도 & 신뢰도 분석 패널 (Support Metrics) -->
+                                    <!-- 지지선 내부 수렴 점수 패널: 백테스트 적중률이 아님 -->
                                     <div id="rec-sup-stat" style="font-size: 0.73em; margin-top: 4px; border-top: 1px solid rgba(0, 102, 255, 0.18); padding-top: 4px; line-height: 1.3; text-align: left;">
-                                        정밀도: <span id="sup-accuracy" style="color: #20c997; font-weight: 700;">--</span><br>
-                                        신뢰도: <span id="sup-confidence" style="color: #20c997; font-weight: 700;">--</span>
+                                        수렴 점수: <span id="sup-accuracy" style="color: #20c997; font-weight: 700;">--</span><br>
+                                        근거 강도: <span id="sup-confidence" style="color: #20c997; font-weight: 700;">--</span>
                                     </div>
                                 </div>
                             </div>
@@ -690,12 +690,12 @@
                                     <span id="market-regime-label" class="reliability-value text-yellow">데이터 대기</span>
                                 </div>
                                 <div class="reliability-box">
-                                    <span class="reliability-label">추천 신뢰도</span>
+                                    <span class="reliability-label">추천 근거 점수</span>
                                     <span id="signal-confidence-label" class="reliability-value text-neutral">--</span>
                                 </div>
                                 <div class="reliability-box">
                                     <span class="reliability-label">주의 지표</span>
-                                    <span id="synthetic-warning-label" class="reliability-value text-red">추정형 지표 분리</span>
+                                    <span id="synthetic-warning-label" class="reliability-value text-red">출처 확인 중</span>
                                 </div>
                             </div>
 
@@ -825,7 +825,7 @@
                                         <span id="metric-oi" class="metric-val">--</span>
                                     </div>
                                     <div class="quant-metric-row">
-                                        <span>실시간 펀딩비 (Funding Rate)</span>
+                                        <span>펀딩비 (Binance Futures)</span>
                                         <span id="metric-funding-rate" class="metric-val">--</span>
                                     </div>
                                     <div class="quant-metric-row">
@@ -1024,7 +1024,7 @@
                     <div id="signal-feed-list" class="signal-feed-list">
                         <div class="signal-item welcome">
                             <span class="signal-time">System</span>
-                            <span class="signal-msg text-yellow">CORS 제한이 없는 바이낸스 실시간 라이브 네트워크 연동에 성공했습니다. 알트코인 심볼을 추가하면 실시간 보조지표(RSI/MACD/MA) 분석 신호가 즉시 출력됩니다!</span>
+                            <span class="signal-msg text-yellow">Binance Futures 공개 데이터 연결을 확인하는 중입니다. 분석은 확정 봉만 사용하며, 원천 조회 실패 시 임의 값을 생성하지 않습니다.</span>
                         </div>
                     </div>
                 </div>
@@ -1276,8 +1276,9 @@
     <script src="https://t1.kakaocdn.net/kakao_js_sdk/1.43.1/kakao.min.js"></script>
 
     <!-- 메인 트레이딩 엔진 로직 JavaScript 연동 -->
+    <script src="data_integrity.js?v=1.0.0" charset="utf-8"></script>
     <script src="wave_analyzer.js?v=1.4.0" charset="utf-8"></script>
     <script src="level_analyzer.js?v=1.1.0" charset="utf-8"></script>
-    <script src="app.js?v=9"></script>
+    <script src="app.js?v=10"></script>
 </body>
 </html>

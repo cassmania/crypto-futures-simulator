@@ -255,10 +255,10 @@ for (const miss of ['atr', 'ema20', 'sma60', 'rsi', 'price']) {
 const gWrong = engine.gradeWave(mk('2파 조정 진행 중', { invalidation: 105 }), '1d', IND);
 assert.strictEqual(gWrong.ev, null, '방향 모순 신호가 통과함');
 
-// 표본 부족 조합은 매매 불가 + 미검증 표시
+// 내부 조합표에 없는 조건은 판정 보류 표시
 const gUnk = engine.gradeWave(mk('4파 조정 진행 중'), '1d', IND);
 assert.strictEqual(gUnk.tradable, false, '미검증 조합이 매매가능');
-assert.ok(gUnk.warnings.some(w => /검증되지 않았다/.test(w)), JSON.stringify(gUnk.warnings));
+assert.ok(gUnk.warnings.some(w => /판정을 보류한다/.test(w)), JSON.stringify(gUnk.warnings));
 
 // 매도 표(ladder): 손절은 최초보다 불리해지지 않고, 확정손익은 단조 증가
 assert.strictEqual(gTop.ladder.length, 4);

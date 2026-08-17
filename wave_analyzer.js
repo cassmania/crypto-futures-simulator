@@ -289,13 +289,13 @@ class ElliottWaveEngine {
         const ev = known ? ElliottWaveEngine.CELL_EV[cell] : 0;
         const grade = ev >= 0.9 ? 'A' : ev >= ElliottWaveEngine.TRADE_CUT ? 'B' : ev >= 0.2 ? 'C' : 'D';
 
-        const notes = [`조합 ${cell}`, `실측 기대값 ${ev >= 0 ? '+' : ''}${ev.toFixed(2)}R`];
+        const notes = [`조합 ${cell}`, `내부 기대값 ${ev >= 0 ? '+' : ''}${ev.toFixed(2)}R`];
         const warnings = [];
         if (aBand === 'a<1') warnings.push('손절 자리가 너무 가까워 잡음에 털린다');
         if (mBand === 'm-') warnings.push('이동평균이 파동 방향과 반대다');
         if (cBand === 'c<6') warnings.push('보조지표 확증이 약하다');
-        if (rBand === 'r低') warnings.push('RSI가 실측 승률 최하 구간이다');
-        if (!known) warnings.push('백테스트에 없는 조합이라 검증되지 않았다');
+        if (rBand === 'r低') warnings.push('RSI가 내부 조합표의 약세 구간이다');
+        if (!known) warnings.push('내부 조합표에 없는 조건이라 판정을 보류한다');
 
         // 매도 표: 가격이 각 R 지점에 닿았을 때 손절이 어디로 오는지.
         // 트레일링은 "따라 올린다"는 말만으론 운용이 안 되고 숫자로 봐야 쓸 수 있다.
