@@ -6645,16 +6645,29 @@ async function 지지저항분석및업데이트(coin, symbol) {
     const 경고HTML = r.경고.length
         ? `<div style="color:#ffd93d; margin-top:6px; font-size:0.85em;">${r.경고.map(w => "⚠ " + w).join("<br>")}</div>` : "";
     setHTML("levels-scenario", 시나리오.join("") + 경고HTML);
+
+    // V4.1 보고서는 읽기 전용이며 주문·자동매매 상태를 변경하지 않습니다.
+    if (typeof V41SimulatorAnalysis !== "undefined") {
+        V41SimulatorAnalysis.render({
+            symbol,
+            price: 현재가,
+            decimals: dp,
+            candlesByTf: 레벨봉캐시.data,
+            levels: r,
+            derivatives: 상태.파생데이터캐시[symbol]?.data || null
+        });
+    }
 }
 
 // 지지·저항 전용 캔들 조회. 시장 혼합을 막기 위해 Binance Futures만 사용합니다.
 async function 레벨캔들가져오기(symbol, interval) {
     const 파싱 = raw => raw.filter(k => Number(k[6]) <= Date.now()).map(k => ({
-        high: parseFloat(k[2]), low: parseFloat(k[3]),
-        close: parseFloat(k[4]), volume: parseFloat(k[5])
+        open: parseFloat(k[1]), high: parseFloat(k[2]), low: parseFloat(k[3]),
+        close: parseFloat(k[4]), volume: parseFloat(k[5]), closeTime: Number(k[6])
     }));
     try {
-        const res = await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=${interval}&limit=200`);
+        // 진행 중 마지막 봉을 제외한 뒤에도 SMA200 계산에 필요한 200개 확정봉을 남깁니다.
+        const res = await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=${interval}&limit=201`);
         if (!res.ok) return null;
         const raw = await res.json();
         if (!Array.isArray(raw) || raw.length < 20) return null;

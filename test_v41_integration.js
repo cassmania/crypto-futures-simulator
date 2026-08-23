@@ -1,0 +1,16 @@
+const assert = require("assert");
+const fs = require("fs");
+const html = fs.readFileSync("index.html","utf8");
+const app = fs.readFileSync("app.js","utf8");
+assert.match(html,/v41_analysis\.js\?v=4\.1\.0/);
+assert.match(html,/id="v41-report"/);
+assert.match(app,/V41SimulatorAnalysis\.render/);
+assert.match(app,/closeTime: Number\(k\[6\]\)/);
+assert.match(app,/interval=\$\{interval\}&limit=201/);
+const moduleText = fs.readFileSync("v41_analysis.js","utf8");
+assert.match(moduleText,/PART 0 · 데이터 기준 및 USDT\.D/);
+assert.match(moduleText,/PART 5 · 실행 전략 및 위험관리/);
+assert.match(moduleText,/Stochastic\(14,3,3\)/);
+assert.match(moduleText,/포지션 위험액 = 계좌 평가액 × 0\.5~1%/);
+assert.match(moduleText,/웹 조사 미수행/);
+console.log("V4.1 시뮬레이터 화면 통합 테스트 통과");
