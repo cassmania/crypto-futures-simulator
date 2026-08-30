@@ -1,0 +1,167 @@
+{
+  "generatedAt": "2026-08-30T22:48:02.549Z",
+  "source": "Binance USDT-M Futures",
+  "rules": {
+    "closedCandlesOnly": true,
+    "maximumCandles": 5000,
+    "holdoutRatio": 0.4,
+    "entry": "next-bar-open",
+    "exit": "current simulator automatic TP/SL approximation",
+    "feeEachSide": 0.0004,
+    "slippageEachSide": 0.0002,
+    "sameBarPriority": "STOP",
+    "fundingAdjustment": "not included because historical funding snapshots are not fetched"
+  },
+  "results": [
+    {
+      "symbol": "BTCUSDT",
+      "interval": "1h",
+      "candles": 5000,
+      "dataStartTime": 1770127200000,
+      "holdoutStartTime": 1780927200000,
+      "endTime": 1788127199999,
+      "verdict": "전략 우위 미확인",
+      "all": {
+        "trades": 167,
+        "winRate": 35.92814371257485,
+        "profitFactor": 0.9633002251229553,
+        "expectancyR": -0.026270187712743545,
+        "totalR": -4.387121348028172,
+        "maxDrawdownR": 24.270058576096964
+      },
+      "holdout": {
+        "trades": 64,
+        "winRate": 35.9375,
+        "profitFactor": 0.8846700530489866,
+        "expectancyR": -0.08301271320869083,
+        "totalR": -5.312813645356213,
+        "maxDrawdownR": 14.90221948438567
+      }
+    },
+    {
+      "symbol": "ETHUSDT",
+      "interval": "1h",
+      "candles": 5000,
+      "dataStartTime": 1770127200000,
+      "holdoutStartTime": 1780927200000,
+      "endTime": 1788127199999,
+      "verdict": "전략 우위 미확인",
+      "all": {
+        "trades": 166,
+        "winRate": 33.734939759036145,
+        "profitFactor": 1.1958802015577898,
+        "expectancyR": 0.14327248784054344,
+        "totalR": 23.78323298153021,
+        "maxDrawdownR": 18.585105889714583
+      },
+      "holdout": {
+        "trades": 74,
+        "winRate": 37.83783783783784,
+        "profitFactor": 0.7839742692196252,
+        "expectancyR": -0.14971352583894512,
+        "totalR": -11.07880091208194,
+        "maxDrawdownR": 18.585105889714583
+      }
+    },
+    {
+      "symbol": "SOLUSDT",
+      "interval": "1h",
+      "candles": 5000,
+      "dataStartTime": 1770127200000,
+      "holdoutStartTime": 1780927200000,
+      "endTime": 1788127199999,
+      "verdict": "전략 우위 미확인",
+      "all": {
+        "trades": 208,
+        "winRate": 26.923076923076923,
+        "profitFactor": 0.8228028338623297,
+        "expectancyR": -0.1440578732348408,
+        "totalR": -29.964037632846882,
+        "maxDrawdownR": 43.952757786367
+      },
+      "holdout": {
+        "trades": 78,
+        "winRate": 30.76923076923077,
+        "profitFactor": 0.7931763823645639,
+        "expectancyR": -0.15917495607507165,
+        "totalR": -12.415646573855588,
+        "maxDrawdownR": 23.185145495215234
+      }
+    },
+    {
+      "symbol": "BTCUSDT",
+      "interval": "4h",
+      "candles": 5000,
+      "dataStartTime": 1716120000000,
+      "holdoutStartTime": 1759320000000,
+      "endTime": 1788119999999,
+      "verdict": "전략 우위 미확인",
+      "all": {
+        "trades": 209,
+        "winRate": 22.00956937799043,
+        "profitFactor": 0.9574027422006758,
+        "expectancyR": -0.037015242775517106,
+        "totalR": -7.736185740083075,
+        "maxDrawdownR": 29.74933181614843
+      },
+      "holdout": {
+        "trades": 84,
+        "winRate": 22.61904761904762,
+        "profitFactor": 0.9723689039206814,
+        "expectancyR": -0.023782345983888002,
+        "totalR": -1.9977170626465923,
+        "maxDrawdownR": 23.44836040474773
+      }
+    },
+    {
+      "symbol": "ETHUSDT",
+      "interval": "4h",
+      "candles": 5000,
+      "dataStartTime": 1716120000000,
+      "holdoutStartTime": 1759320000000,
+      "endTime": 1788119999999,
+      "verdict": "전략 우위 미확인",
+      "all": {
+        "trades": 229,
+        "winRate": 20.087336244541483,
+        "profitFactor": 0.8280497868796944,
+        "expectancyR": -0.15228886826946106,
+        "totalR": -34.87415083370658,
+        "maxDrawdownR": 71.99223565246112
+      },
+      "holdout": {
+        "trades": 79,
+        "winRate": 12.658227848101266,
+        "profitFactor": 0.5112147550395386,
+        "expectancyR": -0.4674330509494663,
+        "totalR": -36.927211025007836,
+        "maxDrawdownR": 36.927211025007836
+      }
+    },
+    {
+      "symbol": "SOLUSDT",
+      "interval": "4h",
+      "candles": 5000,
+      "dataStartTime": 1716120000000,
+      "holdoutStartTime": 1759320000000,
+      "endTime": 1788119999999,
+      "verdict": "전략 우위 미확인",
+      "all": {
+        "trades": 195,
+        "winRate": 19.48717948717949,
+        "profitFactor": 1.1395728105765754,
+        "expectancyR": 0.1240358227389674,
+        "totalR": 24.186985434098645,
+        "maxDrawdownR": 42.22563662838945
+      },
+      "holdout": {
+        "trades": 49,
+        "winRate": 16.3265306122449,
+        "profitFactor": 0.9068522225235556,
+        "expectancyR": -0.08538130288664961,
+        "totalR": -4.183683841445831,
+        "maxDrawdownR": 22.072800042497743
+      }
+    }
+  ]
+}

@@ -230,10 +230,11 @@ class ElliottWaveEngine {
     }
 
     /**
-     * v4 신뢰등급 — 백테스트 실측 기대값 채점.
+     * v4 신뢰등급 — 과거 내부 참고값 기반 채점.
      *
      * v2는 엘리엇 교과서의 패턴 서열을 점수화했다. v4는 그 서열을 15개 심볼
-     * 일봉 8,778건으로 검증한 뒤 실측 기대값(R)으로 다시 썼다.
+     * 일봉 8,778건으로 검증했다고 기록되어 있으나, 현재 저장소에는 해당 원본 결과와
+     * 재현 스크립트가 포함되어 있지 않다. 따라서 아래 수치는 독립 검증 전 참고값이다.
      * 아웃샘플: 워크포워드 69.6% / +0.831R, 심볼 홀드아웃 76.5% / +0.917R
      * (v2 A/B 57.3% / +0.52R, 무필터 48.4% / +0.26R)
      *
@@ -289,7 +290,7 @@ class ElliottWaveEngine {
         const ev = known ? ElliottWaveEngine.CELL_EV[cell] : 0;
         const grade = ev >= 0.9 ? 'A' : ev >= ElliottWaveEngine.TRADE_CUT ? 'B' : ev >= 0.2 ? 'C' : 'D';
 
-        const notes = [`조합 ${cell}`, `내부 기대값 ${ev >= 0 ? '+' : ''}${ev.toFixed(2)}R`];
+        const notes = [`조합 ${cell}`, `과거 내부 참고값 ${ev >= 0 ? '+' : ''}${ev.toFixed(2)}R`, '현재 재현 자료 없음'];
         const warnings = [];
         if (aBand === 'a<1') warnings.push('손절 자리가 너무 가까워 잡음에 털린다');
         if (mBand === 'm-') warnings.push('이동평균이 파동 방향과 반대다');
@@ -558,8 +559,8 @@ class ElliottWaveEngine {
     }
 }
 
-// v4 조합표 — 패턴 x 확증대 x 손절폭 x MA정렬 x RSI대 5축의 실측 기대값(R).
-// 15개 심볼 일봉 8,778건 백테스트 산출물이며 표본 60건 이상인 조합만 싣는다.
+// v4 조합표 — 패턴 x 확증대 x 손절폭 x MA정렬 x RSI대 5축의 과거 내부 참고값(R).
+// 15개 심볼 일봉 8,778건 백테스트에서 만들었다고 기록되어 있으나 재현 원본은 저장소에 없다.
 // 값은 반올림하지 않는다 — 0.4961을 0.50으로 줄여 적었더니 매매선(0.5R)을 넘겨
 // 관망이어야 할 조합이 신호로 나간 적이 있다.
 ElliottWaveEngine.CELL_EV = {

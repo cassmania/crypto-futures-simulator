@@ -1212,14 +1212,14 @@ function 계산RSI(data, period) {
     let avgGain = gains.slice(0, period).reduce((a, b) => a + b, 0) / period;
     let avgLoss = losses.slice(0, period).reduce((a, b) => a + b, 0) / period;
 
-    if (avgLoss === 0) rsi[period] = 100;
+    if (avgLoss === 0) rsi[period] = avgGain === 0 ? 50 : 100;
     else rsi[period] = 100 - (100 / (1 + avgGain / avgLoss));
 
     for (let i = period + 1; i < data.length; i++) {
         avgGain = (avgGain * (period - 1) + gains[i - 1]) / period;
         avgLoss = (avgLoss * (period - 1) + losses[i - 1]) / period;
 
-        if (avgLoss === 0) rsi[i] = 100;
+        if (avgLoss === 0) rsi[i] = avgGain === 0 ? 50 : 100;
         else rsi[i] = 100 - (100 / (1 + avgGain / avgLoss));
     }
 
@@ -1247,57 +1247,20 @@ function 분석및신호생성(symbol) {
     if (!coin) return;
 
     const 분석캔들 = 확정봉만추출(coin.신호캔들데이터);
-    if (분석캔들.length < 30) return;
+    if (분석캔들.length < 60 || typeof StrategyBacktest === "undefined") return;
 
     const closes = 분석캔들.map(c => c.close);
-    const highs = 분석캔들.map(c => c.high);
-    const lows = 분석캔들.map(c => c.low);
     const times = 분석캔들.map(c => c.time);
     const idx = closes.length - 1;
 
-    // 1. 실시간 다중 지표 정밀 연산부 도입 (Advanced Multi-Indicator Calculations)
-    const rsiVal = 계산RSI(closes, 14)[idx] || 50;
-    const macdData = 계산MACD(closes, 12, 26, 9);
-    const 현재MACD = macdData.macd[idx] || 0;
-    const 현재MACD시그널 = macdData.signal[idx] || 0;
-    const 이전MACD = macdData.macd[idx - 1] || 0;
-    const 이전MACD시그널 = macdData.signal[idx - 1] || 0;
-
-    const ema5 = 계산EMA(closes, 5)[idx] || coin.현재가;
-    const ma20 = 계산SMA(closes, 20)[idx] || coin.현재가;
-    const ema20 = 계산EMA(closes, 20)[idx] || coin.현재가;
-    const ma60 = 계산SMA(closes, 60)[idx] || coin.현재가;
-    const ma120 = 계산SMA(closes, 120)[idx] || coin.현재가;
-    const sma200 = 계산SMA(closes, 200)[idx] || coin.현재가; // 100MA 장기 추세 필터
-    const 이전EMA5 = 계산EMA(closes, 5)[idx - 1] || coin.현재가;
-    const 이전EMA20 = 계산EMA(closes, 20)[idx - 1] || coin.현재가;
-
-    const cciVal = 계산CCI(highs, lows, closes, 20)[idx] || 0;
-    const stochData = 계산스토캐스틱(highs, lows, closes, 14, 3, 3);
-    const stochK = stochData.k[idx] || 50;
-    const stochD = stochData.d[idx] || 50;
-    
-    const bbData = 계산볼린저밴드(closes, 20, 2);
-    const bbUpper = bbData.upper[idx] || coin.현재가 * 1.02;
-    const bbLower = bbData.lower[idx] || coin.현재가 * 0.98;
-
-    const 최고24h = Math.max(...highs.slice(Math.max(0, idx - 100), idx + 1));
-    const 최저24h = Math.min(...lows.slice(Math.max(0, idx - 100), idx + 1));
-    const fiboLevels = 계산피보나치되돌림(최고24h, 최저24h);
-    const vpvrData = 계산VPVR매물대(분석캔들, coin.소수점);
-    const vpvrPOC = vpvrData.poc || coin.현재가;
+    // 신호 계산은 백테스트와 같은 모듈에 맡깁니다. 진행 중인 실시간 가격은 섞지 않고
+    // 최신 확정봉 종가까지만 사용하므로 봉 도중 조건이 사라지는 재도색을 줄입니다.
+    const rsiVal = StrategyBacktest.rsi(closes, 14)[idx] ?? 50;
 
     // 2. 다각적 연립 필터링 3단계 검증 시스템 구축 (3-Step Confluence System)
     let 신호방향 = null;
     let 근거 = [];
 
-    // [1단계: 지지와 저항 확인 필터] (VPVR 매물대 POC & 피보나치 레벨 최우선 가격 분석 요소 활용)
-    const 롱지지검증 = coin.현재가 <= fiboLevels["50.0%"] || coin.현재가 < vpvrPOC || coin.현재가 <= bbLower;
-    const 숏저항검증 = coin.현재가 >= fiboLevels["38.2%"] || coin.현재가 > vpvrPOC || coin.현재가 >= bbUpper;
-
-    // [2단계: 추세 방향성 판정 필터] (이평선 20/60 배열 & 슈퍼트렌드 & MACD 연립)
-    const 이평정배열 = ma20 >= ma60;
-    const 이평역배열 = ma20 <= ma60;
     // [카카오 자동 발송 트리거 C: RSI 체크]
     if (window.KakaoAutoSendInfo && window.KakaoAutoSendInfo.enabled_c && window.KakaoAutoSendInfo.symbols && window.KakaoAutoSendInfo.symbols.includes(symbol)) {
         const threshold = window.KakaoAutoSendInfo.rsi_c || 30;
@@ -1329,48 +1292,10 @@ function 분석및신호생성(symbol) {
         }
     }
 
-    const 슈퍼트렌드롱 = coin.현재가 > ema20 && rsiVal > 48;
-    const 슈퍼트렌드숏 = coin.현재가 < ema20 && rsiVal < 52;
-    const MACD롱추세 = 현재MACD > 현재MACD시그널;
-    const MACD숏추세 = 현재MACD < 현재MACD시그널;
-
-    const 추세롱합격 = 이평정배열 || 슈퍼트렌드롱 || MACD롱추세;
-    const 추세숏합격 = 이평역배열 || 슈퍼트렌드숏 || MACD숏추세;
-
-    // [3단계: 오실레이터 진입 타이밍 조율 필터] (RSI & CCI & 스토캐스틱 K/D)
-    const MACD골든크로스 = 이전MACD < 이전MACD시그널 && 현재MACD >= 현재MACD시그널;
-    const MACD데드크로스 = 이전MACD > 이전MACD시그널 && 현재MACD <= 현재MACD시그널;
-    const MA골든크로스 = 이전EMA5 < 이전EMA20 && ema5 >= ema20;
-    const MA데드크로스 = 이전EMA5 > 이전EMA20 && ema5 <= 이전EMA20;
-
-    const RSI롱과매도 = rsiVal <= 38;
-    const CCI롱침체 = cciVal <= -100;
-    const 스토크골든크로스 = stochK <= 30 && stochK > stochD;
-    const 타이밍롱진입 = RSI롱과매도 || CCI롱침체 || 스토크골든크로스 || MACD골든크로스 || MA골든크로스;
-
-    const RSI숏과매수 = rsiVal >= 62;
-    const CCI숏과열 = cciVal >= 100;
-    const 스토크데드크로스 = stochK >= 70 && stochK < stochD;
-    const 타이밍숏진입 = RSI숏과매수 || CCI숏과열 || 스토크데드크로스 || MACD데드크로스 || MA데드크로스;
-
-    // 최종 3중 연립 수렴(Confluence) 합격 시에만 정밀 진입 신호 격발
-    if (롱지지검증 && 추세롱합격 && 타이밍롱진입) {
-        신호방향 = "LONG";
-        if (RSI롱과매도) 근거.push("RSI 과매도 수렴");
-        if (CCI롱침체) 근거.push("CCI 과매도 채널");
-        if (스토크골든크로스) 근거.push("스토캐스틱 골든크로스");
-        if (MACD골든크로스) 근거.push("MACD 골든크로스");
-        if (MA골든크로스) 근거.push("이평 단기 골든크로스");
-        if (coin.현재가 < vpvrPOC) 근거.push("VPVR POC 하단 매집 지지");
-    } else if (숏저항검증 && 추세숏합격 && 타이밍숏진입) {
-        신호방향 = "SHORT";
-        if (RSI숏과매수) 근거.push("RSI 과매수 수렴");
-        if (CCI숏과열) 근거.push("CCI 과열 채널");
-        if (스토크데드크로스) 근거.push("스토캐스틱 데드크로스");
-        if (MACD데드크로스) 근거.push("MACD 데드크로스");
-        if (MA데드크로스) 근거.push("이평 단기 데드크로스");
-        if (coin.현재가 > vpvrPOC) 근거.push("VPVR POC 상단 돌파 저항");
-    }
+    // 화면 신호와 백테스트가 지표 계산부터 판정까지 동일한 순수 함수를 공유합니다.
+    const 신호평가 = StrategyBacktest.analyzeSignal(분석캔들);
+    신호방향 = 신호평가.direction;
+    근거 = 신호평가.reasons;
 
     // 조건 부합 시 화면 알림 및 차트 마킹 출력
     if (신호방향 && 근거.length >= 1) {
@@ -1619,13 +1544,16 @@ function 포지션체결실행(주문, 체결가) {
     }
 
     const 증거금 = (주문.수량 * 체결가) / 주문.레버리지;
+    const 진입수수료 = 주문.수량 * 체결가 * 0.0004;
+    const 필요잔고 = 증거금 + 진입수수료;
 
-    if (상태.지갑잔고 < 증거금) {
-        새신호알림(주문.심볼, `[체결 취소] 잔고 부족으로 예약 주문이 자동 취소되었습니다. (필요 마진: ${증거금.toFixed(2)} USDT)`, "short");
+    if (상태.지갑잔고 < 필요잔고) {
+        새신호알림(주문.심볼, `[체결 취소] 잔고 부족으로 예약 주문이 자동 취소되었습니다. (필요 마진+진입 수수료: ${필요잔고.toFixed(2)} USDT)`, "short");
         return;
     }
 
-    상태.지갑잔고 -= 증거금;
+    // 시장가 모의 체결도 실제 선물 거래처럼 진입과 종료 양쪽 수수료를 반영합니다.
+    상태.지갑잔고 -= 필요잔고;
 
     // 청산가 연산 (유지마진비율 0.5% 가정)
     let 청산가 = 0;
@@ -1643,6 +1571,7 @@ function 포지션체결실행(주문, 체결가) {
         수량: 주문.수량,
         진입가: 체결가,
         투입마진: 증거금,
+        진입수수료: 진입수수료,
         청산가: parseFloat(청산가.toFixed(상태.코인목록[주문.심볼].소수점)),
         익절가: 주문.익절가,
         손절가: 주문.손절가,
@@ -1833,7 +1762,8 @@ function 포지션종료실행(인덱스, 종료가, 사유) {
     const pos = 상태.활성포지션[인덱스];
     if (!pos) return;
 
-    const 수수료 = pos.수량 * 종료가 * 0.0004; // 0.04% 청산/거래 수수료
+    let 종료수수료 = pos.수량 * 종료가 * 0.0004; // 0.04% 종료 수수료
+    const 진입수수료 = Number(pos.진입수수료) || 0;
     
     let pnl = 0;
     if (pos.방향 === "LONG") {
@@ -1842,10 +1772,13 @@ function 포지션종료실행(인덱스, 종료가, 사유) {
         pnl = (pos.진입가 - 종료가) * pos.수량;
     }
 
-    let 최종정산금 = pos.투입마진 + pnl - 수수료;
+    let 최종정산금 = pos.투입마진 + pnl - 종료수수료;
+    let 순손익 = pnl - 진입수수료 - 종료수수료;
     if (사유.includes("청산")) {
         최종정산금 = 0;
         pnl = -pos.투입마진;
+        종료수수료 = 0;
+        순손익 = pnl - 진입수수료;
     }
 
     상태.지갑잔고 += Math.max(0, 최종정산금);
@@ -1858,14 +1791,14 @@ function 포지션종료실행(인덱스, 종료가, 사유) {
         진입가: pos.진입가,
         종료가: 종료가,
         수량: pos.수량,
-        수수료: 수수료,
-        실현손익: pnl,
+        수수료: 진입수수료 + 종료수수료,
+        실현손익: 순손익,
         종료원인: 사유
     });
 
-    const 알림색 = pnl >= 0 ? "long" : "short";
-    const 이익표시 = pnl >= 0 ? "수익 정산" : "손실 정산";
-    새신호알림(pos.심볼, `[포지션 정산] ${pos.심볼} ${pos.방향} 거래가 종료가 ${종료가.toLocaleString()} USDT에 정리되었습니다. (${사유} | PNL: ${pnl.toFixed(2)} USDT ${이익표시})`, 알림색);
+    const 알림색 = 순손익 >= 0 ? "long" : "short";
+    const 이익표시 = 순손익 >= 0 ? "수익 정산" : "손실 정산";
+    새신호알림(pos.심볼, `[포지션 정산] ${pos.심볼} ${pos.방향} 거래가 종료가 ${종료가.toLocaleString()} USDT에 정리되었습니다. (${사유} | 비용 차감 순손익: ${순손익.toFixed(2)} USDT ${이익표시})`, 알림색);
 
     상태.활성포지션.splice(인덱스, 1);
 
