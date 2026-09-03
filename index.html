@@ -17,7 +17,7 @@
     <link rel="icon" href="data:,">
 
     <!-- 자체 스타일시트(Style CSS) 연동 -->
-    <link rel="stylesheet" href="style.css?v=4">
+    <link rel="stylesheet" href="style.css?v=5">
 
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-C60CWQZ62S"></script>
@@ -59,9 +59,37 @@
                     <span class="info-label">미실현 손익 (Unrealized PNL)</span>
                     <span id="header-unrealized-pnl" class="info-value text-neutral">0.00 USDT (0.00%)</span>
                 </div>
-                <div class="info-item">
-                    <span class="info-label">활성 포지션 (Active Positions)</span>
-                    <span id="active-positions-count" class="info-value">0</span>
+                <div class="info-item active-position-overview-anchor">
+                    <button id="active-position-overview-toggle" class="active-position-overview-toggle" type="button" aria-expanded="false" aria-controls="active-position-overview-panel" title="활성 포지션 한눈 요약 열기">
+                        <span class="info-label">활성 포지션 (Active Positions)</span>
+                        <span class="active-position-count-row">
+                            <span id="active-positions-count" class="info-value">0</span>
+                            <i class="fa-solid fa-chevron-down active-position-toggle-icon" aria-hidden="true"></i>
+                        </span>
+                    </button>
+
+                    <!-- 현재 화면을 떠나지 않고 포지션 성과와 청산 위험을 확인하는 요약 패널 -->
+                    <section id="active-position-overview-panel" class="active-position-overview-panel" aria-label="활성 포지션 한눈 요약" hidden>
+                        <div class="position-overview-header">
+                            <div>
+                                <strong><i class="fa-solid fa-layer-group" aria-hidden="true"></i> 포지션 한눈 요약</strong>
+                                <span>위험도가 높은 포지션부터 표시합니다.</span>
+                            </div>
+                            <button id="active-position-overview-close" class="position-overview-close" type="button" aria-label="포지션 요약 닫기">
+                                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                        <div id="active-position-overview-stats" class="position-overview-stats"></div>
+                        <div class="position-overview-list-header" aria-hidden="true">
+                            <span>포지션</span>
+                            <span>미실현 손익</span>
+                            <span>청산 거리</span>
+                        </div>
+                        <div id="active-position-overview-list" class="position-overview-list"></div>
+                        <button id="active-position-overview-detail" class="position-overview-detail" type="button">
+                            <i class="fa-solid fa-table-list" aria-hidden="true"></i> 하단 상세표 보기
+                        </button>
+                    </section>
                 </div>
                 <button id="btn-layout-toggle" class="btn-layout-toggle" title="레이아웃 좌우 전환 (Left/Right Layout Swap)" onclick="window.레이아웃방향토글액션()"><i class="fa-solid fa-right-left"></i></button>
                 <button id="btn-reset" class="btn-reset" title="시뮬레이터 초기화(Reset Simulator)"><i class="fa-solid fa-rotate-right"></i></button>
@@ -1297,7 +1325,7 @@
     <script src="level_analyzer.js?v=1.1.0" charset="utf-8"></script>
     <script src="v41_analysis.js?v=4.1.0" charset="utf-8"></script>
     <script src="strategy_backtest.js?v=1.0.0" charset="utf-8"></script>
-    <script src="app.js?v=12"></script>
+    <script src="app.js?v=13"></script>
     <script src="backtest_panel.js?v=1.0.0" charset="utf-8"></script>
 </body>
 </html>

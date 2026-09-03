@@ -2245,6 +2245,51 @@ window.검색코인강제등록액션 = async function(symbol) {
 };
 
 function 이벤트리스너바인딩() {
+    // 상단 활성 포지션 숫자를 누르면 요약 패널을 열고, 닫기/바깥 클릭/Esc도 지원합니다.
+    const 포지션요약토글버튼 = document.getElementById("active-position-overview-toggle");
+    const 포지션요약닫기버튼 = document.getElementById("active-position-overview-close");
+    const 포지션요약패널 = document.getElementById("active-position-overview-panel");
+    const 포지션상세버튼 = document.getElementById("active-position-overview-detail");
+
+    포지션요약토글버튼?.addEventListener("click", 활성포지션요약토글);
+    포지션요약닫기버튼?.addEventListener("click", 활성포지션요약닫기);
+
+    포지션요약패널?.addEventListener("click", (event) => {
+        const 포지션행 = event.target.closest("[data-position-symbol]");
+        if (!포지션행) return;
+        const symbol = 포지션행.dataset.positionSymbol;
+        if (symbol && typeof window.코인탭전환 === "function") window.코인탭전환(symbol);
+        활성포지션요약닫기();
+    });
+
+    포지션상세버튼?.addEventListener("click", () => {
+        const 활성포지션탭 = document.querySelector('.footer-tab[data-tab="active-positions"]');
+        활성포지션탭?.click();
+        활성포지션요약닫기();
+
+        if (window.innerWidth <= 768 && typeof window.모바일탭스위치 === "function") {
+            window.모바일탭스위치("position");
+        }
+
+        window.setTimeout(() => {
+            document.querySelector(".positions-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 50);
+    });
+
+    document.addEventListener("click", (event) => {
+        const 요약영역 = document.querySelector(".active-position-overview-anchor");
+        if (포지션요약패널 && !포지션요약패널.hidden && 요약영역 && !요약영역.contains(event.target)) {
+            활성포지션요약닫기();
+        }
+    });
+
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && 포지션요약패널 && !포지션요약패널.hidden) {
+            활성포지션요약닫기();
+            포지션요약토글버튼?.focus();
+        }
+    });
+
     // [NEW] 가로형 즐겨찾기 탭 영역 마우스 휠 및 꾹 누르고 비비는 드래그(Drag) 스크롤 제스처 인터랙션 바인딩
     const tabsWrapper = document.querySelector(".coin-tabs-wrapper");
     if (tabsWrapper) {
@@ -2933,6 +2978,7 @@ function 활성포지션테이블렌더링() {
                 <td colspan="11"><i class="fa-solid fa-inbox empty-icon"></i> 활성화된 포지션이 없습니다.</td>
             </tr>
         `;
+        활성포지션요약렌더링();
         return;
     }
 
@@ -2981,6 +3027,96 @@ function 활성포지션테이블렌더링() {
         `;
     });
     tbody.innerHTML = html;
+    활성포지션요약렌더링();
+}
+
+// 활성 포지션을 성과와 청산 위험 중심으로 압축해 상단 요약 패널에 표시합니다.
+// 기존 주문/정산 로직은 건드리지 않고 상태 데이터를 읽기만 하는 표시 전용 함수입니다.
+function 활성포지션요약렌더링() {
+    const panel = document.getElementById("active-position-overview-panel");
+    const statsEl = document.getElementById("active-position-overview-stats");
+    const listEl = document.getElementById("active-position-overview-list");
+    if (!panel || panel.hidden || !statsEl || !listEl) return;
+
+    const 포지션목록 = 상태.활성포지션.map(pos => {
+        const coin = 상태.코인목록[pos.심볼];
+        const 현재가후보 = Number(coin?.현재가);
+        const 현재가 = Number.isFinite(현재가후보) && 현재가후보 > 0 ? 현재가후보 : Number(pos.진입가) || 0;
+        const 청산가 = Number(pos.청산가) || 0;
+        const 방향별거리 = pos.방향 === "SHORT" ? 청산가 - 현재가 : 현재가 - 청산가;
+        const 청산거리 = 현재가 > 0 && 청산가 > 0 ? Math.max(0, (방향별거리 / 현재가) * 100) : Infinity;
+
+        return {
+            ...pos,
+            방향: pos.방향 === "SHORT" ? "SHORT" : "LONG",
+            미실현손익: Number(pos.미실현손익) || 0,
+            수익률: Number(pos.수익률) || 0,
+            청산거리
+        };
+    });
+
+    const 롱수 = 포지션목록.filter(pos => pos.방향 === "LONG").length;
+    const 숏수 = 포지션목록.filter(pos => pos.방향 === "SHORT").length;
+    const 수익수 = 포지션목록.filter(pos => pos.미실현손익 >= 0).length;
+    const 손실수 = 포지션목록.length - 수익수;
+    const 위험수 = 포지션목록.filter(pos => pos.청산거리 <= 10).length;
+    const 총손익 = 포지션목록.reduce((합계, pos) => 합계 + pos.미실현손익, 0);
+    const 총손익부호 = 총손익 >= 0 ? "+" : "";
+    const 총손익색상 = 총손익 >= 0 ? "text-green" : "text-red";
+
+    statsEl.innerHTML = `
+        <div class="position-overview-stat"><span>전체</span><strong>${포지션목록.length}개</strong></div>
+        <div class="position-overview-stat"><span>LONG / SHORT</span><strong><span class="text-green">${롱수}</span> / <span class="text-red">${숏수}</span></strong></div>
+        <div class="position-overview-stat"><span>수익 / 손실</span><strong><span class="text-green">${수익수}</span> / <span class="text-red">${손실수}</span></strong></div>
+        <div class="position-overview-stat"><span>총 미실현 손익</span><strong class="${총손익색상}">${총손익부호}${총손익.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></div>
+        <div class="position-overview-stat"><span>청산 주의(10% 이내)</span><strong class="${위험수 > 0 ? "text-red" : "text-green"}">${위험수}개</strong></div>
+        <div class="position-overview-stat"><span>표시 순서</span><strong>위험 우선</strong></div>
+    `;
+
+    if (포지션목록.length === 0) {
+        listEl.innerHTML = `<div class="position-overview-empty"><i class="fa-solid fa-circle-check"></i> 현재 활성 포지션이 없습니다.</div>`;
+        return;
+    }
+
+    const 정렬된목록 = [...포지션목록].sort((a, b) => a.청산거리 - b.청산거리);
+    listEl.innerHTML = 정렬된목록.map(pos => {
+        const 손익부호 = pos.미실현손익 >= 0 ? "+" : "";
+        const 손익클래스 = pos.미실현손익 >= 0 ? "text-green" : "text-red";
+        const 방향클래스 = pos.방향 === "LONG" ? "long" : "short";
+        const 위험클래스 = pos.청산거리 <= 5 ? "risk-danger" : (pos.청산거리 <= 10 ? "risk-medium" : "risk-safe");
+        const 위험문구 = pos.청산거리 <= 5 ? "위험" : (pos.청산거리 <= 10 ? "주의" : "여유");
+        const 거리문구 = Number.isFinite(pos.청산거리) ? `${pos.청산거리.toFixed(1)}% · ${위험문구}` : "계산 대기";
+        const 안전심볼 = 텍스트HTML이스케이프(pos.심볼);
+
+        return `
+            <button class="position-overview-row" type="button" data-position-symbol="${안전심볼}" title="${안전심볼} 분석 화면으로 이동">
+                <span class="position-overview-symbol">
+                    <span class="badge-position-type ${방향클래스}">${pos.방향}</span>
+                    <span class="position-overview-symbol-name">${안전심볼.replace("USDT", "/USDT")}</span>
+                </span>
+                <span class="position-overview-pnl ${손익클래스}">${손익부호}${pos.미실현손익.toFixed(2)} (${손익부호}${pos.수익률.toFixed(2)}%)</span>
+                <span class="position-overview-distance ${위험클래스}">${거리문구}</span>
+            </button>
+        `;
+    }).join("");
+}
+
+function 활성포지션요약닫기() {
+    const toggle = document.getElementById("active-position-overview-toggle");
+    const panel = document.getElementById("active-position-overview-panel");
+    if (!toggle || !panel) return;
+    panel.hidden = true;
+    toggle.setAttribute("aria-expanded", "false");
+}
+
+function 활성포지션요약토글() {
+    const toggle = document.getElementById("active-position-overview-toggle");
+    const panel = document.getElementById("active-position-overview-panel");
+    if (!toggle || !panel) return;
+    const 열기 = panel.hidden;
+    panel.hidden = !열기;
+    toggle.setAttribute("aria-expanded", String(열기));
+    if (열기) 활성포지션요약렌더링();
 }
 
 function 실시간포지션PNL업데이트() {
@@ -3004,6 +3140,9 @@ function 실시간포지션PNL업데이트() {
             pnlEl.className = `${pnlClass}`;
         }
     });
+
+    // 패널이 열려 있을 때만 요약 DOM을 갱신해 평상시 렌더링 비용을 최소화합니다.
+    활성포지션요약렌더링();
 }
 
 window.수동포지션종료 = function(idx) {

@@ -173,6 +173,163 @@ body {
     color: hsl(200, 100%, 55%) !important; /* 블루 (시원한 네온 블루 적용) */
 }
 
+/* 상단 활성 포지션 수를 누르면 현재 화면 위에 핵심 성과와 위험을 펼쳐 보여줍니다. */
+.active-position-overview-anchor { position: relative; }
+
+.active-position-overview-toggle {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    padding: 4px 7px;
+    margin: -4px -7px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    font: inherit;
+    transition: background-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.active-position-overview-toggle:hover,
+.active-position-overview-toggle:focus-visible,
+.active-position-overview-toggle[aria-expanded="true"] {
+    background: hsla(200, 100%, 55%, 0.1);
+    box-shadow: inset 0 0 0 1px hsla(200, 100%, 55%, 0.35);
+    outline: none;
+}
+
+.active-position-count-row { display: flex; align-items: center; gap: 6px; }
+
+.active-position-toggle-icon {
+    color: hsl(200, 100%, 55%);
+    font-size: 9px;
+    transition: transform var(--transition-fast);
+}
+
+.active-position-overview-toggle[aria-expanded="true"] .active-position-toggle-icon { transform: rotate(180deg); }
+
+.active-position-overview-panel {
+    position: absolute;
+    top: calc(100% + 14px);
+    right: 0;
+    width: min(560px, calc(100vw - 24px));
+    max-height: min(640px, calc(100vh - 92px));
+    padding: 14px;
+    border: 1px solid hsl(215, 22%, 25%);
+    border-top: 3px solid hsl(200, 100%, 55%);
+    border-radius: var(--radius-md);
+    background: hsl(220, 20%, 9%);
+    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.62);
+    color: var(--color-text-primary);
+    z-index: 1200;
+}
+
+.active-position-overview-panel[hidden] { display: none !important; }
+
+.position-overview-header,
+.position-overview-list-header,
+.position-overview-row { display: grid; align-items: center; }
+
+.position-overview-header {
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    padding-bottom: 11px;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.position-overview-header strong { display: block; font-size: 14px; color: hsl(200, 100%, 62%); }
+.position-overview-header span { display: block; margin-top: 3px; color: var(--color-text-muted); font-size: 10px; }
+
+.position-overview-close {
+    width: 30px;
+    height: 30px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-card);
+    color: var(--color-text-muted);
+    cursor: pointer;
+}
+
+.position-overview-close:hover,
+.position-overview-close:focus-visible { color: white; border-color: hsl(200, 100%, 55%); outline: none; }
+
+.position-overview-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 7px;
+    margin: 11px 0;
+}
+
+.position-overview-stat {
+    min-width: 0;
+    padding: 8px 9px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: hsl(220, 18%, 12%);
+}
+
+.position-overview-stat > span { display: block; color: var(--color-text-muted); font-size: 9px; white-space: nowrap; }
+.position-overview-stat > strong { display: block; margin-top: 3px; overflow: hidden; color: white; font-family: var(--font-display); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+
+.position-overview-list-header,
+.position-overview-row {
+    grid-template-columns: minmax(120px, 1.2fr) minmax(140px, 1fr) minmax(88px, .65fr);
+    gap: 8px;
+}
+
+.position-overview-list-header { padding: 6px 9px; color: var(--color-text-muted); font-size: 9px; font-weight: 700; }
+.position-overview-list-header span:not(:first-child),
+.position-overview-row > span:not(:first-child) { text-align: right; }
+
+.position-overview-list {
+    max-height: min(345px, calc(100vh - 330px));
+    overflow-y: auto;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+}
+
+.position-overview-row {
+    width: 100%;
+    padding: 9px;
+    border: 0;
+    border-bottom: 1px solid var(--color-border);
+    background: transparent;
+    color: var(--color-text-primary);
+    cursor: pointer;
+    font: inherit;
+}
+
+.position-overview-row:last-child { border-bottom: 0; }
+.position-overview-row:hover,
+.position-overview-row:focus-visible { background: var(--color-bg-hover); outline: none; }
+
+.position-overview-symbol { display: flex; align-items: center; gap: 7px; min-width: 0; font-size: 11px; font-weight: 800; }
+.position-overview-symbol-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.position-overview-pnl,
+.position-overview-distance { font-family: var(--font-display); font-size: 10px; font-weight: 700; }
+.position-overview-distance.risk-danger { color: var(--color-red); }
+.position-overview-distance.risk-medium { color: var(--color-yellow); }
+.position-overview-distance.risk-safe { color: hsl(200, 100%, 60%); }
+.position-overview-empty { padding: 28px 12px; color: var(--color-text-muted); font-size: 11px; text-align: center; }
+
+.position-overview-detail {
+    width: 100%;
+    margin-top: 10px;
+    padding: 9px 12px;
+    border: 1px solid hsla(200, 100%, 55%, 0.45);
+    border-radius: var(--radius-sm);
+    background: hsla(200, 100%, 55%, 0.1);
+    color: hsl(200, 100%, 65%);
+    font-size: 11px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.position-overview-detail:hover,
+.position-overview-detail:focus-visible { background: hsla(200, 100%, 55%, 0.2); outline: none; }
+
 .btn-reset {
     background: transparent;
     border: 1px solid var(--color-border);
@@ -2986,6 +3143,31 @@ body {
         font-size: 12.5px;
         margin-top: 1px;
     }
+
+    .active-position-overview-toggle {
+        width: 100%;
+        align-items: flex-start;
+    }
+
+    .active-position-overview-panel {
+        position: fixed;
+        top: 126px;
+        right: 8px;
+        left: 8px;
+        width: auto;
+        max-height: calc(100vh - 198px);
+        padding: 12px;
+    }
+
+    .position-overview-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+    .position-overview-list-header,
+    .position-overview-row {
+        grid-template-columns: minmax(100px, 1fr) minmax(105px, 1fr) minmax(78px, .72fr);
+        gap: 5px;
+    }
+
+    .position-overview-list { max-height: calc(100vh - 420px); }
 
     .btn-layout-toggle {
         display: none !important; /* 모바일에서는 레이아웃 좌우 스왑 버튼 숨김 */
