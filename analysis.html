@@ -7,15 +7,16 @@
     <!-- 구글 폰트 Outfit & Inter 연동 -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
     <!-- 폰트어썸 아이콘 연동 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- 트레이딩뷰 차트 라이브러리 CDN 연동 -->
     <script src="https://unpkg.com/lightweight-charts@3.8.0/dist/lightweight-charts.standalone.production.js"></script>
+    <script src="binance_guard.js?v=1" charset="utf-8"></script>
     <link rel="icon" href="data:,">
 
     <!-- 자체 스타일시트 연동 -->
-    <link rel="stylesheet" href="analysis_style.css?v=1.1.3">
+    <link rel="stylesheet" href="analysis_style.css?v=1.1.4">
 
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-C60CWQZ62S"></script>
@@ -275,10 +276,10 @@
                                 </div>
                                 <div class="rec-box" style="display: flex; flex-direction: column; justify-content: space-between;">
                                     <div>
-                                        <span class="rec-label" id="rec-resistance-label" style="color: #f6465d !important; font-weight: 600;">저항선</span>
-                                        <span id="rec-resistance" class="rec-value" style="color: #f6465d !important; font-family:var(--font-display); font-weight: 800;">--</span>
+                                        <span class="rec-label" id="rec-resistance-label" style="color: #d64545 !important; font-weight: 600;">저항선</span>
+                                        <span id="rec-resistance" class="rec-value" style="color: #d64545 !important; font-family:var(--font-display); font-weight: 800;">--</span>
                                     </div>
-                                    <div id="rec-res-stat" style="font-size: 0.73em; margin-top: 4px; border-top: 1px solid rgba(246, 70, 93, 0.18); padding-top: 4px; line-height: 1.3; text-align: left;">
+                                    <div id="rec-res-stat" style="font-size: 0.73em; margin-top: 4px; border-top: 1px solid rgba(214, 69, 69, 0.18); padding-top: 4px; line-height: 1.3; text-align: left;">
                                         정밀도: <span id="res-accuracy" style="color: #ffc107; font-weight: 700;">--</span><br>
                                         신뢰도: <span id="res-confidence" style="color: #ffc107; font-weight: 700;">--</span>
                                     </div>
@@ -553,10 +554,10 @@
                                 <div class="gemini-key-section" style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 8px 12px;">
                                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                                         <span style="font-size: 11px; font-weight: 700; color: var(--color-yellow);"><i class="fa-solid fa-key"></i> Gemini API 설정</span>
-                                        <span id="gemini-key-status" class="status-badge" style="font-size: 9px; padding: 2px 6px; border-radius: 4px; background-color: #475569; color: #ffffff;">미설정</span>
+                                        <span id="gemini-key-status" class="status-badge" style="font-size: 9px; padding: 2px 6px; border-radius: 4px; background-color: #55524c; color: #ffffff;">미설정</span>
                                     </div>
                                     <div style="display: flex; gap: 6px;">
-                                        <input type="password" id="input-gemini-key" placeholder="Gemini API Key 입력" class="modal-num-input" style="flex: 1; text-align: left; padding: 4px 8px; font-size: 11px; border: 1px solid var(--color-border); background-color: #ffffff; color: #0f172a;" aria-label="Gemini API 키 입력">
+                                        <input type="password" id="input-gemini-key" placeholder="Gemini API Key 입력" class="modal-num-input" style="flex: 1; text-align: left; padding: 4px 8px; font-size: 11px; border: 1px solid var(--color-border); background-color: #ffffff; color: #1f1e1b;" aria-label="Gemini API 키 입력">
                                         <button class="btn-confirm-activation" onclick="window.Gemini키저장()" style="padding: 4px 10px; font-size: 11px; cursor: pointer; background: var(--color-yellow); border: none; border-radius: 4px; color: var(--color-bg-dark); font-weight: 600;"><i class="fa-solid fa-save"></i> 저장</button>
                                     </div>
                                 </div>
@@ -573,7 +574,7 @@
 
                                 <!-- 자유 질문 입력 영역 -->
                                 <div class="gemini-input-section" style="display: flex; gap: 6px;">
-                                    <input type="text" id="input-gemini-prompt" placeholder="AI에게 물어볼 추가 정보를 입력하세요..." class="modal-num-input" style="flex: 1; text-align: left; padding: 6px 8px; font-size: 11px; border: 1px solid var(--color-border); background-color: #ffffff; color: #0f172a;" onkeydown="if(event.key==='Enter') window.Gemini자유분석()">
+                                    <input type="text" id="input-gemini-prompt" placeholder="AI에게 물어볼 추가 정보를 입력하세요..." class="modal-num-input" style="flex: 1; text-align: left; padding: 6px 8px; font-size: 11px; border: 1px solid var(--color-border); background-color: #ffffff; color: #1f1e1b;" onkeydown="if(event.key==='Enter') window.Gemini자유분석()">
                                     <button class="btn-confirm-activation" onclick="window.Gemini자유분석()" style="padding: 6px 12px; font-size: 11px; background: var(--color-yellow); color: var(--color-bg-dark); border: none; border-radius: 4px; font-weight: 600; cursor: pointer;"><i class="fa-solid fa-paper-plane"></i> 전송</button>
                                 </div>
 
@@ -683,6 +684,6 @@
     <script src="https://t1.kakaocdn.net/kakao_js_sdk/1.43.1/kakao.min.js"></script>
     <script src="wave_analyzer.js?v=1.4.0" charset="utf-8"></script>
     <script src="level_analyzer.js?v=1.1.0" charset="utf-8"></script>
-    <script src="analysis_app.js?v=1.4.0" charset="utf-8"></script>
+    <script src="analysis_app.js?v=1.4.1" charset="utf-8"></script>
 </body>
 </html>

@@ -198,7 +198,7 @@ async function 초기화실행() {
 
     // 6단계: 달러 인덱스 실시간 갱신 가동 (5초 간격)
     실시간달러지수갱신();
-    setInterval(실시간달러지수갱신, 5000);
+    setInterval(실시간달러지수갱신, 5 * 60 * 1000);
 
     // 화면 첫 업데이트
     화면업데이트();
@@ -225,25 +225,25 @@ function 차트시스템초기화() {
         const chartOptions = {
             layout: {
                 background: { type: 'solid', color: '#ffffff' },
-                textColor: '#475569',
+                textColor: '#55524c',
                 fontSize: 8,
                 fontFamily: 'Inter'
             },
             grid: {
-                vertLines: { color: '#f1f5f9' },
-                horzLines: { color: '#f1f5f9' }
+                vertLines: { color: '#efede5' },
+                horzLines: { color: '#efede5' }
             },
             crosshair: {
                 mode: LightweightCharts.CrosshairMode.Normal,
-                vertLine: { color: '#94a3b8', labelBackgroundColor: '#005bc1' },
-                horzLine: { color: '#94a3b8', labelBackgroundColor: '#005bc1' }
+                vertLine: { color: '#a39e94', labelBackgroundColor: '#c96442' },
+                horzLine: { color: '#a39e94', labelBackgroundColor: '#c96442' }
             },
             rightPriceScale: {
-                borderColor: '#cbd5e1',
+                borderColor: '#d6d1c4',
                 visible: true
             },
             timeScale: {
-                borderColor: '#cbd5e1',
+                borderColor: '#d6d1c4',
                 timeVisible: true
             }
         };
@@ -251,16 +251,16 @@ function 차트시스템초기화() {
         chartData.메인차트 = LightweightCharts.createChart(container, chartOptions);
         
         chartData.캔들시리즈 = chartData.메인차트.addCandlestickSeries({
-            upColor: '#0ECB81',
-            downColor: '#F6465D',
-            borderUpColor: '#0ECB81',
-            borderDownColor: '#F6465D',
-            wickUpColor: '#0ECB81',
-            wickDownColor: '#F6465D'
+            upColor: '#12a150',
+            downColor: '#d64545',
+            borderUpColor: '#12a150',
+            borderDownColor: '#d64545',
+            wickUpColor: '#12a150',
+            wickDownColor: '#d64545'
         });
 
         chartData.EMA5시리즈 = chartData.메인차트.addLineSeries({ color: '#ffb100', lineWidth: 1, title: 'EMA 5' });
-        chartData.EMA20시리즈 = chartData.메인차트.addLineSeries({ color: '#005bc1', lineWidth: 1, title: 'EMA 20' });
+        chartData.EMA20시리즈 = chartData.메인차트.addLineSeries({ color: '#c96442', lineWidth: 1, title: 'EMA 20' });
         chartData.SMA60시리즈 = chartData.메인차트.addLineSeries({ color: '#E040FB', lineWidth: 1, title: 'SMA 60' });
 
         window.addEventListener("resize", () => {
@@ -329,7 +329,7 @@ function 이벤트리스너바인딩() {
             const card = document.querySelector(".ai-advisor-card");
             if (card) {
                 card.style.borderColor = "var(--color-yellow)";
-                card.style.boxShadow = "0 0 15px rgba(0, 91, 193, 0.4)";
+                card.style.boxShadow = "0 0 15px rgba(201, 100, 66, 0.4)";
                 setTimeout(() => {
                     card.style.borderColor = "var(--color-border)";
                     card.style.boxShadow = "0 4px 10px rgba(0, 0, 0, 0.05)";
@@ -714,7 +714,7 @@ async function 실시간시세REST폴러() {
         const statusDot = document.getElementById("binance-status-dot");
         const statusText = document.getElementById("binance-status-text");
         if (statusDot && statusText) {
-            statusDot.style.backgroundColor = "#0ecb81"; // 초록색 연결 성공등
+            statusDot.style.backgroundColor = "#12a150"; // 초록색 연결 성공등
             statusDot.className = "status-dot pulse-green";
             statusText.innerText = "바이낸스 실시간 연결 성공";
             statusText.className = "status-text text-green";
@@ -1481,7 +1481,7 @@ function AI추천분석및업데이트(symbol) {
     if (resistanceEl) {
         resistanceEl.innerHTML = `
             <span style="color: #ff6b8b; font-size: 11px; font-weight:600;">1차: ${resistance1.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}</span>
-            <span style="color: #f6465d; font-size: 11px; font-weight:600; margin-left: 6px;">2차: ${resistance2.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}</span>
+            <span style="color: #d64545; font-size: 11px; font-weight:600; margin-left: 6px;">2차: ${resistance2.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}</span>
             <span style="color: #b3001e; font-size: 11px; font-weight:800; margin-left: 6px;">★3차: ${resistance3.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}</span>
         `;
         resistanceEl.style.display = "flex";
@@ -1594,7 +1594,7 @@ async function 지지저항분석및업데이트(coin, symbol) {
 
     const dp = coin.소수점 != null ? coin.소수점 : 2;
     const fmt = v => Number(v).toLocaleString(undefined, { minimumFractionDigits: dp, maximumFractionDigits: dp });
-    const 색 = rank => rank >= 4 ? "#39FF14" : rank === 3 ? "#0ecb81" : rank === 2 ? "#ffd93d" : "#888";
+    const 색 = rank => rank >= 4 ? "#39FF14" : rank === 3 ? "#12a150" : rank === 2 ? "#ffd93d" : "#888";
 
     const 봉표기 = r.사용봉.map(u => u.tf).join(" / ");
     setHTML("levels-summary",
@@ -1723,7 +1723,7 @@ function 엘리엇파동분석및업데이트(coin, ctx) {
 
     // v4 신뢰등급. 실측 기대값(R)이 매매 가부를 정한다. 컷 미달은 관망으로 강등한다.
     const 등급 = result.grade || { grade: "D", ev: null, cell: null, tradable: false, reason: "", warnings: [] };
-    const 등급색 = 등급.grade === "A" ? "#39FF14" : 등급.grade === "B" ? "#0ecb81"
+    const 등급색 = 등급.grade === "A" ? "#39FF14" : 등급.grade === "B" ? "#12a150"
                  : 등급.grade === "C" ? "#ffd93d" : "#888";
     const ev표기 = 등급.ev === null ? "판정 보류"
                  : `실측 기대값 ${등급.ev >= 0 ? "+" : ""}${등급.ev.toFixed(2)}R`;
@@ -1893,7 +1893,7 @@ function 분석및신호생성(symbol) {
                     markers.push({
                         time: lastTime,
                         position: 신호방향 === "LONG" ? 'belowBar' : 'aboveBar',
-                        color: 신호방향 === "LONG" ? '#f6465d' : '#0066ff', // 상승 = 빨간색(롱), 하락 = 파란색(숏)
+                        color: 신호방향 === "LONG" ? '#d64545' : '#0066ff', // 상승 = 빨간색(롱), 하락 = 파란색(숏)
                         shape: 신호방향 === "LONG" ? 'arrowUp' : 'arrowDown',
                         text: 신호방향 === "LONG" ? 'LONG BUY' : 'SHORT SELL'
                     });
@@ -2103,11 +2103,11 @@ function 드롭다운목록렌더링() {
         html += `
             <div class="dropdown-coin-row ${isActive}" onclick="드롭다운코인선택('${symbol}')" style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid rgba(0,0,0,0.05);">
                 <div class="coin-meta-col" style="display: flex; align-items: center; gap: 6px;">
-                    <i class="${starClass} btn-fav-star" onclick="즐겨찾기토글('${symbol}', event)" style="font-size:11px; cursor: pointer; color: #475569;"></i>
-                    <span class="symbol-name" style="font-weight: 600; color: #0f172a;">${symbol.replace("USDT", "")}</span>
+                    <i class="${starClass} btn-fav-star" onclick="즐겨찾기토글('${symbol}', event)" style="font-size:11px; cursor: pointer; color: #55524c;"></i>
+                    <span class="symbol-name" style="font-weight: 600; color: #1f1e1b;">${symbol.replace("USDT", "")}</span>
                     <span class="symbol-desc" style="font-size: 10px; color: rgba(15, 23, 42, 0.5);">/USDT</span>
                 </div>
-                <div class="coin-price-col" style="color: #0f172a; font-family: monospace;">
+                <div class="coin-price-col" style="color: #1f1e1b; font-family: monospace;">
                     ${coin.현재가.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}
                 </div>
                 <div class="coin-change-col ${변동률클래스}" style="font-weight: 600; min-width: 60px; text-align: right;">
@@ -2451,7 +2451,7 @@ window.차트지지저항선드로잉 = function(chartIdx) {
 
     const rLine2 = c.캔들시리즈.createPriceLine({
         price: resistance2,
-        color: '#f6465d',
+        color: '#d64545',
         lineWidth: 2,
         lineStyle: 0, // Solid
         axisLabelVisible: true,
@@ -2545,11 +2545,11 @@ window.Gemini키상태갱신 = function() {
 
     if (상태.geminiApiKey) {
         statusEl.innerText = "설정 완료";
-        statusEl.style.backgroundColor = "#0ecb81"; // 초록색
+        statusEl.style.backgroundColor = "#12a150"; // 초록색
         if (inputEl) inputEl.value = 상태.geminiApiKey;
     } else {
         statusEl.innerText = "미설정";
-        statusEl.style.backgroundColor = "#475569"; // 회색
+        statusEl.style.backgroundColor = "#55524c"; // 회색
         if (inputEl) inputEl.value = "";
     }
 };

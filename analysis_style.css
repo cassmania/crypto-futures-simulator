@@ -24,7 +24,7 @@
     height: 100% !important;
     z-index: 100 !important;
     border-color: var(--color-yellow) !important;
-    box-shadow: 0 0 20px rgba(0, 91, 193, 0.45) !important;
+    box-shadow: 0 0 20px rgba(201, 100, 66, 0.45) !important;
 }
 
 /* 차트 내부 콤팩트화 */

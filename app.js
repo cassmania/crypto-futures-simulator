@@ -369,26 +369,26 @@ function 차트시스템초기화() {
         // 공통 차트 테마 옵션 정의 (METATRADE 라이트 테마 적용)
         const chartOptions = {
             layout: {
-                background: { type: 'solid', color: '#ffffff' },
-                textColor: '#707A8A',
+                background: { type: 'solid', color: '#fbfaf6' },
+                textColor: '#74706a',
                 fontSize: 9,
                 fontFamily: 'Inter'
             },
             grid: {
-                vertLines: { color: '#F0F3F6' },
-                horzLines: { color: '#F0F3F6' }
+                vertLines: { color: '#efede5' },
+                horzLines: { color: '#efede5' }
             },
             crosshair: {
                 mode: LightweightCharts.CrosshairMode.Normal,
-                vertLine: { color: '#707A8A', labelBackgroundColor: '#0058bc' },
-                horzLine: { color: '#707A8A', labelBackgroundColor: '#0058bc' }
+                vertLine: { color: '#74706a', labelBackgroundColor: '#0058bc' },
+                horzLine: { color: '#74706a', labelBackgroundColor: '#0058bc' }
             },
             rightPriceScale: {
-                borderColor: '#E6ECF2',
+                borderColor: '#e3dfd3',
                 visible: true
             },
             timeScale: {
-                borderColor: '#E6ECF2',
+                borderColor: '#e3dfd3',
                 timeVisible: true,
                 secondsVisible: false
             }
@@ -397,14 +397,14 @@ function 차트시스템초기화() {
         // A. 각 분할 차트 생성
         chartData.메인차트 = LightweightCharts.createChart(container, chartOptions);
         
-        // 캔들 시리즈 주입 (METATRADE 테마: 상승 초록 #0ECB81, 하락 빨강 #F6465D)
+        // 캔들 시리즈 주입 (METATRADE 테마: 상승 초록 #12a150, 하락 빨강 #d64545)
         chartData.캔들시리즈 = chartData.메인차트.addCandlestickSeries({
-            upColor: '#0ECB81',
-            downColor: '#F6465D',
-            borderUpColor: '#0ECB81',
-            borderDownColor: '#F6465D',
-            wickUpColor: '#0ECB81',
-            wickDownColor: '#F6465D'
+            upColor: '#12a150',
+            downColor: '#d64545',
+            borderUpColor: '#12a150',
+            borderDownColor: '#d64545',
+            wickUpColor: '#12a150',
+            wickDownColor: '#d64545'
         });
 
         // 이동평균선(MA) 추가
@@ -601,7 +601,7 @@ async function 분할차트캔들데이터로드(chartIdx) {
     chartData.요청번호 = 요청번호;
 
     try {
-        const response = await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=${interval}&limit=150`);
+        const response = await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=${interval}&limit=300`);
         if (!response.ok) throw new Error(`${interval} Binance Futures 캔들 호출 실패 (${response.status})`);
 
         const rawData = await response.json();
@@ -818,26 +818,20 @@ function 매핑지표데이터(times, values) {
 
 // 6. 바이낸스 WebSocket 실시간 스트리밍 시스템 (WebSocket Combined streams Engine)
 function 바이낸스웹소켓연결() {
-    if (상태.웹소켓인스턴스) {
-        상태.웹소켓인스턴스.close();
-    }
+    [상태.웹소켓인스턴스, 상태.호가웹소켓].forEach(s => { if (s) { s.onclose = null; s.close(); } });
 
     const statusDot = document.getElementById("binance-status-dot");
     const statusText = document.getElementById("binance-status-text");
 
-    // 바이낸스는 여러 스트림을 결합(Combined Streams)하여 하나의 소켓 포트로 편리하게 제공합니다.
-    // 연결 시점 등록된 모든 코인을 주소 스트림으로 취합
-    const streamsList = [];
-    Object.keys(상태.코인목록).forEach(symbol => {
-        const sym = symbol.toLowerCase();
-        streamsList.push(`${sym}@kline_1m`);
-        streamsList.push(`${sym}@depth5`); // 5단계 호가 깊이
-    });
+    // 바이낸스 선물 스트림은 경로가 나뉘었다: kline은 /market, depth는 /public.
+    // 예전 /stream 경로는 depth만 보내고 kline은 조용히 빠진다.
+    const 심볼들 = Object.keys(상태.코인목록).map(s => s.toLowerCase());
+    const 캔들URL = `wss://fstream.binance.com/market/stream?streams=${심볼들.map(s => s + "@kline_1m").join("/")}`;
+    const 호가URL = `wss://fstream.binance.com/public/stream?streams=${심볼들.map(s => s + "@depth5").join("/")}`;
 
-    const wsUrl = `wss://fstream.binance.com/stream?streams=${streamsList.join("/")}`;
-    
     console.log("[Binance WS] 웹소켓 다중 스트림 연결 시도...");
-    상태.웹소켓인스턴스 = new WebSocket(wsUrl);
+    상태.웹소켓인스턴스 = new WebSocket(캔들URL);
+    상태.호가웹소켓 = new WebSocket(호가URL);
 
     상태.웹소켓인스턴스.onopen = () => {
         상태.웹소켓연결상태 = true;
@@ -890,6 +884,9 @@ function 바이낸스웹소켓연결() {
     상태.웹소켓인스턴스.onerror = (err) => {
         console.error("[Binance WS] 웹소켓 에러 발생:", err);
     };
+
+    상태.호가웹소켓.onmessage = 상태.웹소켓인스턴스.onmessage;
+    상태.호가웹소켓.onclose = 상태.웹소켓인스턴스.onclose;
 }
 
 // 동적 알트코인 추가 시, 새로운 스트림 목록을 구성하여 웹소켓 재접속 (Hot-Swap)
@@ -989,7 +986,9 @@ function 실시간캔들메시지파싱(data) {
         else if (c.시간단위 === "1d") 봉단위초 = 86400;
         else if (c.시간단위 === "1w") 봉단위초 = 604800;
 
-        const targetT = Math.floor(candleTime / 봉단위초) * 봉단위초;
+        // 유닉스 기준일은 목요일이라 주봉은 월요일(+4일)로 맞춰야 바이낸스 봉과 일치한다.
+        const 기준 = 봉단위초 === 604800 ? 345600 : 0;
+        const targetT = Math.floor((candleTime - 기준) / 봉단위초) * 봉단위초 + 기준;
         const lastCandle = c.캔들데이터[c.캔들데이터.length - 1];
 
         if (targetT === lastCandle.time) {
@@ -1017,7 +1016,9 @@ function 실시간캔들메시지파싱(data) {
             if (c.캔들데이터.length > 500) c.캔들데이터.shift();
             c.캔들시리즈.update(신규분할캔들);
 
-            // 경계가 바뀌면 REST로 확정 OHLCV를 다시 받아 미리보기 봉을 교체합니다.
+            // 경계가 바뀌면 REST로 확정 OHLCV를 다시 받아 미리보기 봉을 교체합니다. 경계당 한 번만.
+            if (c.재조회경계 === targetT) return;
+            c.재조회경계 = targetT;
             분할차트캔들데이터로드(idx).then(() => {
                 if (c.캔들시리즈 && c.캔들데이터.length) c.캔들시리즈.setData(c.캔들데이터);
             });
@@ -1052,9 +1053,9 @@ function 실시간호가메시지파싱(data, symbol) {
     const coin = 상태.코인목록[symbol];
     if (!coin) return;
 
-    // 바이낸스 depth5 페이로드 규격: bids: [[가격, 잔량], ...], asks: [[가격, 잔량], ...]
-    coin.호가매도 = data.asks || [];
-    coin.호가매수 = data.bids || [];
+    // 선물 depth5 스트림은 a/b 키, 현물·REST는 asks/bids 키를 쓴다.
+    coin.호가매도 = data.a || data.asks || [];
+    coin.호가매수 = data.b || data.bids || [];
 
     // 현재 선택 활성화된 코인일 때만 호가창 렌더링 반영
     if (symbol === 상태.기본코인) {
@@ -1336,7 +1337,7 @@ function 분석및신호생성(symbol) {
                 markers.push({
                     time: times[idx],
                     position: 신호방향 === "LONG" ? 'belowBar' : 'aboveBar',
-                    color: 신호방향 === "LONG" ? '#f6465d' : '#0066ff', // 상승 = 빨간색, 하락 = 파란색
+                    color: 신호방향 === "LONG" ? '#d64545' : '#0066ff', // 상승 = 빨간색, 하락 = 파란색
                     shape: 신호방향 === "LONG" ? 'arrowUp' : 'arrowDown',
                     text: 신호방향 === "LONG" ? 'LONG BUY' : 'SHORT SELL'
                 });
@@ -3008,7 +3009,7 @@ function 활성포지션테이블렌더링() {
                 <td style="font-family:var(--font-display); color: #B8860B; font-weight: 900;">${pos.진입가.toLocaleString(undefined, { minimumFractionDigits: 소수점 })}</td>
                 <td id="pos-mark-price-${pos.아이디}" style="font-family:var(--font-display); color: #000000; font-weight: 900;">${현재가.toLocaleString(undefined, { minimumFractionDigits: 소수점 })}</td>
                 <td class="text-red" style="font-family:var(--font-display); font-weight:600;">${pos.청산가.toLocaleString(undefined, { minimumFractionDigits: 소수점 })}</td>
-                <td style="font-family:var(--font-display); color: #005bc1; font-weight: 900;">${pos.투입마진.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                <td style="font-family:var(--font-display); color: #c96442; font-weight: 900;">${pos.투입마진.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                 <td style="text-align: center;">
                     <label class="config-switch" style="scale: 0.8; display: inline-block; margin: 0 auto; vertical-align: middle;">
                         <input type="checkbox" ${autoMarginChecked} onchange="window.포지션자동마진토글(${idx})">
@@ -4011,7 +4012,7 @@ function AI추천분석및업데이트(symbol) {
         추천방향 = "SHORT";
         포지션텍스트 = "지정가 숏 예약 (Strong Sell)";
         가이드텍스트 = "저항선 부근 예약 숏 대기 🔴";
-        가이드컬러 = "#f6465d";
+        가이드컬러 = "#d64545";
         뱃지클래스 = "advisor-badge badge-short";
         뱃지텍스트 = "★ 강력 매도 진입";
     } else if (점수 <= 43) {
@@ -4037,7 +4038,7 @@ function AI추천분석및업데이트(symbol) {
     if (recGuideMsgEl) {
         if (저항선돌파상태) {
             recGuideMsgEl.innerText = "저항선 돌파 강세! 상위 저항선 관측 🔴";
-            recGuideMsgEl.style.color = "#f6465d";
+            recGuideMsgEl.style.color = "#d64545";
         } else if (지지선붕괴상태) {
             recGuideMsgEl.innerText = "지지선 붕괴 낙폭! 추가 하락 주의 🟢";
             recGuideMsgEl.style.color = "#0066ff";
@@ -4103,7 +4104,7 @@ function AI추천분석및업데이트(symbol) {
     if (resistanceEl) {
         resistanceEl.innerHTML = `
             <span style="color: #ff6b8b; font-size: 11px; font-weight:600;">1차: ${resistance1.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}</span>
-            <span style="color: #f6465d; font-size: 11px; font-weight:600; margin-left: 6px;">2차: ${resistance2.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}</span>
+            <span style="color: #d64545; font-size: 11px; font-weight:600; margin-left: 6px;">2차: ${resistance2.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}</span>
             <span style="color: #b3001e; font-size: 11px; font-weight:800; margin-left: 6px;">★3차: ${resistance3.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 })}</span>
         `;
         resistanceEl.style.display = "flex";
@@ -4150,10 +4151,10 @@ function AI추천분석및업데이트(symbol) {
     let resColor = "#ffc107";
     if (저항선돌파상태) {
         resRating = "⚠️ 돌파 경보 (Breakout)";
-        resColor = "#f6465d"; // 선명한 레드 경고
+        resColor = "#d64545"; // 선명한 레드 경고
     } else if (resConf >= 91.0) {
         resRating = "Strong (강력 저항)";
-        resColor = "#f6465d";
+        resColor = "#d64545";
     } else if (resConf >= 86.0) {
         resRating = "Stable (견고 저항)";
         resColor = "#fd7e14";
@@ -4619,7 +4620,7 @@ window.차트지지저항선드로잉 = function(chartIdx) {
 
     const rLine2 = c.캔들시리즈.createPriceLine({
         price: resistance2,
-        color: '#f6465d',
+        color: '#d64545',
         lineWidth: 2,
         lineStyle: 0, // Solid
         axisLabelVisible: true,
@@ -6480,7 +6481,7 @@ function 엘리엇파동분석및업데이트(coin, ctx) {
 
     // 내부 조합표 기반 등급이며 미래 적중률이나 수익을 보장하지 않습니다.
     const 등급 = result.grade || { grade: "D", ev: null, cell: null, tradable: false, reason: "", warnings: [] };
-    const 등급색 = 등급.grade === "A" ? "#39FF14" : 등급.grade === "B" ? "#0ecb81"
+    const 등급색 = 등급.grade === "A" ? "#39FF14" : 등급.grade === "B" ? "#12a150"
                  : 등급.grade === "C" ? "#ffd93d" : "#888";
     const ev표기 = 등급.ev === null ? "판정 보류"
                  : `내부 기대값 ${등급.ev >= 0 ? "+" : ""}${등급.ev.toFixed(2)}R`;
@@ -6650,7 +6651,7 @@ async function 지지저항분석및업데이트(coin, symbol) {
 
     const dp = coin.소수점 != null ? coin.소수점 : 2;
     const fmt = v => Number(v).toLocaleString(undefined, { minimumFractionDigits: dp, maximumFractionDigits: dp });
-    const 색 = rank => rank >= 4 ? "#39FF14" : rank === 3 ? "#0ecb81" : rank === 2 ? "#ffd93d" : "#888";
+    const 색 = rank => rank >= 4 ? "#39FF14" : rank === 3 ? "#12a150" : rank === 2 ? "#ffd93d" : "#888";
 
     const 봉표기 = r.사용봉.map(u => u.tf).join(" / ");
     setHTML("levels-summary",
