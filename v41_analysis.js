@@ -94,14 +94,26 @@
         });
         return { version: "4.1.0", frames };
     }
+    // 원화 환산 출처: 브라우저(github.io)에서 CORS 허용을 실측한 곳만. 코인원·코빗은 막힘.
+    const FX_SOURCES = [
+        ["Upbit KRW-USDT", "https://api.upbit.com/v1/ticker?markets=KRW-USDT", data => data?.[0]?.trade_price],
+        ["Bithumb USDT_KRW", "https://api.bithumb.com/public/ticker/USDT_KRW", data => data?.data?.closing_price],
+        ["USD/KRW 환율", "https://open.er-api.com/v6/latest/USD", data => data?.rates?.KRW]
+    ];
     async function fetchContext() {
         const now = Date.now();
-        if (now - cache.fxAt > 300000) {
-            try {
-                const response = await fetch("https://api.upbit.com/v1/ticker?markets=KRW-USDT");
-                const data = await response.json(), value = +data?.[0]?.trade_price;
-                if (finite(value) && value > 0) { cache.fx = value; cache.fxAt = now; }
-            } catch (_) { /* 실패값을 생성하지 않습니다. */ }
+        // 실패해도 시도 시각을 남겨 1분은 쉰다. 예전엔 실패 때마다 틱마다 재요청 → 업비트 429 →
+        // 429 응답엔 CORS 헤더가 없어 브라우저엔 CORS 오류로 보였다.
+        if (now - cache.fxAt > 300000 && now - (cache.fxTriedAt || 0) > 60000) {
+            cache.fxTriedAt = now;
+            for (const [name, url, pick] of FX_SOURCES) {
+                try {
+                    const response = await fetch(url, { cache: "no-store" });
+                    if (!response.ok) continue;
+                    const value = +pick(await response.json());
+                    if (finite(value) && value > 0) { cache.fx = value; cache.fxAt = now; cache.fxSource = name; break; }
+                } catch (_) { /* 다음 출처로. 실패값을 생성하지 않습니다. */ }
+            }
         }
         if (now - cache.dominanceAt > 300000) {
             try {
@@ -140,7 +152,7 @@
         };
         const closeTime = frame.lastConfirmed ? new Date(frame.lastConfirmed).toLocaleString("ko-KR",{timeZone:"Asia/Seoul"}) : "확인 불가";
         box.innerHTML = `<div class="v41-title">코인분석스킬 V4.1 · ${input.symbol}</div>
-          <div class="v41-meta">Binance USDT-M 무기한 · 현재가 ${price(input.price)} · 기준 ${new Date().toLocaleString("ko-KR")} · 마지막 ${primaryTf.toUpperCase()} 확정봉 ${closeTime}<br>환율 ${context.fx?`Upbit KRW-USDT ${context.fx.toLocaleString("ko-KR")}원 · ${new Date(context.fxAt).toLocaleString("ko-KR")}`:"KRW 환산 확인 불가"}</div>
+          <div class="v41-meta">Binance USDT-M 무기한 · 현재가 ${price(input.price)} · 기준 ${new Date().toLocaleString("ko-KR")} · 마지막 ${primaryTf.toUpperCase()} 확정봉 ${closeTime}<br>환율 ${context.fx?`${context.fxSource || "Upbit KRW-USDT"} ${context.fx.toLocaleString("ko-KR")}원 · ${new Date(context.fxAt).toLocaleString("ko-KR")}`:"KRW 환산 확인 불가"}</div>
           <div class="v41-part"><b>PART 0 · 데이터 기준 및 USDT.D</b><br>확정봉만 계산 · Binance 공식 공개 API · ${context.dominance?`USDT.D ${context.dominance.toFixed(3)}% · CoinGecko /api/v3/global · ${new Date(context.dominanceAt).toLocaleString("ko-KR")}`:"USDT.D 현재 데이터 확인 불가"}<br><span>USDT.D는 단독 매매 신호가 아닌 위험선호 보조 필터</span></div>
           <div class="v41-part"><b>PART 1 · 기술적 분석</b><br>SMA20/60/120/200 ${maText}<br>RSI(14) ${finite(frame.rsi14)?frame.rsi14.toFixed(1):"표본 부족"} · CCI(20) ${finite(frame.cci20)?frame.cci20.toFixed(1):"표본 부족"} · MACD ${frame.macd?frame.macd.histogram.toFixed(digits):"표본 부족"} · Stochastic(14,3,3) ${frame.stochastic?`%K ${frame.stochastic.k.toFixed(1)} / %D ${frame.stochastic.d.toFixed(1)}`:"표본 부족"}<br>근사 VPVR ${profile}<br>앵커 VWAP ${price(frame.anchoredVwap)} · 조회 구간 시작봉 앵커</div>
           <div class="v41-part"><b>PART 2 · 선물 및 군중 심리</b><br>펀딩비 ${funding}<br>OI ${oi}<br><span>OI 1H 변화율·CVD·청산맵: 현재 실시간 데이터 확인 불가</span></div>
