@@ -32,8 +32,24 @@ assert.ok(appSource.includes("상태.지갑잔고 -= 필요잔고"), "진입 수
 assert.ok(appSource.includes("실현손익: 순손익"), "거래 이력은 비용 차감 순손익이어야 함");
 
 const html = fs.readFileSync("index.html", "utf8");
-assert.ok(html.includes("strategy_backtest.js?v=1.0.0"), "공용 전략 모듈 연결 필요");
+assert.ok(html.includes("strategy_backtest.js?v=1.1.0"), "공용 전략 모듈 연결 필요");
 assert.ok(html.includes("indicator-backtest-button"), "백테스트 실행 UI 필요");
+assert.ok(fs.readFileSync("analysis.html", "utf8").includes("strategy_backtest.js?v=1.1.0"), "분석 페이지도 공용 모듈 필요");
 
-console.log("다중 지표 백테스트·비용 정산 검증 통과 (6개 항목)");
+// 세션 VWAP는 UTC 자정마다 초기화되어야 합니다 (전체 누적이면 현재가와 수 % 벌어짐).
+const vwap = Strategy.sessionVwap([
+    { time: 0, high: 2, low: 0, close: 1, volume: 1 },
+    { time: 3600, high: 4, low: 2, close: 3, volume: 1 },
+    { time: 86400, high: 10, low: 8, close: 9, volume: 5 }
+]);
+assert.deepStrictEqual(vwap, [1, 2, 9], "VWAP 일 단위 초기화");
+
+// 가격선 반응 기록: 닿은 뒤 3봉 안에 종가로 뚫리면 실패, 아니면 지지 성공으로 셉니다.
+const bars = [100, 98, 101, 102, 103, 98, 97, 96, 95, 99, 100, 101, 102].map((close, i) => ({ time: i, high: close + 0.5, low: close - 0.5, close }));
+const reaction = Strategy.levelReaction(bars, 98, "support", 0.003);
+assert.deepStrictEqual(reaction, { touches: 2, held: 1, rate: 0.5 }, `지지 반응 집계: ${JSON.stringify(reaction)}`);
+assert.ok(Strategy.reactionText({ touches: 2, held: 2, rate: 1 }, "support").startsWith("표본 부족"), "3회 미만은 표본 부족");
+assert.ok(!/94\.5%|96\.2%/.test(fs.readFileSync("analysis_app.js", "utf8")), "고정 정확도 숫자 금지");
+
+console.log("다중 지표 백테스트·비용 정산 검증 통과 (10개 항목)");
 

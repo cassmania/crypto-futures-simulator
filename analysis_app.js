@@ -1084,7 +1084,7 @@ function 계산MACD(data, shortPeriod = 12, longPeriod = 26, signalPeriod = 9) {
     return { macdLine, signalLine, histogram };
 }
 
-function 계산스토캐스틱(closes, highs, lows, periodK = 14, periodD = 3) {
+function 계산스토캐스틱(closes, highs, lows, periodK = 14, periodD = 3, smoothK = 3) {
     const kValues = [];
     for (let i = 0; i < closes.length; i++) {
         if (i < periodK - 1) {
@@ -1098,8 +1098,10 @@ function 계산스토캐스틱(closes, highs, lows, periodK = 14, periodD = 3) {
             kValues.push(k);
         }
     }
-    const dValues = 계산SMA(kValues, periodD);
-    return { kValues, dValues };
+    // 슬로우 스토캐스틱 14/3/3: 원시 %K를 3봉 평균한 값이 %K다 (예전엔 평활 없이 최대 48포인트 어긋남)
+    const slowK = 계산SMA(kValues, smoothK).map((v, i) => Number.isFinite(v) ? v : kValues[i]);
+    const dValues = 계산SMA(slowK, periodD).map((v, i) => Number.isFinite(v) ? v : slowK[i]);
+    return { kValues: slowK, dValues };
 }
 
 function 계산CCI(closes, highs, lows, period = 20) {
@@ -1159,26 +1161,18 @@ function 계산VPVR매물대(candles, precision) {
     return { poc: pocPrice, volumes: priceVolumes };
 }
 
+// 예전엔 불러온 봉 전체를 누적해 현재가와 3~11% 벌어졌다. UTC 일 단위로 초기화한다.
 function 계산VWAP(candles) {
-    let cumPriceVol = 0;
-    let cumVol = 0;
-    const vwapArr = [];
-    candles.forEach(c => {
-        const typPrice = (c.close + c.high + c.low) / 3;
-        cumPriceVol += typPrice * (c.volume || 1);
-        cumVol += (c.volume || 1);
-        vwapArr.push(cumPriceVol / (cumVol || 1));
-    });
-    return vwapArr;
+    return StrategyBacktest.sessionVwap(candles);
 }
 
 // 지표 신뢰도 등급
 function 지표신뢰도등급(score) {
-    if (score >= 88) return { 텍스트: "★ 최상급 (Excellent)", 클래스: "text-green" };
-    if (score >= 80) return { 텍스트: "신뢰 확실 (High)", 클래스: "text-green" };
-    if (score >= 68) return { 텍스트: "안정적 진입 (Stable)", 클래스: "text-yellow" };
-    if (score >= 45) return { 텍스트: "보통 신뢰성 (Moderate)", 클래스: "text-neutral" };
-    return { 텍스트: "⚠️ 분석 불가 (Low)", 클래스: "text-red" };
+    // 지표끼리 같은 방향을 가리키는 정도일 뿐 승률이 아니다 (실측 검증구간 기대값 음수)
+    const n = Math.round(score);
+    if (score >= 80) return { 텍스트: `지표 합의 강함 (${n}점)`, 클래스: "text-green" };
+    if (score >= 60) return { 텍스트: `지표 합의 보통 (${n}점)`, 클래스: "text-yellow" };
+    return { 텍스트: `지표 합의 약함 (${n}점)`, 클래스: "text-red" };
 }
 
 // 시장 상태 판정
@@ -1503,10 +1497,14 @@ function AI추천분석및업데이트(symbol) {
     const supAcc = document.getElementById("sup-accuracy");
     const supConf = document.getElementById("sup-confidence");
 
-    if (resAcc) resAcc.innerText = "94.5% (수렴)";
-    if (resConf) resConf.innerHTML = `<span class="text-red" style="font-weight:700;">Stable (저항 작동)</span>`;
-    if (supAcc) supAcc.innerText = "96.2% (강력)";
-    if (supConf) supConf.innerHTML = `<span class="text-green" style="font-weight:700;">Strong (강력 지지)</span>`;
+    // 예전엔 지지·저항 정확도를 고정 문자열(90%대)로 띄웠다. 불러온 봉에서 실제 반응을 센다.
+    const 저항반응 = StrategyBacktest.levelReaction(coin.캔들데이터.slice(0, -1), 정밀저항가격, "resistance");
+    const 지지반응 = StrategyBacktest.levelReaction(coin.캔들데이터.slice(0, -1), 정밀지지가격, "support");
+    const 거리 = p => `현재가 대비 ${(((p - coin.현재가) / coin.현재가) * 100).toFixed(2)}%`;
+    if (resAcc) resAcc.innerText = StrategyBacktest.reactionText(저항반응, "resistance");
+    if (resConf) resConf.innerText = 거리(정밀저항가격);
+    if (supAcc) supAcc.innerText = StrategyBacktest.reactionText(지지반응, "support");
+    if (supConf) supConf.innerText = 거리(정밀지지가격);
 
     const regime = document.getElementById("market-regime-label");
     const confidence = document.getElementById("signal-confidence-label");

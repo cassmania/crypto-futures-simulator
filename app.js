@@ -3383,10 +3383,12 @@ const AI추천캐시 = {
     손절가: 0
 };
 
+// 지표끼리 같은 방향을 가리키는 정도(합의도). 백테스트 승률이 아니므로 %로 쓰지 않는다.
+// 실측: 이 합의 신호의 검증구간 기대값은 음수(2026-10-27, BTC·ETH·SOL 1h/4h 397건 −0.18R).
 function 지표신뢰도등급(점수) {
-    if (점수 >= 80) return { 텍스트: `${점수}% 높음`, 클래스: "text-green" };
-    if (점수 >= 60) return { 텍스트: `${점수}% 보통`, 클래스: "text-yellow" };
-    return { 텍스트: `${점수}% 낮음`, 클래스: "text-red" };
+    if (점수 >= 80) return { 텍스트: `지표 합의 강함 (${점수}점)`, 클래스: "text-green" };
+    if (점수 >= 60) return { 텍스트: `지표 합의 보통 (${점수}점)`, 클래스: "text-yellow" };
+    return { 텍스트: `지표 합의 약함 (${점수}점)`, 클래스: "text-red" };
 }
 
 // 시장 상태를 먼저 구분해야 RSI/CCI 같은 과열 지표를 과신하지 않습니다.
@@ -4126,84 +4128,24 @@ function AI추천분석및업데이트(symbol) {
     if (recSlEl) recSlEl.innerText = 추천손절가.toLocaleString(undefined, { minimumFractionDigits: coin.소수점 });
 
     // ----------------------------------------------------
-    // [퀀트 분석 엔진 V3] 정밀 분석 저항/지지의 정확도(정밀도) 및 신뢰도 다각적 분석 연산
+    // 저항/지지선 실측 반응 기록
+    // 예전엔 '정확도·신뢰도'를 83~99점 하한을 박은 공식으로 지어냈다. 이제 불러온 확정봉에서
+    // 그 가격에 실제로 닿았던 횟수와 버틴 횟수를 센다.
     // ----------------------------------------------------
-    // A. 저항선 정밀도 & 신뢰도 연산
-    // 볼린저 밴드 상단(bbUpper)과 피보나치 23.6% 저항선이 좁을수록 다중 수렴(Confluence) 지점으로 간주하여 정밀도 극대화
-    const resGap = Math.abs(bbUpper - fiboLevels["23.6%"]) / bbBasis;
-    let resAcc = Math.max(83.5, Math.min(99.4, 99.4 - (resGap * 180)));
-    
-    // RSI가 과매수(65 이상) 영역에 있거나 CCI가 강세 모멘텀(100 이상)일수록 저항의 신뢰도가 강화
-    let resConfBase = 81.0 + (rsiVal > 65 ? (rsiVal - 65) * 0.7 : 0) + (cciVal > 100 ? (cciVal - 100) * 0.05 : 0);
-    // 현재가가 저항선에 가까울수록(저항 테스트 상황) 신뢰 지수 상승 가산
-    const resDist = Math.abs((coin.currentlyPrice || coin.현재가) - 정밀저항가격) / coin.현재가;
-    if (resDist < 0.01) resConfBase += 4.5;
+    const 저항반응 = StrategyBacktest.levelReaction(분석캔들, 정밀저항가격, "resistance");
+    const 지지반응 = StrategyBacktest.levelReaction(분석캔들, 정밀지지가격, "support");
+    const 반응색 = (r, warn) => warn ? "#d64545" : (r.rate == null || r.touches < 3) ? "#8a8272" : r.rate >= 0.6 ? "#20c997" : r.rate >= 0.4 ? "#ffc107" : "#d64545";
+    const 거리 = p => `${(((p - coin.현재가) / coin.현재가) * 100).toFixed(2)}%`;
 
-    // 저항선이 시세 상승으로 뚫려버린 돌파 국면일 때는 정밀도 및 신뢰도를 긴급 감쇄 조정
-    if (저항선돌파상태) {
-        resAcc = resAcc * 0.90; // 정밀도 10% 일시 감쇄 경고
-        resConfBase = resConfBase * 0.88;
-    }
-    const resConf = Math.max(70.0, Math.min(98.9, resConfBase));
-    
-    // 신뢰 등급(Rating) 결정 (영어/한글 병기)
-    let resRating = "Moderate (보통)";
-    let resColor = "#ffc107";
-    if (저항선돌파상태) {
-        resRating = "⚠️ 돌파 경보 (Breakout)";
-        resColor = "#d64545"; // 선명한 레드 경고
-    } else if (resConf >= 91.0) {
-        resRating = "Strong (강력 저항)";
-        resColor = "#d64545";
-    } else if (resConf >= 86.0) {
-        resRating = "Stable (견고 저항)";
-        resColor = "#fd7e14";
-    }
-
-    // B. 지지선 정밀도 & 신뢰도 연산
-    // 볼린저 밴드 하단(bbLower)과 피보나치 78.6% 지지선이 좁을수록 다중 지지 수렴 지점으로 간주하여 정밀도 극대화
-    const supGap = Math.abs(bbLower - fiboLevels["78.6%"]) / bbBasis;
-    let supAcc = Math.max(84.0, Math.min(99.6, 99.6 - (supGap * 150)));
-    
-    // RSI가 과매도(35 이하) 영역에 도달하거나 CCI가 낙폭 과대(-100 이하)일수록 반등 신뢰도가 강화
-    let supConfBase = 83.0 + (rsiVal < 35 ? (35 - rsiVal) * 0.8 : 0) + (cciVal < -100 ? (Math.abs(cciVal) - 100) * 0.06 : 0);
-    // 현재가가 지지선에 바짝 달라붙었을 때(지지 테스팅 상태) 신뢰 지수 가산
-    const supDist = Math.abs((coin.currentlyPrice || coin.현재가) - 정밀지지가격) / coin.현재가;
-    if (supDist < 0.01) supConfBase += 4.8;
-    // VPVR 매물 중심(POC) 하단에 현재가가 위치하여 강한 하방 매집 메리트를 보일 때 가산
-    if (coin.현재가 < vpvrPOC) supConfBase += 3.5;
-
-    // 지지선이 붕괴되어 주저앉은 붕괴 국면일 때는 정밀도 및 신뢰도 긴급 감쇄 조정
-    if (지지선붕괴상태) {
-        supAcc = supAcc * 0.89; // 정밀도 11% 일시 감쇄 경고
-        supConfBase = supConfBase * 0.86;
-    }
-    const supConf = Math.max(70.0, Math.min(99.5, supConfBase));
-    
-    // 신뢰 등급(Rating) 결정 (영어/한글 병기)
-    let supRating = "Moderate (보통)";
-    let supColor = "#ffc107";
-    if (지지선붕괴상태) {
-        supRating = "⚠️ 붕괴 경보 (Breakdown)";
-        supColor = "#0066ff"; // 선명한 블루 경고
-    } else if (supConf >= 92.0) {
-        supRating = "Strong (강력 지지)";
-        supColor = "#0066ff";
-    } else if (supConf >= 87.0) {
-        supRating = "Stable (견고 지지)";
-        supColor = "#20c997";
-    }
-
-    // C. DOM 바인딩 및 실시간 염색 노출 (DOM Binding)
     const resAccEl = document.getElementById("res-accuracy");
     const resConfEl = document.getElementById("res-confidence");
     const supAccEl = document.getElementById("sup-accuracy");
     const supConfEl = document.getElementById("sup-confidence");
 
-    if (resAccEl) resAccEl.innerText = `${resAcc.toFixed(1)}/100 (내부 수렴)`;
-    if (resConfEl) resConfEl.innerHTML = `<span style="color: ${resColor}; font-weight: 700;">${resConf.toFixed(1)}/100 [${resRating}]</span>`;
-    if (supAccEl) supAccEl.innerText = `${supAcc.toFixed(1)}/100 (내부 수렴)`;
-    if (supConfEl) supConfEl.innerHTML = `<span style="color: ${supColor}; font-weight: 700;">${supConf.toFixed(1)}/100 [${supRating}]</span>`;
+    if (resAccEl) resAccEl.innerText = StrategyBacktest.reactionText(저항반응, "resistance");
+    if (resConfEl) resConfEl.innerHTML = `<span style="color: ${반응색(저항반응, 저항선돌파상태)}; font-weight: 700;">${저항선돌파상태 ? "⚠️ 돌파됨" : "현재가 대비 " + 거리(정밀저항가격)}</span>`;
+    if (supAccEl) supAccEl.innerText = StrategyBacktest.reactionText(지지반응, "support");
+    if (supConfEl) supConfEl.innerHTML = `<span style="color: ${반응색(지지반응, 지지선붕괴상태)}; font-weight: 700;">${지지선붕괴상태 ? "⚠️ 붕괴됨" : "현재가 대비 " + 거리(정밀지지가격)}</span>`;
 }
 
 // 정밀 분석된 저항선과 지지선 가격을 주문창 폼에 최적 배분하여 즉시 꽂아넣는 스마트 주입 기능
@@ -5170,19 +5112,9 @@ function 계산스토캐스틱(highs, lows, closes, periodK = 14, periodD = 3, s
 }
 
 // VWAP (Volume Weighted Average Price) 계산
+// 예전엔 불러온 봉 전체를 누적해 현재가와 3~11% 벌어졌다. UTC 일 단위로 초기화한다.
 function 계산VWAP(candles) {
-    let vwap = [];
-    let cumulativeTPV = 0;
-    let cumulativeVol = 0;
-    
-    candles.forEach(c => {
-        let tp = (c.high + c.low + c.close) / 3;
-        cumulativeTPV += tp * c.volume;
-        cumulativeVol += c.volume;
-        if (cumulativeVol === 0) vwap.push(c.close);
-        else vwap.push(cumulativeTPV / cumulativeVol);
-    });
-    return vwap;
+    return StrategyBacktest.sessionVwap(candles);
 }
 
 // 볼린저 밴드 (Bollinger Bands) 계산

@@ -297,6 +297,50 @@
         };
     }
 
+    // 세션 VWAP: UTC 00:00마다 초기화 (트레이딩뷰 기본값과 같음). 시각은 초 단위.
+    function sessionVwap(candles) {
+        let day = null, pv = 0, vol = 0;
+        return candles.map(candle => {
+            const d = Math.floor(candle.time / 86400);
+            if (d !== day) { day = d; pv = 0; vol = 0; }
+            const v = candle.volume || 0;
+            pv += (candle.high + candle.low + candle.close) / 3 * v;
+            vol += v;
+            return vol > 0 ? pv / vol : candle.close;
+        });
+    }
+
+    // 가격선의 실제 반응 기록: 과거 확정봉이 선 근처(±tol)에 닿은 횟수와, 그 뒤 3봉 안에
+    // 종가로 선을 뚫지 않고 버틴 횟수. 같은 접근이 여러 봉 이어지면 1회로 센다.
+    // tol 기본값은 평균 봉 길이의 25% — 고정 0.3%면 1분봉에선 거의 모든 봉이 '닿고 버틴' 것으로 세진다.
+    function levelReaction(candles, price, side, tol, after = 3) {
+        let touches = 0, held = 0, skipUntil = -1;
+        if (!(price > 0) || !candles.length) return { touches, held, rate: null };
+        if (tol == null) {
+            const avgRange = candles.reduce((sum, c) => sum + (c.high - c.low) / c.close, 0) / candles.length;
+            tol = Math.max(0.0001, avgRange * 0.25);
+        }
+        for (let index = 0; index < candles.length - after; index++) {
+            if (index <= skipUntil) continue;
+            const candle = candles[index];
+            const touched = side === "support"
+                ? candle.low <= price * (1 + tol) && candle.close >= price * (1 - tol)
+                : candle.high >= price * (1 - tol) && candle.close <= price * (1 + tol);
+            if (!touched) continue;
+            touches++;
+            const next = candles.slice(index + 1, index + 1 + after);
+            const broke = next.some(c => side === "support" ? c.close < price * (1 - tol) : c.close > price * (1 + tol));
+            if (!broke) held++;
+            skipUntil = index + after;
+        }
+        return { touches, held, rate: touches ? held / touches : null };
+    }
+
+    function reactionText(r, side) {
+        if (!r || r.touches < 3) return `표본 부족 (과거 접근 ${r ? r.touches : 0}회)`;
+        return `${r.held}/${r.touches}회 ${side === "support" ? "지지" : "저항"} (${Math.round(r.rate * 100)}%)`;
+    }
+
     function verdict(summary) {
         if (summary.trades < 30) return "표본 부족";
         if (summary.expectancyR > 0 && summary.profitFactor > 1) return "양의 성과 관찰";
@@ -305,6 +349,7 @@
 
     return {
         DEFAULT_COST, sma, ema, rsi, cci, stochastic, bollinger, fibonacci, volumePoc,
-        evaluateConfluence, analyzeSignal, autoTargets, resolveExit, calculateNetR, runBacktest, summarize, verdict
+        evaluateConfluence, analyzeSignal, autoTargets, resolveExit, calculateNetR, runBacktest, summarize, verdict,
+        sessionVwap, levelReaction, reactionText
     };
 });
