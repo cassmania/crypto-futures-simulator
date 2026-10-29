@@ -41,8 +41,9 @@ const 상태 = {
 
     // AI 자동매매 5대 세부 설정 (AI Auto-Trading Parameters)
     자동매매설정: {
-        진입비율: 10,          // 가용 잔고 대비 마진 진입 비율 (%)
-        익절옵션: "ai",        // "ai" (정밀 자동) 또는 "manual" (수동 %)
+        진입비율: 10,          // 가용 잔고 대비 마진 진입 비율 (%) — 화면 표시용
+        진입마진USDT: null,    // 사용자가 정한 1회 진입 증거금(USDT). 체결은 이 값 그대로
+익절옵션: "ai",        // "ai" (정밀 자동) 또는 "manual" (수동 %)
         수동익절율: 10,        // 수동 지정 시 익절율 (%)
         손절옵션: "ai",        // "ai" (스탑헌팅가드 자동) 또는 "manual" (수동 %)
         수동손절율: 5,         // 수동 지정 시 손절율 (%)
@@ -1379,14 +1380,18 @@ function AI자동매매실행(symbol, 방향) {
 
     // 3. 사용자가 설정한 진입 비율(Entry Ratio)에 따른 가용 지갑 잔고 비례 투자 증거금 산출
     const 진입가 = coin.현재가;
+    // 입력한 USDT를 정수 %로 바꿔 지갑×%로 되돌리면 잔고가 클 때 최소 1%로 부풀어 입력과 다른 금액이 체결됐습니다.
+    // 그래서 사용자가 정한 금액을 그대로 씁니다. 잔고가 모자라면 포지션체결실행이 거부합니다.
     const 진입비율 = 상태.자동매매설정.진입비율 !== undefined ? 상태.자동매매설정.진입비율 : 10;
-    const targetMargin = 상태.지갑잔고 * (진입비율 / 100); // 가용 자산의 설정 비율(%) 증거금
-    
+    const 고정마진 = Number(상태.자동매매설정.진입마진USDT);
+    const targetMargin = 고정마진 > 0 ? 고정마진 : 상태.지갑잔고 * (진입비율 / 100);
+
     // 주문 크기(Size) 계산: 수량 = (증거금 * 레버리지) / 진입가
     let qty = (targetMargin * leverage) / 진입가;
     
-    // 코인 고유 규격 소수점에 맞게 포맷 처리
-    qty = parseFloat(qty.toFixed(coin.수량소수점));
+    // 코인 수량 단위로 내림 — 반올림하면 투입마진이 설정한 금액을 넘습니다.
+    const 단위 = 10 ** coin.수량소수점;
+    qty = parseFloat((Math.floor(qty * 단위 + 1e-9) / 단위).toFixed(coin.수량소수점));
 
     if (qty <= 0) {
         새신호알림(symbol, `[🤖 AI 자동매매 실패] 계산된 수량(${qty})이 거래 규격보다 작아 진입할 수 없습니다.`, "short");
@@ -1488,7 +1493,7 @@ function AI자동매매실행(symbol, 방향) {
     const 손절안내타입 = 상태.자동매매설정.손절옵션 === "manual" ? `수동 ${상태.자동매매설정.수동손절율}%` : 
         "기술 지표 기준";
 
-    새신호알림(symbol, `[🤖 AI 자동매매 작동] ${방향} 매매 신호가 감지되어 가용자산의 ${진입비율}% (레버리지 ${leverage}x, 수량 ${qty})로 시장가 자동 포지션 진입합니다. (익절 TP: ${익절가} (${익절안내타입}) | 손절 SL: ${손절가} (${손절안내타입}))`, 방향 === "LONG" ? "long" : "short");
+    새신호알림(symbol, `[🤖 AI 자동매매 작동] ${방향} 매매 신호가 감지되어 증거금 ${targetMargin.toFixed(2)} USDT (레버리지${leverage}x, 수량 ${qty})로 시장가 자동 포지션 진입합니다. (익절 TP: ${익절가} (${익절안내타입}) | 손절 SL: ${손절가} (${손절안내타입}))`, 방향 === "LONG" ? "long" : "short");
     
     // 모의 포지션 실체결 등록 실행
     포지션체결실행(자동주문, 진입가);
@@ -1580,7 +1585,7 @@ function 포지션체결실행(주문, 체결가) {
         청산가: parseFloat(청산가.toFixed(상태.코인목록[주문.심볼].소수점)),
         익절가: 주문.익절가,
         손절가: 주문.손절가,
-        자동마진: true, // 🛡️ 실시간 청산 예방용 자동 증거금 추가 가드 기본값 비활성화
+        자동마진: false, // 🛡️ 청산 예방 자동 증거금 추가는 투입마진을 설정값보다 키우므로 기본 꺼짐 (포지션별로 켤 수 있음)
         체결시간: 얻는현재시각텍스트()
     };
 
@@ -5340,21 +5345,20 @@ window.AI설정수치동기화 = function(triggerType) {
 
     if (sliderRatio && txtRatio && usdtInput) {
         if (triggerType === "usdt") {
+            // 입력한 금액을 그대로 저장하고, %는 표시만 따라갑니다.
             const usdtVal = parseFloat(usdtInput.value) || 0;
-            const computedRatio = Math.round((usdtVal / 상태.지갑잔고) * 100);
-            const clampedRatio = Math.max(1, Math.min(100, computedRatio));
-            
-            sliderRatio.value = clampedRatio;
-            txtRatio.innerText = `${clampedRatio}%`;
-            상태.자동매매설정.진입비율 = clampedRatio;
-        } else {
-            // ratio 슬라이더 변경 혹은 로드 시
+            if (usdtVal > 0) 상태.자동매매설정.진입마진USDT = usdtVal;
+            const pct = 상태.지갑잔고 > 0 ? (usdtVal / 상태.지갑잔고) * 100 : 0;
+            sliderRatio.value = Math.max(1, Math.min(100, Math.round(pct)));
+            txtRatio.innerText = `${pct < 1 ? pct.toFixed(2) : Math.round(pct)}%`;
+            상태.자동매매설정.진입비율 = Math.max(1, Math.min(100, Math.round(pct)));
+        } else if (triggerType === "ratio") {
+            // 슬라이더를 움직일 때만 금액을 다시 정합니다. (익절·손절 옵션 변경은 금액을 건드리지 않음)
             const ratioVal = parseInt(sliderRatio.value) || 10;
             txtRatio.innerText = `${ratioVal}%`;
             상태.자동매매설정.진입비율 = ratioVal;
-            
-            // 슬라이더 조작 시에만 USDT 금액 입력창 역갱신
-            usdtInput.value = Math.round(상태.지갑잔고 * (ratioVal / 100));
+            상태.자동매매설정.진입마진USDT = Math.round(상태.지갑잔고 * (ratioVal / 100));
+            usdtInput.value = 상태.자동매매설정.진입마진USDT;
         }
     }
 
@@ -5407,7 +5411,8 @@ window.AI설정스토리지복원 = function() {
             const 설정 = JSON.parse(저장된설정);
             if (설정) {
                 if (설정.진입비율 !== undefined) 상태.자동매매설정.진입비율 = parseInt(설정.진입비율);
-                if (설정.익절옵션 !== undefined) 상태.자동매매설정.익절옵션 = 설정.익절옵션;
+                if (Number(설정.진입마진USDT) > 0) 상태.자동매매설정.진입마진USDT = Number(설정.진입마진USDT);
+if (설정.익절옵션 !== undefined) 상태.자동매매설정.익절옵션 = 설정.익절옵션;
                 if (설정.수동익절율 !== undefined) 상태.자동매매설정.수동익절율 = parseFloat(설정.수동익절율);
                 if (설정.손절옵션 !== undefined) 상태.자동매매설정.손절옵션 = 설정.손절옵션;
                 if (설정.수동손절율 !== undefined) 상태.자동매매설정.수동손절율 = parseFloat(설정.수동손절율);
@@ -5425,7 +5430,11 @@ window.AI설정스토리지복원 = function() {
             sliderRatio.value = 상태.자동매매설정.진입비율;
             txtRatio.innerText = `${상태.자동매매설정.진입비율}%`;
             if (usdtInput) {
-                usdtInput.value = Math.round(상태.지갑잔고 * (상태.자동매매설정.진입비율 / 100));
+                // 예전 저장본(비율만 있음)은 지금 잔고 기준 금액으로 한 번 고정합니다.
+                if (!(상태.자동매매설정.진입마진USDT > 0)) {
+                    상태.자동매매설정.진입마진USDT = Math.round(상태.지갑잔고 * (상태.자동매매설정.진입비율 / 100));
+                }
+                usdtInput.value = 상태.자동매매설정.진입마진USDT;
             }
         }
 
@@ -5485,7 +5494,9 @@ window.AI설정모달열기액션 = function(symbol) {
     if (ratioInput) ratioInput.value = initialRatio;
     if (leverageInput) leverageInput.value = actualLeverage ? parseInt(actualLeverage.value) : 3;
     if (usdtInput) {
-        usdtInput.value = Math.round(상태.지갑잔고 * (initialRatio / 100));
+        usdtInput.value = 상태.자동매매설정.진입마진USDT > 0
+            ? 상태.자동매매설정.진입마진USDT
+            : Math.round(상태.지갑잔고 * (initialRatio / 100));
     }
 
     // 수치 실시간 갱신 계산 호출
@@ -5509,25 +5520,20 @@ window.AI모달수치동기화 = function(triggerType) {
     let ratioVal = parseInt(ratioInput.value) || 10;
     const leverageVal = parseInt(leverageInput.value) || 3;
 
-    if (triggerType === "usdt" && usdtInput) {
-        const usdtVal = parseFloat(usdtInput.value) || 0;
-        const computedRatio = Math.round((usdtVal / 상태.지갑잔고) * 100);
-        ratioVal = Math.max(1, Math.min(100, computedRatio));
-        
-        ratioInput.value = ratioVal;
-    } else {
-        // ratio 슬라이더 변경 혹은 기본 실행 시
-        if (usdtInput) {
-            usdtInput.value = Math.round(상태.지갑잔고 * (ratioVal / 100));
-        }
+    // 레버리지 슬라이더나 첫 표시 때는 입력된 금액을 그대로 둡니다. 슬라이더를 움직일 때만 금액을 다시 정합니다.
+    if (triggerType === "ratio" && usdtInput) {
+        usdtInput.value = Math.round(상태.지갑잔고 * (ratioVal / 100));
     }
+    const usdtVal = usdtInput ? (parseFloat(usdtInput.value) || 0) : 상태.지갑잔고 * (ratioVal / 100);
+    const pct = 상태.지갑잔고 > 0 ? (usdtVal / 상태.지갑잔고) * 100 : 0;
+    if (triggerType !== "ratio") ratioInput.value = Math.max(1, Math.min(100, Math.round(pct)));
 
-    if (ratioTxt) ratioTxt.innerText = `${ratioVal}%`;
+    if (ratioTxt) ratioTxt.innerText = `${pct < 1 ? pct.toFixed(2) : Math.round(pct)}%`;
     if (leverageTxt) leverageTxt.innerText = `${leverageVal}x`;
 
     // 예상 금액 계산 (Estimated Margin and Position Size)
     const balance = 상태.지갑잔고;
-    const estMargin = balance * (ratioVal / 100);
+    const estMargin = usdtVal;
     const estSize = estMargin * leverageVal;
 
     const txtBalance = document.getElementById("modal-wallet-balance");
@@ -5562,9 +5568,13 @@ window.AI모달최종가동액션 = function() {
         const ratioVal = parseInt(ratioInput.value);
         const leverageVal = parseInt(leverageInput.value);
 
-        // A. 전역 상태 갱신
+        // A. 전역 상태 갱신 — 모달에 적힌 금액 그대로
         상태.자동매매설정.진입비율 = ratioVal;
-        
+        const modalUsdt = parseFloat(document.getElementById("modal-margin-usdt")?.value) || 0;
+        if (modalUsdt > 0) 상태.자동매매설정.진입마진USDT = modalUsdt;
+        const configUsdt = document.getElementById("input-ai-margin-usdt");
+        if (configUsdt) configUsdt.value = 상태.자동매매설정.진입마진USDT;
+
         // B. 우측 주문 패널 레버리지 슬라이더 및 텍스트 갱신
         const actualLeverage = document.getElementById("input-leverage");
         const displayLeverage = document.getElementById("leverage-display");
@@ -5578,7 +5588,7 @@ window.AI모달최종가동액션 = function() {
         const configTxt = document.getElementById("txt-ai-margin-ratio");
         if (configSlider && configTxt) {
             configSlider.value = ratioVal;
-            configTxt.innerText = `${ratioVal}%`;
+            configTxt.innerText = document.getElementById("modal-margin-ratio-txt")?.innerText || `${ratioVal}%`;
         }
         
         // AI 설정 상태 로컬스토리지 영구 저장
@@ -5612,7 +5622,7 @@ window.AI모달최종가동액션 = function() {
 
     // 효과음 및 알림 출력
     재생효과음("sound-trigger");
-    새신호알림(symbol, `[🤖 AI 자동매매 가동 개시] 진입비율 **${상태.자동매매설정.진입비율}%**, 레버리지 **${leverageInput.value}x** 설정으로 자동 트레이딩 엔진이 성공적으로 가동되었습니다.`, "long");
+    새신호알림(symbol, `[🤖 AI 자동매매 가동 개시] 1회 증거금 **${Number(상태.자동매매설정.진입마진USDT).toFixed(2)} USDT**, 레버리지 **${leverageInput.value}x** 설정으로 자동 트레이딩 엔진이 성공적으로 가동되었습니다.`, "long");
 };
 
 // ⚡ 레버리지 영구 고정 및 변경 불가(Locking) 영속성 시스템 (Leverage State Lock)
