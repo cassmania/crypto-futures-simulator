@@ -1299,7 +1299,9 @@ function 분석및신호생성(symbol) {
     근거 = 신호평가.reasons;
 
     // 조건 부합 시 화면 알림 및 차트 마킹 출력
-    if (신호방향 && 근거.length >= 1) {
+    // 탭 전환 등으로 같은 확정봉이 다시 평가돼도 알림·자동매매는 봉당 한 번만 냅니다.
+    if (신호방향 && 근거.length >= 1 && coin.마지막신호봉 !== times[idx]) {
+        coin.마지막신호봉 = times[idx];
         const 근거텍스트 = 근거.join(" + ");
         const 색상 = 신호방향 === "LONG" ? "long" : "short";
         const 방향한글 = 신호방향 === "LONG" ? "롱(LONG) 매수" : "숏(SHORT) 매도";
@@ -1395,7 +1397,9 @@ function AI자동매매실행(symbol, 방향) {
     let 익절가 = 0;
     let 손절가 = 0;
 
-    const 분석캔들 = 확정봉만추출(coin.캔들데이터);
+    // 신호를 낸 것과 같은 1분봉으로 TP/SL을 잡습니다. 차트 배열은 화면에 띄운 코인만 채워져
+    // 다른 코인 신호가 매번 "20개 미만"으로 보류되던 원인이었습니다.
+    const 분석캔들 = 확정봉만추출(coin.신호캔들데이터?.length ? coin.신호캔들데이터 : coin.캔들데이터);
     if (분석캔들.length < 20) {
         새신호알림(symbol, "[자동매매 보류] 확정 봉이 20개 미만이어서 TP/SL을 안전하게 계산할 수 없습니다.", "neutral");
         return;

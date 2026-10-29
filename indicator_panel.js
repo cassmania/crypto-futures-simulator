@@ -44,8 +44,68 @@
         (c._indSeries || []).forEach(s => { try { c.메인차트.removeSeries(s); } catch {} });
         (c._indLines || []).forEach(l => { try { c.캔들시리즈.removePriceLine(l); } catch {} });
         c._indSeries = []; c._indLines = [];
+        if (박스차트 === c) 박스설정(null, []);
         if (c.캔들시리즈) { c.캔들시리즈._indMarkers = []; try { c.캔들시리즈.setMarkers(c.캔들시리즈._markers || []); } catch {} }
     }
+
+    /* 지지·저항 구간 박스 — trading-chart app.js srZones() 그대로.
+       스윙 고점·저점(좌우 k봉 극값)을 ATR 기준으로 묶어, 두 번 이상 반응한 가격대만 남긴다. */
+    function srZones(bars, look = 400, k = 5) {
+        const b = bars.slice(-look), n = b.length;
+        if (n < 2 * k + 20) return [];
+        let tr = 0;
+        for (let i = 1; i < n; i++) tr += Math.max(b[i].high, b[i - 1].close) - Math.min(b[i].low, b[i - 1].close);
+        const atr = tr / (n - 1), tol = atr * 0.6;
+        const piv = [];
+        for (let i = k; i < n - k; i++) {
+            let hi = true, lo = true;
+            for (let j = i - k; j <= i + k; j++) { if (b[j].high > b[i].high) hi = false; if (b[j].low < b[i].low) lo = false; }
+            if (hi) piv.push({ p: b[i].high, t: b[i].time });
+            if (lo) piv.push({ p: b[i].low, t: b[i].time });
+        }
+        piv.sort((x, y) => x.p - y.p);
+        const zs = [];
+        for (const q of piv) {
+            const z = zs[zs.length - 1];
+            if (z && q.p - z.hi <= tol && q.p - z.lo <= tol * 2) { z.hi = q.p; z.n++; z.t = Math.min(z.t, q.t); }
+            else zs.push({ lo: q.p, hi: q.p, n: 1, t: q.t });
+        }
+        return zs.filter(z => z.n >= 2)
+            .sort((x, y) => y.n - x.n).slice(0, 6)
+            .map(z => { const pad = Math.max(0, atr * 0.25 - (z.hi - z.lo) / 2); return { lo: z.lo - pad, hi: z.hi + pad, n: z.n, t: z.t }; });
+    }
+
+    // lightweight-charts 3.8에는 series primitive가 없어 차트 위에 반투명 div로 박스를 얹는다.
+    // ponytail: 매 프레임 좌표 재계산(박스 6개라 가볍다). v4로 올리면 primitive로 바꿀 것.
+    let 박스층 = null, 박스차트 = null, 박스들 = [];
+    function 박스그리기() {
+        requestAnimationFrame(박스그리기);
+        if (!박스층 || !박스차트 || document.hidden) return;
+        const ch = 박스차트.메인차트, s = 박스차트.캔들시리즈, ts = ch.timeScale();
+        let 폭;
+        try { 폭 = 박스층.clientWidth - ch.priceScale("right").width(); } catch { 폭 = 박스층.clientWidth; }
+        박스들.forEach((z, i) => {
+            const el = 박스층.children[i];
+            const y1 = s.priceToCoordinate(z.hi), y2 = s.priceToCoordinate(z.lo);
+            const x = Math.max(0, ts.timeToCoordinate(z.t) ?? 0);
+            if (y1 == null || y2 == null || x >= 폭) { el.style.display = "none"; return; }
+            const top = Math.min(y1, y2), h = Math.max(Math.abs(y2 - y1), 4);
+            el.style.cssText = "display:block;position:absolute;box-sizing:border-box;left:" + x + "px;top:" + top + "px;width:" + (폭 - x)
+                + "px;height:" + h + "px;background:rgba(41,98,255,.16);border:2px solid #2962ff;";
+        });
+    }
+    function 박스설정(c, zones) {
+        if (박스층) 박스층.remove();
+        박스층 = null; 박스차트 = c; 박스들 = zones;
+        const host = c && document.getElementById("split-chart-canvas-" + 상태.차트객체.분할차트들.indexOf(c));
+        if (!host || !zones.length) return;
+        if (getComputedStyle(host).position === "static") host.style.position = "relative";
+        박스층 = document.createElement("div");
+        박스층.style.cssText = "position:absolute;inset:0;pointer-events:none;z-index:2;overflow:hidden;";
+        박스층.innerHTML = zones.map(() => "<div></div>").join("");
+        host.appendChild(박스층);
+    }
+    requestAnimationFrame(박스그리기);
 
     function 통계문구(st) {
         if (!st || !st.trades) return "검증 거래 없음";
@@ -138,20 +198,24 @@
         범위해제 = () => { try { ts.unsubscribeVisibleLogicalRangeChange(맞추기); } catch {} };
         맞추기(ts.getVisibleLogicalRange());
 
+        // 마커 규칙은 trading-chart drawMarkers()와 같다.
         const 방향 = d => d === 1 ? "롱" : "숏";
+        const L = d => d === 1, 퍼센트 = x => (x >= 0 ? "+" : "") + (x * 100).toFixed(1) + "%";
         const ms = [];
         v.trades.forEach(t => {
             const eb = bars[t.entryIdx], xb = bars[t.exitIdx];
             if (!eb || !xb) return;
-            ms.push({ time: eb.time, position: t.dir === 1 ? "belowBar" : "aboveBar", shape: t.dir === 1 ? "arrowUp" : "arrowDown",
-                color: t.dir === 1 ? COL.buy : COL.sell, text: 방향(t.dir) });
-            ms.push({ time: xb.time, position: t.dir === 1 ? "aboveBar" : "belowBar", shape: "circle", color: t.reason === "stop" ? COL.gray : COL.accent,
-                text: (t.reason === "stop" ? "손절 " : "청산 ") + (t.pnl >= 0 ? "+" : "") + (t.pnl * 100).toFixed(1) + "%" });
+            ms.push({ time: eb.time, position: L(t.dir) ? "belowBar" : "aboveBar", shape: L(t.dir) ? "arrowUp" : "arrowDown",
+                color: L(t.dir) ? COL.buy : COL.sell, text: L(t.dir) ? "매수" : "숏" });
+            ms.push({ time: xb.time, position: L(t.dir) ? "aboveBar" : "belowBar", shape: L(t.dir) ? "arrowDown" : "arrowUp",
+                color: t.reason === "stop" ? COL.gray : (L(t.dir) ? COL.sell : COL.buy),
+                text: (t.reason === "stop" ? "손절 " : L(t.dir) ? "매도 " : "청산 ") + 퍼센트(t.pnl) });
         });
-        if (v.open && bars[v.open.idx]) ms.push({ time: bars[v.open.idx].time, position: v.open.dir === 1 ? "belowBar" : "aboveBar",
-            shape: v.open.dir === 1 ? "arrowUp" : "arrowDown", color: v.open.dir === 1 ? COL.buy : COL.sell, text: 방향(v.open.dir) + " 보유" });
-        if (v.pending) ms.push({ time: bars[bars.length - 1].time, position: "aboveBar", shape: "circle", color: COL.accent,
-            text: v.pending.type === "exit" ? "청산 대기" : 방향(v.pending.dir) + " 대기" });
+        if (v.open && bars[v.open.idx]) ms.push({ time: bars[v.open.idx].time, position: L(v.open.dir) ? "belowBar" : "aboveBar",
+            shape: L(v.open.dir) ? "arrowUp" : "arrowDown", color: L(v.open.dir) ? COL.buy : COL.sell, text: L(v.open.dir) ? "매수 보유" : "숏 보유" });
+        if (v.pending) ms.push({ time: bars[bars.length - 1].time, position: v.pending.dir === 1 ? "belowBar" : "aboveBar", shape: "circle", color: COL.accent,
+            text: v.pending.type === "exit" ? "청산 대기" : v.pending.dir === 1 ? "매수 대기" : "숏 대기" });
+        if (v.auto && bars[a.adaptive.from]) ms.push({ time: bars[a.adaptive.from].time, position: "aboveBar", shape: "square", color: COL.gray, text: "검증 시작" });
         마커병합(c.캔들시리즈);
         c.캔들시리즈._indMarkers = ms;
         c.캔들시리즈.setMarkers(c.캔들시리즈._markers || []);
@@ -168,7 +232,20 @@
         const pl = (price, color, t, style, width) => {
             if (isFinite(price)) c._indLines.push(c.캔들시리즈.createPriceLine({ price, color, lineWidth: width || 1, lineStyle: style, axisLabelVisible: true, title: t }));
         };
-        if (lv) { pl(lv.entry, COL.accent, "지표 진입", 0, 2); pl(lv.stop, COL.gray, "지표 손절", 1); pl(lv.tp1, COL.accent, "1차 목표", 1); pl(lv.tp2, COL.accent, "2차 목표", 1); }
+        // 매물대(POC·VAH·VAL)와 파란 지지 구간 — trading-chart drawLevels()와 같은 값
+        const vp = Engine.volumeProfile(bars, Math.min(300, bars.length), 48);
+        if (vp) { pl(vp.poc, COL.accent, "POC", 0); pl(vp.vah, COL.gray, "VAH", 2); pl(vp.val, COL.gray, "VAL", 2); }
+        const last = bars[bars.length - 1].close;
+        const zones = srZones(bars.slice(0, -1));
+        박스설정(c, zones);
+        // 현재가가 구간 위면 구간 윗선, 구간 안이면 아랫선이 지켜야 할 지지선
+        const sup = zones.filter(z => z.lo < last).sort((x, y) => y.lo - x.lo)[0] || null;
+        if (sup) { sup.line = sup.hi < last ? sup.hi : sup.lo; pl(sup.line, "#2962ff", "지지", 0, 3); }
+        if (lv) {
+            const d = lv.entry < lv.tp1 ? 1 : -1;
+            pl(lv.entry, d === 1 ? COL.buy : COL.sell, d === 1 ? "진입" : "숏 진입", 0, 2);
+            pl(lv.stop, COL.sell, "손절", 1); pl(lv.tp1, COL.buy, "1차 목표", 1); pl(lv.tp2, COL.buy, "2차 목표", 1);
+        }
 
         if (card) {
             const [cl, cc] = 신뢰도(v.stats), x = a.context, f = n => n == null ? "—" : n.toFixed(1);
@@ -180,6 +257,12 @@
                 '<div class="ind-cell"><span class="ind-k">현재 국면</span><b>' + esc(Engine.REGIME_NAME[a.regime] || "—") + '</b><span class="ind-dim">ADX ' + f(x.adx) + " · +DI " + f(x.pdi) + " / −DI " + f(x.mdi) + "</span></div>"
                 + '<div class="ind-cell"><span class="ind-k">' + (v.auto ? "자동 적용 지표" : "선택 지표") + "</span><b>" + esc(strat.name) + '</b><span class="ind-dim">' + esc(strat.kind + " · " + strat.desc) + "</span></div>"
                 + '<div class="ind-cell"><span class="ind-k">워크포워드 검증</span><b>' + 통계문구(v.stats) + '</b><span><span class="ind-pill ' + cc + '">' + cl + "</span></span></div>"
+                + '<div class="ind-cell"><span class="ind-k">지지 구간 (파란 박스)</span>' + (sup
+                    ? "<b>" + sup.lo.toLocaleString() + " ~ " + sup.hi.toLocaleString() + '</b><span class="ind-dim">' + 퍼센트((sup.line - last) / last) + " · 반응 " + sup.n + "회</span>"
+                    : '<b class="ind-dim">—</b>') + "</div>"
+                + '<div class="ind-cell"><span class="ind-k">매물대 POC</span>' + (vp
+                    ? "<b>" + vp.poc.toLocaleString() + '</b><span class="ind-dim">VA ' + vp.val.toLocaleString() + " ~ " + vp.vah.toLocaleString() + "</span>"
+                    : '<b class="ind-dim">—</b>') + "</div>"
                 + '<div class="ind-cell"><span class="ind-k">지표 상태</span><span>' + 상태문구 + '</span><span class="ind-dim">봉 마감 신호 · 다음 봉 시가 체결 · 수수료 0.05% · 2.5×ATR 손절 · 롱/숏</span></div>';
         }
     }
