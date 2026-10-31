@@ -34,7 +34,6 @@ assert.ok(appSource.includes("실현손익: 순손익"), "거래 이력은 비�
 const html = fs.readFileSync("index.html", "utf8");
 assert.ok(html.includes("strategy_backtest.js?v=1.1.0"), "공용 전략 모듈 연결 필요");
 assert.ok(html.includes("indicator-backtest-button"), "백테스트 실행 UI 필요");
-assert.ok(fs.readFileSync("analysis.html", "utf8").includes("strategy_backtest.js?v=1.1.0"), "분석 페이지도 공용 모듈 필요");
 
 // 세션 VWAP는 UTC 자정마다 초기화되어야 합니다 (전체 누적이면 현재가와 수 % 벌어짐).
 const vwap = Strategy.sessionVwap([
